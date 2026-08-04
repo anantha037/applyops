@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from backend.llm_feedback import GroqFeedbackService
 from backend.routes.applications import router as applications_router
 from backend.routes.dashboard import router as dashboard_router
 from backend.routes.internal import router as internal_router
@@ -19,7 +20,10 @@ async def lifespan(app: FastAPI):
     sheets = SheetsClient()
     sheets.ensure_structure()
     app.state.sheets = sheets
-    scheduler = ApplyOpsScheduler(sheets, TelegramBot())
+    telegram = TelegramBot()
+    app.state.telegram = telegram
+    app.state.feedback_service = GroqFeedbackService()
+    scheduler = ApplyOpsScheduler(sheets, telegram)
     scheduler.start()
     app.state.scheduler = scheduler
     try:
