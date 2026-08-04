@@ -1,7 +1,7 @@
 from datetime import date
 
 from backend.models import Application, ApplicationStage, ApplicationStatus
-from backend.scheduler import flag_ghosted_applications, send_due_today_reminder
+from backend.scheduler import flag_ghosted_applications, send_daily_feedback, send_due_today_reminder
 
 
 def application(
@@ -43,6 +43,9 @@ class FakeTelegramBot:
     def send_due_today_reminder(self, applications: list[Application]) -> None:
         self.sent.append(applications)
 
+    def send_message(self, message: str) -> None:
+        self.sent.append([message])
+
 
 def test_ghosted_check_only_flags_more_than_three_days_overdue() -> None:
     today = date(2026, 8, 5)
@@ -74,3 +77,16 @@ def test_reminder_sends_only_when_applications_are_due() -> None:
 
     assert send_due_today_reminder(FakeSheetsClient([not_due]), telegram, today) == 0
     assert telegram.sent == [[due]]
+
+
+def test_daily_feedback_logs_and_skips_when_groq_fails(monkeypatch, caplog) -> None:
+    class FailingFeedbackService:
+        def generate(self, _stats):
+            raise RuntimeError("Groq unavailable")
+
+    monkeypatch.setattr("backend.scheduler.build_daily_coaching_input", lambda *_: object())
+    telegram = FakeTelegramBot()
+
+    assert send_daily_feedback(object(), FailingFeedbackService(), telegram, date(2026, 8, 5)) is None
+    assert telegram.sent == []
+    assert "Daily coaching feedback failed" in caplog.text
