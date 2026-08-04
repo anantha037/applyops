@@ -112,6 +112,14 @@ class SheetsClient:
         self._applications().append_row(self._application_row(application), value_input_option="RAW")
         return application
 
+    def applications_due_on(self, target_date: date) -> list[Application]:
+        """Return applications whose next scheduled action is due on target_date."""
+        return [
+            application
+            for application in self.list_applications()
+            if application.next_action_due == target_date
+        ]
+
     def get_application(self, application_id: str) -> Application | None:
         row_number = self._application_row_number(application_id)
         if row_number is None:
