@@ -4,13 +4,16 @@ from __future__ import annotations
 
 import json
 import os
+from collections import Counter
+from datetime import date
 from pathlib import Path
 from typing import Any
 
 from dotenv import load_dotenv
 from groq import Groq
 
-from backend.models import DailyCoachingInput, DailyFeedback
+from backend.models import Application, DailyCoachingInput, DailyFeedback
+from backend.sheets_client import SheetsClient
 
 load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
@@ -41,6 +44,44 @@ def build_coaching_prompt(stats: DailyCoachingInput) -> str:
         f"Decision guidance: {coaching_direction(stats)}\n"
         f"Daily metrics: {data}"
     )
+
+
+def build_daily_coaching_input(
+    sheets: SheetsClient, report_date: date
+) -> DailyCoachingInput:
+    """Derive the daily coaching metrics from the three Phase 1 worksheet tabs."""
+    applications = sheets.list_applications()
+    applications_today = [app for app in applications if app.date_applied == report_date]
+    activity = sheets.list_activity(report_date)
+    remarks = [
+        text
+        for app in applications_today
+        for text in (app.latest_update, app.remarks)
+        if text.strip()
+    ]
+    remarks.extend(event.notes for event in activity if event.notes.strip())
+    goal = sheets.get_daily_goal()
+    return DailyCoachingInput(
+        date=report_date,
+        goal=goal,
+        applications_logged_today=len(applications_today),
+        calls_made_today=sum(event.action_type == "Call Dialed" for event in activity),
+        responses_today=sum(event.action_type == "Call Connected" for event in activity),
+        streak_days=_goal_streak(applications, goal, report_date),
+        remarks_today=remarks[:10],
+    )
+
+
+def _goal_streak(applications: list[Application], goal: int, report_date: date) -> int:
+    if goal == 0:
+        return 0
+    applications_per_day = Counter(application.date_applied for application in applications)
+    streak = 0
+    current_date = report_date
+    while applications_per_day[current_date] >= goal:
+        streak += 1
+        current_date = current_date.fromordinal(current_date.toordinal() - 1)
+    return streak
 
 
 class GroqFeedbackService:
