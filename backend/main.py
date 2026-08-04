@@ -23,7 +23,7 @@ async def lifespan(app: FastAPI):
     telegram = TelegramBot()
     app.state.telegram = telegram
     app.state.feedback_service = GroqFeedbackService()
-    scheduler = ApplyOpsScheduler(sheets, telegram)
+    scheduler = ApplyOpsScheduler(sheets, telegram, app.state.feedback_service)
     scheduler.start()
     app.state.scheduler = scheduler
     try:
