@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -13,6 +14,7 @@ from backend.sheets_client import SheetsClient
 from backend.telegram_bot import TelegramBot
 
 INDIA_TIMEZONE = ZoneInfo("Asia/Kolkata")
+logger = logging.getLogger(__name__)
 
 
 def india_today() -> date:
@@ -47,12 +49,16 @@ def send_daily_feedback(
     feedback_service: GroqFeedbackService,
     telegram: TelegramBot,
     today: date | None = None,
-) -> DailyFeedback:
-    """Generate one daily coaching message and deliver it via Telegram."""
-    stats = build_daily_coaching_input(sheets, today or india_today())
-    feedback = feedback_service.generate(stats)
-    telegram.send_message(feedback.message)
-    return feedback
+) -> DailyFeedback | None:
+    """Generate one daily coaching message; log and skip it if the call fails."""
+    try:
+        stats = build_daily_coaching_input(sheets, today or india_today())
+        feedback = feedback_service.generate(stats)
+        telegram.send_message(feedback.message)
+        return feedback
+    except Exception:
+        logger.exception("Daily coaching feedback failed; skipping today's message")
+        return None
 
 
 class ApplyOpsScheduler:
@@ -103,5 +109,5 @@ class ApplyOpsScheduler:
     def run_reminder_check(self) -> int:
         return send_due_today_reminder(self._sheets, self._telegram)
 
-    def run_daily_feedback(self) -> DailyFeedback:
+    def run_daily_feedback(self) -> DailyFeedback | None:
         return send_daily_feedback(self._sheets, self._feedback_service, self._telegram)
