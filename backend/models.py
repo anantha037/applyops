@@ -37,10 +37,17 @@ FOLLOW_UP_DELAYS: dict[ApplicationStage, int] = {
 
 
 def calculate_next_action_due(
-    stage: ApplicationStage, last_touch_date: date | None
+    stage: ApplicationStage,
+    last_touch_date: date | None,
+    application_status: ApplicationStatus | str | None = None,
 ) -> date | None:
-    """Return the next follow-up date for a stage, or None when not scheduled."""
+    """Return the next follow-up date, or None for terminal applications."""
     if last_touch_date is None:
+        return None
+    if application_status in {
+        ApplicationStatus.OFFER_RECEIVED,
+        ApplicationStatus.REJECTED,
+    }:
         return None
     delay = FOLLOW_UP_DELAYS.get(stage)
     return last_touch_date + timedelta(days=delay) if delay is not None else None
