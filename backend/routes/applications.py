@@ -40,7 +40,7 @@ def create_application(payload: ApplicationCreate, request: Request) -> Applicat
     application_data = payload.model_dump()
     application_data["last_touch_date"] = last_touch_date
     application_data["next_action_due"] = calculate_next_action_due(
-        ApplicationStage(payload.stage), last_touch_date
+        ApplicationStage(payload.stage), last_touch_date, payload.status
     )
     application = Application(
         id=str(uuid4()),
@@ -60,9 +60,9 @@ def update_application(
 
     changes = payload.model_dump(exclude_unset=True)
     updated = existing.model_copy(update=changes)
-    if "stage" in changes or "last_touch_date" in changes:
+    if {"stage", "last_touch_date", "status"} & changes.keys():
         updated.next_action_due = calculate_next_action_due(
-            ApplicationStage(updated.stage), updated.last_touch_date
+            ApplicationStage(updated.stage), updated.last_touch_date, updated.status
         )
     return sheets.update_application(updated) or _not_found()
 
