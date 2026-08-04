@@ -171,11 +171,24 @@ class SheetsClient:
                 )
         return activities
 
+    def get_daily_goal(self) -> int:
+        """Return the configured daily goal, or zero when Settings is still blank."""
+        records = self._settings().get_all_records()
+        if not records or not records[0].get("Daily Goal"):
+            return 0
+        try:
+            return int(records[0]["Daily Goal"])
+        except (TypeError, ValueError) as exc:
+            raise SheetConfigurationError("Settings 'Daily Goal' must be a whole number") from exc
+
     def _applications(self) -> gspread.Worksheet:
         return self._spreadsheet.worksheet("Applications")
 
     def _activity_log(self) -> gspread.Worksheet:
         return self._spreadsheet.worksheet("Activity Log")
+
+    def _settings(self) -> gspread.Worksheet:
+        return self._spreadsheet.worksheet("Settings")
 
     def _application_row_number(self, application_id: str) -> int | None:
         values = self._applications().col_values(1)
