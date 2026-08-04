@@ -7,7 +7,8 @@ from zoneinfo import ZoneInfo
 
 from apscheduler.schedulers.background import BackgroundScheduler
 
-from backend.models import ApplicationStatus
+from backend.llm_feedback import GroqFeedbackService, build_daily_coaching_input
+from backend.models import ApplicationStatus, DailyFeedback
 from backend.sheets_client import SheetsClient
 from backend.telegram_bot import TelegramBot
 
@@ -41,12 +42,28 @@ def send_due_today_reminder(
     return len(applications)
 
 
+def send_daily_feedback(
+    sheets: SheetsClient,
+    feedback_service: GroqFeedbackService,
+    telegram: TelegramBot,
+    today: date | None = None,
+) -> DailyFeedback:
+    """Generate one daily coaching message and deliver it via Telegram."""
+    stats = build_daily_coaching_input(sheets, today or india_today())
+    feedback = feedback_service.generate(stats)
+    telegram.send_message(feedback.message)
+    return feedback
+
+
 class ApplyOpsScheduler:
     """Owns the Phase 2 background jobs for the FastAPI process."""
 
-    def __init__(self, sheets: SheetsClient, telegram: TelegramBot) -> None:
+    def __init__(
+        self, sheets: SheetsClient, telegram: TelegramBot, feedback_service: GroqFeedbackService
+    ) -> None:
         self._sheets = sheets
         self._telegram = telegram
+        self._feedback_service = feedback_service
         self._scheduler = BackgroundScheduler(timezone=INDIA_TIMEZONE)
         self._scheduler.add_job(
             self.run_ghosted_check,
@@ -64,6 +81,14 @@ class ApplyOpsScheduler:
             id="due-today-reminder",
             replace_existing=True,
         )
+        self._scheduler.add_job(
+            self.run_daily_feedback,
+            trigger="cron",
+            hour=21,
+            minute=0,
+            id="daily-coaching-feedback",
+            replace_existing=True,
+        )
 
     def start(self) -> None:
         self._scheduler.start()
@@ -77,3 +102,6 @@ class ApplyOpsScheduler:
 
     def run_reminder_check(self) -> int:
         return send_due_today_reminder(self._sheets, self._telegram)
+
+    def run_daily_feedback(self) -> DailyFeedback:
+        return send_daily_feedback(self._sheets, self._feedback_service, self._telegram)
