@@ -48,6 +48,7 @@ On startup, ApplyOps creates the `Applications`, `Activity Log`, and `Settings` 
 - `GET /activity?date=today` (or `YYYY-MM-DD`)
 - `GET /dashboard/due-today`
 - `POST /internal/reminder-check`
+- `POST /internal/daily-feedback`
 
 Example application creation:
 
@@ -57,7 +58,7 @@ Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8000/applications -ContentT
 
 ### Scheduled reminders
 
-ApplyOps checks for applications due today and sends a Telegram reminder at 3:00 PM India time. It also runs the ghosted-application check daily at 9:00 AM India time.
+ApplyOps checks for applications due today and sends a Telegram reminder at 3:00 PM India time. It runs the ghosted-application check daily at 9:00 AM, and sends one Groq-generated daily coaching message at 9:00 PM, all in India time.
 
 To verify Telegram delivery immediately, ensure at least one application has `Next Action Due` set to today, start the API, then run:
 
@@ -66,6 +67,16 @@ Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8000/internal/reminder-chec
 ```
 
 The response reports `sent: true` and the due count when Telegram accepted a message. A `sent: false` response means no applications are due today.
+
+### Daily coaching verification
+
+Set a whole-number goal in the first data row under `Daily Goal` on the `Settings` tab. To test the real Groq and Telegram path immediately, submit a synthetic daily summary:
+
+```powershell
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8000/internal/daily-feedback -ContentType 'application/json' -Body '{"date":"2026-08-05","goal":12,"applications_logged_today":7,"calls_made_today":3,"responses_today":1,"streak_days":4,"remarks_today":["Technical interview completed"]}'
+```
+
+The response contains the generated message, and the same message arrives in Telegram. The service performs one Groq call and limits the message to 40 words.
 
 ### Frontend
 
