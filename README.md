@@ -4,7 +4,7 @@ ApplyOps is a personal job-application command center built around an existing G
 
 ## Current status
 
-The repository skeleton is in place. Feature implementation begins with Phase 1 after the structure is confirmed.
+Phase 1 is implemented locally: the FastAPI API persists applications and activity events in Google Sheets. The live workbook is created when the API starts.
 
 ## Setup
 
@@ -19,6 +19,8 @@ The repository skeleton is in place. Feature implementation begins with Phase 1 
 
 Copy `.env.example` to `.env` and replace each placeholder with the appropriate local value. Keep `.env`, service-account JSON keys, and API tokens out of version control.
 
+For Phase 1, set `GOOGLE_SHEET_ID` to the ID in the spreadsheet URL and set `GOOGLE_SERVICE_ACCOUNT_JSON` to either an absolute path to the downloaded service-account JSON key or the complete JSON object on one line. Share the target spreadsheet with the service account's `client_email` as an Editor.
+
 ### Backend
 
 ```powershell
@@ -28,7 +30,28 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-The FastAPI application and endpoints will be added during Phase 1.
+Start the API from the repository root:
+
+```powershell
+python -m uvicorn backend.main:app --reload
+```
+
+On startup, ApplyOps creates the `Applications`, `Activity Log`, and `Settings` tabs and their headers if they do not already exist.
+
+### Phase 1 API
+
+- `GET /applications?status=In%20Progress&stage=Called`
+- `POST /applications`
+- `PATCH /applications/{id}`
+- `DELETE /applications/{id}`
+- `POST /activity`
+- `GET /activity?date=today` (or `YYYY-MM-DD`)
+
+Example application creation:
+
+```powershell
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8000/applications -ContentType 'application/json' -Body '{"company":"Acme","job_title":"Backend Engineer","application_method":"LinkedIn"}'
+```
 
 ### Frontend
 
