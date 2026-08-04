@@ -128,5 +128,24 @@ class Activity(BaseModel):
     notes: str
 
 
+class DailyCoachingInput(BaseModel):
+    """Structured daily metrics supplied to the coaching engine."""
+
+    date: date
+    goal: int = Field(ge=0)
+    applications_logged_today: int = Field(ge=0)
+    calls_made_today: int = Field(ge=0)
+    responses_today: int = Field(ge=0)
+    streak_days: int = Field(ge=0)
+    remarks_today: list[str] = Field(default_factory=list)
+
+
+class DailyFeedback(BaseModel):
+    """The concise coaching message generated for one day."""
+
+    date: date
+    message: str
+
+
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
