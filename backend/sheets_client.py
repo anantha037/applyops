@@ -86,6 +86,23 @@ class SheetsClient:
 
         credentials = self._load_credentials(credentials_value)
         self._spreadsheet = gspread.authorize(credentials).open_by_key(self._spreadsheet_id)
+        self._cache: dict[str, list[dict]] = {}
+        self._cache_time = 0.0
+
+    def _get_cached_records(self, worksheet_name: str, fetcher: Callable) -> list[dict]:
+        import time
+        now = time.time()
+        if now - self._cache_time > 15:
+            self._cache.clear()
+            self._cache_time = now
+            
+        if worksheet_name not in self._cache:
+            self._cache[worksheet_name] = fetcher().get_all_records()
+            
+        return self._cache[worksheet_name]
+
+    def _invalidate_cache(self) -> None:
+        self._cache.clear()
 
     @staticmethod
     def _load_credentials(credentials_value: str) -> Credentials:
@@ -120,7 +137,8 @@ class SheetsClient:
     def list_applications(
         self, status: str | None = None, stage: str | None = None
     ) -> list[Application]:
-        applications = [self._application_from_row(row) for row in self._applications().get_all_records()]
+        records = self._get_cached_records("Applications", self._applications)
+        applications = [self._application_from_row(row) for row in records]
         return [
             application
             for application in applications
@@ -130,6 +148,7 @@ class SheetsClient:
 
     def create_application(self, application: Application) -> Application:
         self._applications().append_row(self._application_row(application), value_input_option="RAW")
+        self._invalidate_cache()
         return application
 
     def applications_due_on(self, target_date: date) -> list[Application]:
@@ -155,6 +174,7 @@ class SheetsClient:
         self._applications().update(
             f"A{row_number}:{last_column}", [self._application_row(application)], value_input_option="RAW"
         )
+        self._invalidate_cache()
         return application
 
     def delete_application(self, application_id: str) -> bool:
@@ -162,6 +182,7 @@ class SheetsClient:
         if row_number is None:
             return False
         self._applications().delete_rows(row_number)
+        self._invalidate_cache()
         return True
 
     def create_activity(self, activity_id: str, payload: ActivityCreate) -> Activity:
@@ -176,11 +197,13 @@ class SheetsClient:
         self._activity_log().append_row(
             [_serialize(value) for value in activity.model_dump().values()], value_input_option="RAW"
         )
+        self._invalidate_cache()
         return activity
 
     def list_activity(self, activity_date: date | None = None) -> list[Activity]:
         activities: list[Activity] = []
-        for row in self._activity_log().get_all_records():
+        records = self._get_cached_records("Activity Log", self._activity_log)
+        for row in records:
             timestamp = datetime.fromisoformat(row["Timestamp"].replace("Z", "+00:00"))
             if activity_date is None or timestamp.date() == activity_date:
                 activities.append(
@@ -196,7 +219,7 @@ class SheetsClient:
         return self.get_settings().daily_goal
 
     def get_settings(self) -> Settings:
-        records = self._settings().get_all_records()
+        records = self._get_cached_records("Settings", self._settings)
         if not records:
             return Settings()
         record = records[0]
@@ -306,7 +329,8 @@ class SheetsClient:
         end: date | None = None,
     ) -> list[CalendarEvent]:
         events: list[CalendarEvent] = []
-        for row in self._calendar_events().get_all_records():
+        records = self._get_cached_records("Calendar Events", self._calendar_events)
+        for row in records:
             if not row["ID"]:
                 continue
             try:
@@ -324,6 +348,7 @@ class SheetsClient:
         self._calendar_events().append_row(
             self._calendar_row(event), value_input_option="RAW"
         )
+        self._invalidate_cache()
         return event
 
     def get_calendar_event(self, event_id: str) -> CalendarEvent | None:
@@ -347,6 +372,7 @@ class SheetsClient:
             [self._calendar_row(event)],
             value_input_option="RAW",
         )
+        self._invalidate_cache()
         return event
 
     def delete_calendar_event(self, event_id: str) -> bool:
@@ -354,6 +380,7 @@ class SheetsClient:
         if row_num is None:
             return False
         self._calendar_events().delete_rows(row_num)
+        self._invalidate_cache()
         return True
 
     # ── Auto-sync helpers ────────────────────────────────────────────────────
@@ -458,9 +485,10 @@ class SheetsClient:
         )
 
     def list_contacts_manual(self) -> list[ContactManual]:
+        records = self._get_cached_records("Contacts_Manual", self._contacts_manual_ws)
         return [
             self._contact_manual_from_row(row)
-            for row in self._contacts_manual_ws().get_all_records()
+            for row in records
             if row.get("ID")
         ]
 
@@ -472,6 +500,7 @@ class SheetsClient:
             ],
             value_input_option="RAW",
         )
+        self._invalidate_cache()
         return contact
 
     # ── Merged contacts view ─────────────────────────────────────────────────
@@ -590,7 +619,7 @@ class SheetsClient:
         return self._spreadsheet.worksheet("Daily Snapshots")
 
     def list_daily_snapshots(self) -> list[DailySnapshot]:
-        records = self._daily_snapshots_ws().get_all_records()
+        records = self._get_cached_records("Daily Snapshots", self._daily_snapshots_ws)
         snapshots = []
         for row in records:
             if not row.get("Date"):
@@ -645,4 +674,5 @@ class SheetsClient:
         else:
             # Append new row
             ws.append_row(row_data, value_input_option="RAW")
+        self._invalidate_cache()
 
