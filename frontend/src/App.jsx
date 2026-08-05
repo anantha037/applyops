@@ -4,9 +4,10 @@ import Applications from './pages/Applications'
 import Calendar from './pages/Calendar'
 import Contacts from './pages/Contacts'
 import Analytics from './pages/Analytics'
+import Reports from './pages/Reports'
 import Settings from './pages/Settings'
 
-const views = { dashboard: Dashboard, applications: Applications, calendar: Calendar, contacts: Contacts, analytics: Analytics, settings: Settings }
+const views = { dashboard: Dashboard, applications: Applications, calendar: Calendar, contacts: Contacts, analytics: Analytics, reports: Reports, settings: Settings }
 
 export default function App() {
   const [view, setView] = useState('dashboard')
