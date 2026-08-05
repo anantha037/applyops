@@ -12,7 +12,7 @@ import gspread
 from dotenv import load_dotenv
 from google.oauth2.service_account import Credentials
 
-from backend.models import Activity, ActivityCreate, Application, ApplicationCreate, ApplicationUpdate, utc_now
+from backend.models import Activity, ActivityCreate, Application, Settings, SettingsUpdate, utc_now
 
 load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
@@ -173,13 +173,34 @@ class SheetsClient:
 
     def get_daily_goal(self) -> int:
         """Return the configured daily goal, or zero when Settings is still blank."""
+        return self.get_settings().daily_goal
+
+    def get_settings(self) -> Settings:
         records = self._settings().get_all_records()
-        if not records or not records[0].get("Daily Goal"):
-            return 0
+        if not records:
+            return Settings()
+        record = records[0]
         try:
-            return int(records[0]["Daily Goal"])
+            daily_goal = int(record.get("Daily Goal") or 0)
         except (TypeError, ValueError) as exc:
             raise SheetConfigurationError("Settings 'Daily Goal' must be a whole number") from exc
+        return Settings(
+            daily_goal=daily_goal,
+            working_hours_start=record.get("Working Hours Start", ""),
+            working_hours_end=record.get("Working Hours End", ""),
+            telegram_chat_id=record.get("Telegram Chat ID", ""),
+            dashboard_pin=record.get("Dashboard PIN", ""),
+        )
+
+    def update_settings(self, changes: SettingsUpdate) -> Settings:
+        settings = self.get_settings().model_copy(update=changes.model_dump(exclude_unset=True))
+        self._settings().update(
+            "A2:E2",
+            [[settings.daily_goal, settings.working_hours_start, settings.working_hours_end,
+              settings.telegram_chat_id, settings.dashboard_pin]],
+            value_input_option="RAW",
+        )
+        return settings
 
     def _applications(self) -> gspread.Worksheet:
         return self._spreadsheet.worksheet("Applications")
