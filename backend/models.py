@@ -203,3 +203,42 @@ class SettingsUpdate(BaseModel):
 
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+# ── Contacts ─────────────────────────────────────────────────────────────────
+
+class ContactCreate(BaseModel):
+    """Payload for a new manual-only contact row in Contacts_Manual."""
+    name:    Annotated[str, Field(min_length=1)]
+    company: str = ""
+    role:    str = ""
+    email:   str = ""
+    phone:   str = ""
+    tags:    str = ""   # comma-separated: Recruiter, HR Manager, Referrer, Other
+    notes:   str = ""
+
+
+class ContactManual(ContactCreate):
+    """Persisted Contacts_Manual row."""
+    id: str
+
+
+class ContactView(BaseModel):
+    """Merged/enriched contact returned by GET /contacts.
+
+    Fields that come from Applications are populated when the contact
+    was derived from an application row.  source='manual' means it came
+    exclusively from Contacts_Manual (no matching application HR record).
+    """
+    id:                    str
+    name:                  str
+    company:               str = ""
+    role:                  str = ""
+    email:                 str = ""
+    phone:                 str = ""
+    tags:                  str = ""
+    notes:                 str = ""
+    source:                str          # "application" | "manual" | "both"
+    application_id:        str | None = None
+    last_contacted:        str | None = None  # ISO date string or None
+    responded:             bool = False
