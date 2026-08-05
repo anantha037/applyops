@@ -158,11 +158,11 @@ class SheetsClient:
         )
         return activity
 
-    def list_activity(self, activity_date: date) -> list[Activity]:
+    def list_activity(self, activity_date: date | None = None) -> list[Activity]:
         activities: list[Activity] = []
         for row in self._activity_log().get_all_records():
             timestamp = datetime.fromisoformat(row["Timestamp"].replace("Z", "+00:00"))
-            if timestamp.date() == activity_date:
+            if activity_date is None or timestamp.date() == activity_date:
                 activities.append(
                     Activity(
                         id=row["ID"], timestamp=timestamp, application_id=row["Application ID"],
