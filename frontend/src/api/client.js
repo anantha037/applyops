@@ -23,4 +23,5 @@ export const api = {
   deleteCalendarEvent: id => request(`/calendar/events/${id}`, { method: 'DELETE' }),
   contacts: () => request('/contacts'),
   createContact: body => request('/contacts', { method: 'POST', body: JSON.stringify(body) }),
+  analyticsOverview: (range = '30d') => request(`/analytics/overview?range=${range}`),
 }
