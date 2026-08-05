@@ -6,13 +6,17 @@ import json
 import os
 from datetime import date, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import gspread
 from dotenv import load_dotenv
 from google.oauth2.service_account import Credentials
 
-from backend.models import Activity, ActivityCreate, Application, Settings, SettingsUpdate, utc_now
+from backend.models import (
+    Activity, ActivityCreate, Application,
+    CalendarEvent, CalendarEventCreate, CalendarEventSource, CalendarEventType, CalendarEventUpdate,
+    Settings, SettingsUpdate, utc_now,
+)
 
 load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
@@ -26,11 +30,16 @@ ACTIVITY_LOG_HEADERS = ["ID", "Timestamp", "Application ID", "Company", "Action 
 SETTINGS_HEADERS = [
     "Daily Goal", "Working Hours Start", "Working Hours End", "Telegram Chat ID", "Dashboard PIN"
 ]
+CALENDAR_EVENTS_HEADERS = [
+    "ID", "Title", "Event Type", "Date", "Time",
+    "Related Application ID", "Notes", "Source",
+]
 
 WORKSHEET_HEADERS = {
     "Applications": APPLICATIONS_HEADERS,
     "Activity Log": ACTIVITY_LOG_HEADERS,
     "Settings": SETTINGS_HEADERS,
+    "Calendar Events": CALENDAR_EVENTS_HEADERS,
 }
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
@@ -241,3 +250,180 @@ class SheetsClient:
             interview_attended=_as_optional_bool(row["Interview Attended"]),
             latest_update=row["Latest Update"], remarks=row["Remarks"],
         )
+
+    # ── Calendar Events ─────────────────────────────────────────────────────
+
+    def _calendar_events(self) -> gspread.Worksheet:
+        return self._spreadsheet.worksheet("Calendar Events")
+
+    @staticmethod
+    def _calendar_row(event: CalendarEvent) -> list[str]:
+        return [
+            event.id,
+            event.title,
+            event.event_type,
+            _serialize(event.date),
+            event.time or "",
+            event.related_application_id or "",
+            event.notes,
+            event.source,
+        ]
+
+    @staticmethod
+    def _calendar_from_row(row: dict[str, Any]) -> CalendarEvent:
+        return CalendarEvent(
+            id=row["ID"],
+            title=row["Title"],
+            event_type=row["Event Type"],
+            date=row["Date"],
+            time=row["Time"] or None,
+            related_application_id=row["Related Application ID"] or None,
+            notes=row["Notes"],
+            source=row["Source"],
+        )
+
+    def _calendar_row_number(self, event_id: str) -> int | None:
+        values = self._calendar_events().col_values(1)
+        try:
+            return values.index(event_id) + 1
+        except ValueError:
+            return None
+
+    def list_calendar_events(
+        self,
+        start: date | None = None,
+        end: date | None = None,
+    ) -> list[CalendarEvent]:
+        events: list[CalendarEvent] = []
+        for row in self._calendar_events().get_all_records():
+            if not row["ID"]:
+                continue
+            try:
+                ev = self._calendar_from_row(row)
+            except Exception:
+                continue
+            if start and ev.date < start:
+                continue
+            if end and ev.date > end:
+                continue
+            events.append(ev)
+        return events
+
+    def create_calendar_event(self, event: CalendarEvent) -> CalendarEvent:
+        self._calendar_events().append_row(
+            self._calendar_row(event), value_input_option="RAW"
+        )
+        return event
+
+    def get_calendar_event(self, event_id: str) -> CalendarEvent | None:
+        row_num = self._calendar_row_number(event_id)
+        if row_num is None:
+            return None
+        row = dict(zip(
+            CALENDAR_EVENTS_HEADERS,
+            self._calendar_events().row_values(row_num),
+            strict=False,
+        ))
+        return self._calendar_from_row(row)
+
+    def update_calendar_event(self, event: CalendarEvent) -> CalendarEvent | None:
+        row_num = self._calendar_row_number(event.id)
+        if row_num is None:
+            return None
+        last_col = gspread.utils.rowcol_to_a1(row_num, len(CALENDAR_EVENTS_HEADERS))
+        self._calendar_events().update(
+            f"A{row_num}:{last_col}",
+            [self._calendar_row(event)],
+            value_input_option="RAW",
+        )
+        return event
+
+    def delete_calendar_event(self, event_id: str) -> bool:
+        row_num = self._calendar_row_number(event_id)
+        if row_num is None:
+            return False
+        self._calendar_events().delete_rows(row_num)
+        return True
+
+    # ── Auto-sync helpers ────────────────────────────────────────────────────
+
+    def _find_auto_event(
+        self,
+        related_application_id: str,
+        event_type: CalendarEventType,
+    ) -> CalendarEvent | None:
+        """Find the single Auto-sourced event for an application + type pair."""
+        for ev in self.list_calendar_events():
+            if (
+                ev.related_application_id == related_application_id
+                and ev.event_type == event_type
+                and ev.source == CalendarEventSource.AUTO
+            ):
+                return ev
+        return None
+
+    def sync_followup_event(
+        self,
+        application_id: str,
+        company: str,
+        next_action_due: date | None,
+        event_id_factory: "Callable[[], str]",
+    ) -> None:
+        """Upsert or delete the Auto Follow-up event for an application.
+
+        If next_action_due is not None → upsert (create or update in-place).
+        If next_action_due is None     → delete the auto event if it exists.
+        """
+        existing = self._find_auto_event(application_id, CalendarEventType.FOLLOW_UP)
+        if next_action_due is None:
+            if existing:
+                self.delete_calendar_event(existing.id)
+            return
+
+        if existing:
+            updated = existing.model_copy(update={"date": next_action_due, "title": f"{company} – Follow-up"})
+            self.update_calendar_event(updated)
+        else:
+            new_event = CalendarEvent(
+                id=event_id_factory(),
+                title=f"{company} – Follow-up",
+                event_type=CalendarEventType.FOLLOW_UP,
+                date=next_action_due,
+                time=None,
+                related_application_id=application_id,
+                notes="",
+                source=CalendarEventSource.AUTO,
+            )
+            self.create_calendar_event(new_event)
+
+    def sync_interview_event(
+        self,
+        application_id: str,
+        company: str,
+        interview_date: date | None,
+        interview_round: str,
+        event_id_factory: "Callable[[], str]",
+    ) -> None:
+        """Upsert or delete the Auto Interview event for an application."""
+        existing = self._find_auto_event(application_id, CalendarEventType.INTERVIEW)
+        if interview_date is None:
+            if existing:
+                self.delete_calendar_event(existing.id)
+            return
+
+        title = f"{company} – {interview_round or 'Interview'}"
+        if existing:
+            updated = existing.model_copy(update={"date": interview_date, "title": title})
+            self.update_calendar_event(updated)
+        else:
+            new_event = CalendarEvent(
+                id=event_id_factory(),
+                title=title,
+                event_type=CalendarEventType.INTERVIEW,
+                date=interview_date,
+                time=None,
+                related_application_id=application_id,
+                notes="",
+                source=CalendarEventSource.AUTO,
+            )
+            self.create_calendar_event(new_event)
