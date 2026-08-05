@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.llm_feedback import GroqFeedbackService
 from backend.routes.applications import router as applications_router
 from backend.routes.calendar import router as calendar_router
+from backend.routes.contacts import router as contacts_router
 from backend.routes.dashboard import router as dashboard_router
 from backend.routes.internal import router as internal_router
 from backend.routes.settings import router as settings_router
@@ -51,6 +52,7 @@ app.add_middleware(
 )
 app.include_router(applications_router)
 app.include_router(calendar_router)
+app.include_router(contacts_router)
 app.include_router(dashboard_router)
 app.include_router(internal_router)
 app.include_router(settings_router)
