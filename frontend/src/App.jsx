@@ -63,7 +63,7 @@ export default function App() {
         </div>
       </aside>
       
-      <main className="flex-1 overflow-auto bg-[#07111f] p-6 md:p-8">
+      <main className={`flex-1 overflow-auto p-6 md:p-8 ${view === 'dashboard' ? 'bg-[#07111f]' : 'bg-gray-50 text-gray-900'}`}>
         <View />
       </main>
     </div>
