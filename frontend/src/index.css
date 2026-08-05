@@ -1,4 +1,6 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root { font-family: Inter, ui-sans-serif, system-ui, sans-serif; color: #d7e1ee; background: #07111f; }
 * { box-sizing: border-box; }
