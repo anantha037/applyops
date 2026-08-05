@@ -9,6 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.llm_feedback import GroqFeedbackService
+from backend.routes.analytics import router as analytics_router
 from backend.routes.applications import router as applications_router
 from backend.routes.calendar import router as calendar_router
 from backend.routes.contacts import router as contacts_router
@@ -50,6 +51,7 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
+app.include_router(analytics_router)
 app.include_router(applications_router)
 app.include_router(calendar_router)
 app.include_router(contacts_router)
