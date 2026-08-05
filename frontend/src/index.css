@@ -9,3 +9,5 @@ button, input, select, textarea { font: inherit; }
 .panel { border: 1px solid #1b3045; background: #0b1828; box-shadow: 0 12px 30px rgb(0 0 0 / .15); }
 .label { color: #8092a9; font-size: .68rem; letter-spacing: .12em; text-transform: uppercase; }
 .field { width: 100%; border: 1px solid #23415e; border-radius: .35rem; background: #091522; color: #e5edf7; padding: .58rem .7rem; }
+.light-field { width: 100%; border: 1px solid #e2e8f0; border-radius: .6rem; background: #fff; color: #1e293b; padding: .55rem .75rem; outline: none; transition: border-color .15s, box-shadow .15s; }
+.light-field:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,.12); }
