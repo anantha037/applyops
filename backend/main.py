@@ -15,6 +15,7 @@ from backend.routes.calendar import router as calendar_router
 from backend.routes.contacts import router as contacts_router
 from backend.routes.dashboard import router as dashboard_router
 from backend.routes.internal import router as internal_router
+from backend.routes.reports import router as reports_router
 from backend.routes.settings import router as settings_router
 from backend.scheduler import ApplyOpsScheduler
 from backend.sheets_client import SheetsClient
@@ -57,4 +58,5 @@ app.include_router(calendar_router)
 app.include_router(contacts_router)
 app.include_router(dashboard_router)
 app.include_router(internal_router)
+app.include_router(reports_router)
 app.include_router(settings_router)
