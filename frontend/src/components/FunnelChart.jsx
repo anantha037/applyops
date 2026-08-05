@@ -1,2 +1,1 @@
-// Funnel chart component will be added in Phase 4.
-
+export default function FunnelChart({ funnel = {} }) { const max = Math.max(1, ...Object.values(funnel)); return <div className="panel rounded-lg p-4"><p className="label mb-4">Pipeline signal</p><div className="space-y-3">{Object.entries(funnel).map(([label, count]) => <div key={label}><div className="mb-1 flex justify-between text-xs"><span>{label}</span><span className="text-cyan-300">{count}</span></div><div className="h-2 bg-slate-800"><div className="h-2 bg-cyan-400" style={{ width: `${count / max * 100}%` }} /></div></div>)}</div></div> }
