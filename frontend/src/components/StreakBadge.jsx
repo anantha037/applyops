@@ -1,2 +1,1 @@
-// Streak badge component will be added in Phase 4.
-
+export default function StreakBadge({ days = 0 }) { return <div className="panel rounded-lg p-4"><p className="label">Goal streak</p><p className="mt-2 text-3xl font-black text-amber-300">{days}<span className="ml-1 text-sm font-medium text-slate-400">days</span></p></div> }
