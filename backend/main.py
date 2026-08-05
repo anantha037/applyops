@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+import os
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from backend.llm_feedback import GroqFeedbackService
 from backend.routes.applications import router as applications_router
@@ -34,6 +36,18 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="ApplyOps API", version="0.1.0", lifespan=lifespan)
+allowed_origins = [
+    origin.strip()
+    for origin in os.getenv("ALLOWED_ORIGINS", "http://localhost:5173").split(",")
+    if origin.strip()
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["*"],
+)
 app.include_router(applications_router)
 app.include_router(dashboard_router)
 app.include_router(internal_router)
