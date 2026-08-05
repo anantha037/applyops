@@ -1,2 +1,1 @@
-// Goal ring component will be added in Phase 4.
-
+export default function GoalRing({ count = 0, goal = 0 }) { const pct = goal ? Math.min(100, Math.round(count / goal * 100)) : 0; return <div className="panel flex items-center gap-4 rounded-lg p-4"><div className="grid h-20 w-20 place-items-center rounded-full border-4 border-cyan-400 text-lg font-black">{pct}%</div><div><p className="label">Today’s outreach</p><p className="mt-1 text-2xl font-bold">{count}<span className="text-slate-500"> / {goal || '—'}</span></p></div></div> }
