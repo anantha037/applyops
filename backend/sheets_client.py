@@ -16,7 +16,7 @@ from backend.models import (
     Activity, ActivityCreate, Application,
     CalendarEvent, CalendarEventCreate, CalendarEventSource, CalendarEventType, CalendarEventUpdate,
     ContactCreate, ContactManual, ContactView,
-    Settings, SettingsUpdate, utc_now,
+    DailySnapshot, Settings, SettingsUpdate, utc_now,
 )
 
 load_dotenv(Path(__file__).resolve().parents[1] / ".env")
@@ -38,6 +38,11 @@ CALENDAR_EVENTS_HEADERS = [
 CONTACTS_MANUAL_HEADERS = [
     "ID", "Name", "Company", "Role", "Email", "Phone", "Tags", "Notes",
 ]
+DAILY_SNAPSHOTS_HEADERS = [
+    "Date", "Total Applications", "Not Contacted", "In Progress",
+    "Interviewing", "Offer Received", "Rejected", "Ghosted",
+    "Response Rate", "Calls Dialed", "Calls Connected", "Interviews Attended"
+]
 
 WORKSHEET_HEADERS = {
     "Applications":    APPLICATIONS_HEADERS,
@@ -45,6 +50,7 @@ WORKSHEET_HEADERS = {
     "Settings":        SETTINGS_HEADERS,
     "Calendar Events": CALENDAR_EVENTS_HEADERS,
     "Contacts_Manual": CONTACTS_MANUAL_HEADERS,
+    "Daily Snapshots": DAILY_SNAPSHOTS_HEADERS,
 }
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
@@ -576,3 +582,67 @@ class SheetsClient:
         # Sort: most recently contacted first, then alphabetical
         result.sort(key=lambda c: (c.last_contacted or "", c.name))
         return result
+
+
+    # ── Daily Snapshots ──────────────────────────────────────────────────────
+
+    def _daily_snapshots_ws(self) -> gspread.Worksheet:
+        return self._spreadsheet.worksheet("Daily Snapshots")
+
+    def list_daily_snapshots(self) -> list[DailySnapshot]:
+        records = self._daily_snapshots_ws().get_all_records()
+        snapshots = []
+        for row in records:
+            if not row.get("Date"):
+                continue
+            snapshots.append(DailySnapshot(
+                date=datetime.strptime(str(row["Date"]), "%Y-%m-%d").date(),
+                total_applications=int(row.get("Total Applications") or 0),
+                not_contacted=int(row.get("Not Contacted") or 0),
+                in_progress=int(row.get("In Progress") or 0),
+                interviewing=int(row.get("Interviewing") or 0),
+                offer_received=int(row.get("Offer Received") or 0),
+                rejected=int(row.get("Rejected") or 0),
+                ghosted=int(row.get("Ghosted") or 0),
+                response_rate=float(str(row.get("Response Rate", 0)).strip('%') or 0),
+                calls_dialed=int(row.get("Calls Dialed") or 0),
+                calls_connected=int(row.get("Calls Connected") or 0),
+                interviews_attended=int(row.get("Interviews Attended") or 0)
+            ))
+        return snapshots
+
+    def save_daily_snapshot(self, snapshot: DailySnapshot) -> None:
+        """Upsert a daily snapshot by date."""
+        ws = self._daily_snapshots_ws()
+        records = ws.get_all_records()
+        
+        date_str = snapshot.date.isoformat()
+        row_idx = None
+        for i, row in enumerate(records):
+            if row.get("Date") == date_str:
+                row_idx = i + 2  # +2 because header is row 1, 0-indexed enumerate
+                break
+                
+        row_data = [
+            date_str,
+            snapshot.total_applications,
+            snapshot.not_contacted,
+            snapshot.in_progress,
+            snapshot.interviewing,
+            snapshot.offer_received,
+            snapshot.rejected,
+            snapshot.ghosted,
+            snapshot.response_rate,
+            snapshot.calls_dialed,
+            snapshot.calls_connected,
+            snapshot.interviews_attended,
+        ]
+        
+        if row_idx:
+            # Update existing row
+            cell_range = f"A{row_idx}:L{row_idx}"
+            ws.update(values=[row_data], range_name=cell_range, value_input_option="RAW")
+        else:
+            # Append new row
+            ws.append_row(row_data, value_input_option="RAW")
+
