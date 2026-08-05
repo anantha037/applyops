@@ -11,3 +11,28 @@ button, input, select, textarea { font: inherit; }
 .field { width: 100%; border: 1px solid #23415e; border-radius: .35rem; background: #091522; color: #e5edf7; padding: .58rem .7rem; }
 .light-field { width: 100%; border: 1px solid #e2e8f0; border-radius: .6rem; background: #fff; color: #1e293b; padding: .55rem .75rem; outline: none; transition: border-color .15s, box-shadow .15s; }
 .light-field:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,.12); }
+
+/* ── react-big-calendar theme overrides ──────────────────────────────────── */
+.rbc-wrapper { font-family: inherit; }
+.rbc-wrapper .rbc-calendar { font-family: inherit; font-size: 12px; }
+.rbc-wrapper .rbc-header { padding: 10px 4px; font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: .06em; border-bottom: 1px solid #f3f4f6; background: #fafafa; }
+.rbc-wrapper .rbc-month-view, .rbc-wrapper .rbc-time-view { border: none; }
+.rbc-wrapper .rbc-day-bg { border-color: #f3f4f6; }
+.rbc-wrapper .rbc-off-range-bg { background: #fafafa; }
+.rbc-wrapper .rbc-today { background: #eef2ff; }
+.rbc-wrapper .rbc-date-cell { padding: 6px 8px; font-size: 11px; font-weight: 600; color: #374151; }
+.rbc-wrapper .rbc-date-cell.rbc-off-range { color: #d1d5db; }
+.rbc-wrapper .rbc-show-more { font-size: 10px; font-weight: 700; color: #6366f1; background: transparent; padding: 1px 6px; }
+.rbc-wrapper .rbc-event { padding: 0; border-radius: 6px; border: none; box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+.rbc-wrapper .rbc-event.rbc-selected { outline: 2px solid #6366f1; outline-offset: 1px; box-shadow: none; }
+.rbc-wrapper .rbc-event-label { display: none; }
+.rbc-wrapper .rbc-toolbar { display: none; }
+.rbc-wrapper .rbc-time-header-content .rbc-header { border-bottom: 1px solid #f3f4f6; }
+.rbc-wrapper .rbc-time-slot { font-size: 10px; color: #9ca3af; }
+.rbc-wrapper .rbc-timeslot-group { border-color: #f3f4f6; }
+.rbc-wrapper .rbc-time-content { border-top: 1px solid #f3f4f6; }
+.rbc-wrapper .rbc-current-time-indicator { background: #6366f1; height: 2px; }
+.rbc-wrapper .rbc-row-segment .rbc-event-content { font-size: 11px; font-weight: 600; }
+.rbc-wrapper .rbc-month-row { border-color: #f3f4f6; }
+.rbc-wrapper .rbc-day-slot .rbc-time-slot { border-color: #f9fafb; }
+.rbc-wrapper .rbc-slot-selection { background: rgba(99,102,241,.1); border-color: #6366f1; }
