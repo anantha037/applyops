@@ -21,4 +21,6 @@ export const api = {
   createCalendarEvent: body => request('/calendar/events', { method: 'POST', body: JSON.stringify(body) }),
   updateCalendarEvent: (id, body) => request(`/calendar/events/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
   deleteCalendarEvent: id => request(`/calendar/events/${id}`, { method: 'DELETE' }),
+  contacts: () => request('/contacts'),
+  createContact: body => request('/contacts', { method: 'POST', body: JSON.stringify(body) }),
 }
