@@ -15,6 +15,7 @@ from google.oauth2.service_account import Credentials
 from backend.models import (
     Activity, ActivityCreate, Application,
     CalendarEvent, CalendarEventCreate, CalendarEventSource, CalendarEventType, CalendarEventUpdate,
+    ContactCreate, ContactManual, ContactView,
     Settings, SettingsUpdate, utc_now,
 )
 
@@ -34,12 +35,16 @@ CALENDAR_EVENTS_HEADERS = [
     "ID", "Title", "Event Type", "Date", "Time",
     "Related Application ID", "Notes", "Source",
 ]
+CONTACTS_MANUAL_HEADERS = [
+    "ID", "Name", "Company", "Role", "Email", "Phone", "Tags", "Notes",
+]
 
 WORKSHEET_HEADERS = {
-    "Applications": APPLICATIONS_HEADERS,
-    "Activity Log": ACTIVITY_LOG_HEADERS,
-    "Settings": SETTINGS_HEADERS,
+    "Applications":    APPLICATIONS_HEADERS,
+    "Activity Log":    ACTIVITY_LOG_HEADERS,
+    "Settings":        SETTINGS_HEADERS,
     "Calendar Events": CALENDAR_EVENTS_HEADERS,
+    "Contacts_Manual": CONTACTS_MANUAL_HEADERS,
 }
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
@@ -427,3 +432,147 @@ class SheetsClient:
                 source=CalendarEventSource.AUTO,
             )
             self.create_calendar_event(new_event)
+
+    # ── Contacts_Manual ──────────────────────────────────────────────────────
+
+    def _contacts_manual_ws(self) -> gspread.Worksheet:
+        return self._spreadsheet.worksheet("Contacts_Manual")
+
+    @staticmethod
+    def _contact_manual_from_row(row: dict[str, Any]) -> ContactManual:
+        return ContactManual(
+            id=row["ID"],
+            name=row["Name"],
+            company=row.get("Company", ""),
+            role=row.get("Role", ""),
+            email=row.get("Email", ""),
+            phone=row.get("Phone", ""),
+            tags=row.get("Tags", ""),
+            notes=row.get("Notes", ""),
+        )
+
+    def list_contacts_manual(self) -> list[ContactManual]:
+        return [
+            self._contact_manual_from_row(row)
+            for row in self._contacts_manual_ws().get_all_records()
+            if row.get("ID")
+        ]
+
+    def create_contact_manual(self, contact: ContactManual) -> ContactManual:
+        self._contacts_manual_ws().append_row(
+            [
+                contact.id, contact.name, contact.company, contact.role,
+                contact.email, contact.phone, contact.tags, contact.notes,
+            ],
+            value_input_option="RAW",
+        )
+        return contact
+
+    # ── Merged contacts view ─────────────────────────────────────────────────
+
+    def get_contacts_merged(self) -> list[ContactView]:
+        """Merge Application-derived HR contacts with Contacts_Manual, deduped by email.
+
+        Enrichment from Activity Log:
+          last_contacted — latest timestamp for any activity linked to that application
+          responded      — True if any "Call Connected" or "Interview Completed" exists
+        """
+        applications   = self.list_applications()
+        all_activities = self.list_activity(None)
+
+        # Build per-application activity maps
+        last_touched: dict[str, str] = {}   # app_id → latest ISO timestamp string
+        responded_ids: set[str] = set()
+
+        for act in all_activities:
+            app_id = act.application_id
+            ts_str = act.timestamp.isoformat()
+            if app_id not in last_touched or ts_str > last_touched[app_id]:
+                last_touched[app_id] = ts_str
+            if act.action_type in ("Call Connected", "Interview Completed"):
+                responded_ids.add(app_id)
+
+        # Normalise email for dedup (lowercase, strip)
+        def _norm(email: str) -> str:
+            return email.strip().lower()
+
+        # --- Build contacts from Applications HR fields ---
+        # key: normalised email (non-empty) → ContactView
+        by_email: dict[str, ContactView] = {}
+        # contacts with no email, keyed by application_id
+        no_email: list[ContactView] = []
+
+        for app in applications:
+            hr_name  = (app.hr_name  or "").strip()
+            hr_email = (app.hr_email or "").strip()
+            hr_phone = (app.hr_phone or "").strip()
+
+            if not hr_name and not hr_email and not hr_phone:
+                continue  # no HR info at all — skip
+
+            app_last = None
+            if app.id in last_touched:
+                # Convert timestamp to date string for the response
+                app_last = last_touched[app.id][:10]
+
+            contact = ContactView(
+                id=f"app:{app.id}",
+                name=hr_name or f"HR at {app.company}",
+                company=app.company or "",
+                role="",
+                email=hr_email,
+                phone=hr_phone,
+                tags="",
+                notes="",
+                source="application",
+                application_id=app.id,
+                last_contacted=app_last,
+                responded=app.id in responded_ids,
+            )
+
+            norm = _norm(hr_email)
+            if norm:
+                by_email[norm] = contact
+            else:
+                no_email.append(contact)
+
+        # --- Merge in Contacts_Manual, deduping by email ---
+        for manual in self.list_contacts_manual():
+            norm = _norm(manual.email)
+            if norm and norm in by_email:
+                # Email exists from an application — merge: enrich source flag and
+                # fill any blank fields the application record left empty.
+                existing = by_email[norm]
+                by_email[norm] = existing.model_copy(update={
+                    "source":  "both",
+                    "name":    existing.name  or manual.name,
+                    "role":    existing.role  or manual.role,
+                    "tags":    existing.tags  or manual.tags,
+                    "notes":   existing.notes or manual.notes,
+                    "phone":   existing.phone or manual.phone,
+                })
+            else:
+                # New contact — add as manual-only
+                view = ContactView(
+                    id=f"manual:{manual.id}",
+                    name=manual.name,
+                    company=manual.company,
+                    role=manual.role,
+                    email=manual.email,
+                    phone=manual.phone,
+                    tags=manual.tags,
+                    notes=manual.notes,
+                    source="manual",
+                    application_id=None,
+                    last_contacted=None,
+                    responded=False,
+                )
+                if norm:
+                    by_email[norm] = view
+                else:
+                    no_email.append(view)
+
+        result = list(by_email.values()) + no_email
+        # Sort: most recently contacted first, then alphabetical
+        result.sort(key=lambda c: (c.last_contacted or "", c.name))
+        return result
