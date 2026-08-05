@@ -242,3 +242,21 @@ class ContactView(BaseModel):
     application_id:        str | None = None
     last_contacted:        str | None = None  # ISO date string or None
     responded:             bool = False
+
+
+# ── Analytics ────────────────────────────────────────────────────────────────
+
+class DailySnapshot(BaseModel):
+    """A daily aggregated snapshot of the user's application pipeline."""
+    date: date
+    total_applications: int
+    not_contacted: int
+    in_progress: int
+    interviewing: int
+    offer_received: int
+    rejected: int
+    ghosted: int
+    response_rate: float
+    calls_dialed: int
+    calls_connected: int
+    interviews_attended: int
