@@ -9,6 +9,44 @@ from typing import Annotated
 from pydantic import BaseModel, ConfigDict, Field
 
 
+class CalendarEventType(StrEnum):
+    FOLLOW_UP            = "Follow-up"
+    INTERVIEW            = "Interview"
+    APPLICATION_DEADLINE = "Application Deadline"
+    REMINDER             = "Reminder"
+    PERSONAL             = "Personal"
+
+
+class CalendarEventSource(StrEnum):
+    AUTO   = "Auto"
+    MANUAL = "Manual"
+
+
+class CalendarEventCreate(BaseModel):
+    """Payload for a new calendar event (manual creation only)."""
+    title:                  str
+    event_type:             CalendarEventType
+    date:                   date
+    time:                   str | None = None
+    related_application_id: str | None = None
+    notes:                  str        = ""
+    source:                 CalendarEventSource = CalendarEventSource.MANUAL
+
+
+class CalendarEventUpdate(BaseModel):
+    """Partial update payload for a calendar event."""
+    title:      str | None = None
+    event_type: CalendarEventType | None = None
+    event_date: date | None = None   # renamed from `date` to avoid shadowing the type
+    time:       str  | None = None
+    notes:      str  | None = None
+
+
+class CalendarEvent(CalendarEventCreate):
+    """Persisted calendar event record."""
+    id: str
+
+
 class ApplicationStatus(StrEnum):
     NOT_CONTACTED = "Not Contacted"
     IN_PROGRESS = "In Progress"
