@@ -2,9 +2,10 @@ import { useState } from 'react'
 import Dashboard from './pages/Dashboard'
 import Applications from './pages/Applications'
 import Calendar from './pages/Calendar'
+import Contacts from './pages/Contacts'
 import Settings from './pages/Settings'
 
-const views = { dashboard: Dashboard, applications: Applications, calendar: Calendar, settings: Settings }
+const views = { dashboard: Dashboard, applications: Applications, calendar: Calendar, contacts: Contacts, settings: Settings }
 
 export default function App() {
   const [view, setView] = useState('dashboard')
