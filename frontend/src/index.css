@@ -1,0 +1,9 @@
+@import "tailwindcss";
+
+:root { font-family: Inter, ui-sans-serif, system-ui, sans-serif; color: #d7e1ee; background: #07111f; }
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; background: #07111f; }
+button, input, select, textarea { font: inherit; }
+.panel { border: 1px solid #1b3045; background: #0b1828; box-shadow: 0 12px 30px rgb(0 0 0 / .15); }
+.label { color: #8092a9; font-size: .68rem; letter-spacing: .12em; text-transform: uppercase; }
+.field { width: 100%; border: 1px solid #23415e; border-radius: .35rem; background: #091522; color: #e5edf7; padding: .58rem .7rem; }
