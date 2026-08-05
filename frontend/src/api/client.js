@@ -12,4 +12,13 @@ export const api = {
   updateApplication: (id, body) => request(`/applications/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
   settings: () => request('/settings'), updateSettings: body => request('/settings', { method: 'PATCH', body: JSON.stringify(body) }),
   logActivity: body => request('/activity', { method: 'POST', body: JSON.stringify(body) }),
+  calendarEvents: (start, end) => {
+    const params = new URLSearchParams()
+    if (start) params.set('start', start)
+    if (end)   params.set('end',   end)
+    return request(`/calendar/events?${params}`)
+  },
+  createCalendarEvent: body => request('/calendar/events', { method: 'POST', body: JSON.stringify(body) }),
+  updateCalendarEvent: (id, body) => request(`/calendar/events/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  deleteCalendarEvent: id => request(`/calendar/events/${id}`, { method: 'DELETE' }),
 }
