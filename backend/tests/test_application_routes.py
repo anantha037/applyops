@@ -41,6 +41,13 @@ class FakeSheetsClient:
     def list_activity(self, _activity_date) -> list[Activity]:
         return self.activities
 
+    # Stubs for calendar auto-sync — not under test here; see test_calendar_sync.py
+    def sync_followup_event(self, *args, **kwargs) -> None:
+        pass
+
+    def sync_interview_event(self, *args, **kwargs) -> None:
+        pass
+
 
 def test_application_crud_and_activity_routes() -> None:
     app = FastAPI()
