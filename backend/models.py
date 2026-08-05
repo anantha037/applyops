@@ -147,5 +147,21 @@ class DailyFeedback(BaseModel):
     message: str
 
 
+class Settings(BaseModel):
+    daily_goal: int = Field(default=0, ge=0)
+    working_hours_start: str = ""
+    working_hours_end: str = ""
+    telegram_chat_id: str = ""
+    dashboard_pin: str = ""
+
+
+class SettingsUpdate(BaseModel):
+    daily_goal: int | None = Field(default=None, ge=0)
+    working_hours_start: str | None = None
+    working_hours_end: str | None = None
+    telegram_chat_id: str | None = None
+    dashboard_pin: str | None = None
+
+
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
