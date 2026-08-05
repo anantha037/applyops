@@ -46,7 +46,19 @@ def create_application(payload: ApplicationCreate, request: Request) -> Applicat
         id=str(uuid4()),
         **application_data,
     )
-    return _sheets(request).create_application(application)
+    sheets = _sheets(request)
+    sheets.create_application(application)
+    # Auto-sync calendar events
+    sheets.sync_followup_event(
+        application.id, application.company, application.next_action_due, lambda: str(uuid4())
+    )
+    if application.interview_date:
+        sheets.sync_interview_event(
+            application.id, application.company,
+            application.interview_date, application.interview_round,
+            lambda: str(uuid4()),
+        )
+    return application
 
 
 @router.patch("/applications/{application_id}", response_model=Application)
@@ -64,7 +76,20 @@ def update_application(
         updated.next_action_due = calculate_next_action_due(
             ApplicationStage(updated.stage), updated.last_touch_date, updated.status
         )
-    return sheets.update_application(updated) or _not_found()
+    result = sheets.update_application(updated)
+    if result is None:
+        _not_found()
+    # Auto-sync calendar events whenever relevant fields change
+    if {"stage", "last_touch_date", "status", "next_action_due", "interview_date", "interview_round"} & changes.keys():
+        sheets.sync_followup_event(
+            updated.id, updated.company, updated.next_action_due, lambda: str(uuid4())
+        )
+        sheets.sync_interview_event(
+            updated.id, updated.company,
+            updated.interview_date, updated.interview_round or "",
+            lambda: str(uuid4()),
+        )
+    return result
 
 
 @router.delete("/applications/{application_id}", status_code=status.HTTP_204_NO_CONTENT)
