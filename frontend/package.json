@@ -12,7 +12,8 @@
     "date-fns": "^4.4.0",
     "react": "^19.0.0",
     "react-big-calendar": "^1.20.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "recharts": "^3.10.1"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.4.1",
