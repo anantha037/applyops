@@ -19,8 +19,8 @@ export default function DashboardLayout({ children, currentView, onViewChange, o
     localStorage.setItem('applyops-sidebar-collapsed', isCollapsed ? 'true' : 'false')
   }, [isCollapsed])
 
-  // Dashboard is always dark per design spec. Other pages follow user preference.
-  const contentTheme = currentView === 'dashboard' ? 'dark' : theme
+  // Content area follows active user theme preference (light or dark)
+  const contentTheme = theme
 
   const handleThemeChange = (newTheme) => {
     setTheme(newTheme)

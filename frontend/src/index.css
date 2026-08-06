@@ -3,23 +3,18 @@
 @tailwind utilities;
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   DESIGN TOKENS — ApplyOps Design System
-   All colors are semantic variables. Components must never hardcode colors.
+   DESIGN SYSTEM TOKEN SCHEMES (Commercial SaaS Palette)
    ═══════════════════════════════════════════════════════════════════════════ */
 
 :root {
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-
-  /* ── Surfaces ─────────────────────────────────────────────────────────── */
+  /* ── Light Theme Tokens ───────────────────────────────────────────────── */
   --background: #F8FAFC;
   --surface: #FFFFFF;
   --surface-secondary: #F1F5F9;
   --surface-tertiary: #E8EDF2;
   --card: #FFFFFF;
 
-  /* ── Borders ──────────────────────────────────────────────────────────── */
+  /* ── Borders (Light Shade Border) ─────────────────────────────────────── */
   --border: #E2E8F0;
   --border-secondary: #CBD5E1;
 
@@ -45,15 +40,15 @@
   --info: #0284C7;
   --info-light: #F0F9FF;
 
-  /* ── Sidebar (Light Theme - Commercial SaaS Palette) ─────────────────── */
-  --sidebar-bg: #F8FAFC;
+  /* ── Sidebar (Light Theme - Soft Light Hash Tone) ─────────────────────── */
+  --sidebar-bg: #F1F5F9;
   --sidebar-surface: #FFFFFF;
   --sidebar-border: #E2E8F0;
   --sidebar-text: #0F172A;
   --sidebar-text-muted: #64748B;
   --sidebar-active-bg: #EEF2FF;
   --sidebar-active-text: #4F46E5;
-  --sidebar-hover: #F1F5F9;
+  --sidebar-hover: #E2E8F0;
 
   /* ── Misc ──────────────────────────────────────────────────────────────── */
   --overlay: rgba(0, 0, 0, 0.5);
@@ -62,14 +57,14 @@
 
 /* ── Dark Theme ──────────────────────────────────────────────────────────── */
 [data-theme="dark"] {
-  --background: #0B0F19;
-  --surface: #131B2E;
-  --surface-secondary: #1A243B;
-  --surface-tertiary: #23304B;
-  --card: #131B2E;
+  --background: #090D16;
+  --surface: #111827;
+  --surface-secondary: #1F2937;
+  --surface-tertiary: #374151;
+  --card: #111827;
 
-  --border: #1E293B;
-  --border-secondary: #2E3E58;
+  --border: rgba(255, 255, 255, 0.04);
+  --border-secondary: rgba(255, 255, 255, 0.07);
 
   --foreground: #F8FAFC;
   --foreground-secondary: #94A3B8;
@@ -90,27 +85,23 @@
   --info: #38BDF8;
   --info-light: rgba(56, 189, 248, 0.12);
 
-  /* ── Sidebar (Dark Theme - Commercial SaaS Dark) ───────────────────────── */
-  --sidebar-bg: #0B0F19;
-  --sidebar-surface: #131B2E;
-  --sidebar-border: #1E293B;
+  /* ── Sidebar (Dark Theme - Sleek Translucent Dark Border System) ───────── */
+  --sidebar-bg: #080C14;
+  --sidebar-surface: #111827;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
   --sidebar-text: #F8FAFC;
   --sidebar-text-muted: #64748B;
-  --sidebar-active-bg: rgba(99, 102, 241, 0.15);
+  --sidebar-active-bg: rgba(99, 102, 241, 0.16);
   --sidebar-active-text: #818CF8;
-  --sidebar-hover: rgba(255, 255, 255, 0.05);
+  --sidebar-hover: rgba(255, 255, 255, 0.04);
 
   --overlay: rgba(0, 0, 0, 0.7);
   --shadow-color: rgba(0, 0, 0, 0.25);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   BASE STYLES
+   BASE STYLES & UTILITIES
    ═══════════════════════════════════════════════════════════════════════════ */
-
-* {
-  box-sizing: border-box;
-}
 
 body {
   margin: 0;
@@ -133,254 +124,4 @@ body {
 
 button, input, select, textarea {
   font: inherit;
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   COMPONENT CLASSES
-   Reusable classes consumed by JSX components via className.
-   ═══════════════════════════════════════════════════════════════════════════ */
-
-/* ── Card / Panel ───────────────────────────────────────────────────────── */
-.card {
-  border: 1px solid var(--border);
-  border-radius: 0.75rem;
-  background: var(--card);
-  transition: background-color 200ms ease-in-out, border-color 200ms ease-in-out;
-}
-
-/* Legacy alias — keep until all pages migrate */
-.panel {
-  border: 1px solid var(--border);
-  background: var(--surface);
-  box-shadow: 0 1px 3px var(--shadow-color);
-  transition: background-color 200ms ease-in-out, border-color 200ms ease-in-out, box-shadow 200ms ease-in-out;
-}
-
-/* ── Labels ─────────────────────────────────────────────────────────────── */
-.label {
-  color: var(--foreground-secondary);
-  font-size: .68rem;
-  letter-spacing: .12em;
-  text-transform: uppercase;
-}
-
-/* ── Input fields ───────────────────────────────────────────────────────── */
-.field {
-  width: 100%;
-  border: 1px solid var(--border);
-  border-radius: .5rem;
-  background: var(--surface-secondary);
-  color: var(--foreground);
-  padding: .58rem .7rem;
-  outline: none;
-  transition: border-color .15s, background-color 200ms ease-in-out, color 200ms ease-in-out;
-}
-
-.field:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px var(--ring);
-}
-
-.field::placeholder {
-  color: var(--placeholder);
-}
-
-.light-field {
-  width: 100%;
-  border: 1px solid var(--border);
-  border-radius: .6rem;
-  background: var(--surface);
-  color: var(--foreground);
-  padding: .55rem .75rem;
-  outline: none;
-  transition: border-color .15s, box-shadow .15s, background-color 200ms ease-in-out, color 200ms ease-in-out;
-}
-
-.light-field:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px var(--ring);
-}
-
-.light-field::placeholder {
-  color: var(--placeholder);
-}
-
-/* ── Buttons ────────────────────────────────────────────────────────────── */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  border-radius: 0.625rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  padding: 0.5rem 1rem;
-  transition: all 150ms ease-in-out;
-  cursor: pointer;
-  border: none;
-  outline: none;
-}
-
-.btn:focus-visible {
-  box-shadow: 0 0 0 3px var(--ring);
-}
-
-.btn:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-
-.btn-primary {
-  background: var(--primary);
-  color: var(--primary-foreground);
-}
-.btn-primary:hover:not(:disabled) {
-  background: var(--primary-hover);
-}
-
-.btn-secondary {
-  background: var(--surface-secondary);
-  color: var(--foreground);
-  border: 1px solid var(--border);
-}
-.btn-secondary:hover:not(:disabled) {
-  background: var(--surface-tertiary);
-  border-color: var(--border-secondary);
-}
-
-.btn-ghost {
-  background: transparent;
-  color: var(--foreground-secondary);
-}
-.btn-ghost:hover:not(:disabled) {
-  background: var(--surface-secondary);
-  color: var(--foreground);
-}
-
-.btn-danger {
-  background: var(--danger);
-  color: white;
-}
-.btn-danger:hover:not(:disabled) {
-  opacity: 0.9;
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   REACT-BIG-CALENDAR THEME OVERRIDES
-   ═══════════════════════════════════════════════════════════════════════════ */
-.rbc-wrapper {
-  font-family: inherit;
-}
-
-.rbc-wrapper .rbc-calendar {
-  font-family: inherit;
-  font-size: 12px;
-}
-
-.rbc-wrapper .rbc-header {
-  padding: 10px 4px;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--foreground-secondary);
-  text-transform: uppercase;
-  letter-spacing: .06em;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface-secondary);
-}
-
-.rbc-wrapper .rbc-month-view, .rbc-wrapper .rbc-time-view {
-  border: none;
-}
-
-.rbc-wrapper .rbc-day-bg {
-  border-color: var(--border);
-}
-
-.rbc-wrapper .rbc-off-range-bg {
-  background: var(--surface-secondary);
-  opacity: 0.5;
-}
-
-.rbc-wrapper .rbc-today {
-  background: rgba(99, 102, 241, 0.08);
-}
-
-.rbc-wrapper .rbc-date-cell {
-  padding: 6px 8px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--foreground);
-}
-
-.rbc-wrapper .rbc-date-cell.rbc-off-range {
-  color: var(--muted);
-}
-
-.rbc-wrapper .rbc-show-more {
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--primary);
-  background: transparent;
-  padding: 1px 6px;
-}
-
-.rbc-wrapper .rbc-event {
-  padding: 0;
-  border-radius: 6px;
-  border: none;
-  box-shadow: 0 1px 2px var(--shadow-color);
-}
-
-.rbc-wrapper .rbc-event.rbc-selected {
-  outline: 2px solid var(--primary);
-  outline-offset: 1px;
-  box-shadow: none;
-}
-
-.rbc-wrapper .rbc-event-label {
-  display: none;
-}
-
-.rbc-wrapper .rbc-toolbar {
-  display: none;
-}
-
-.rbc-wrapper .rbc-time-header-content .rbc-header {
-  border-bottom: 1px solid var(--border);
-}
-
-.rbc-wrapper .rbc-time-slot {
-  font-size: 10px;
-  color: var(--muted);
-}
-
-.rbc-wrapper .rbc-timeslot-group {
-  border-color: var(--border);
-}
-
-.rbc-wrapper .rbc-time-content {
-  border-top: 1px solid var(--border);
-}
-
-.rbc-wrapper .rbc-current-time-indicator {
-  background: var(--primary);
-  height: 2px;
-}
-
-.rbc-wrapper .rbc-row-segment .rbc-event-content {
-  font-size: 11px;
-  font-weight: 600;
-}
-
-.rbc-wrapper .rbc-month-row {
-  border-color: var(--border);
-}
-
-.rbc-wrapper .rbc-day-slot .rbc-time-slot {
-  border-color: var(--border);
-}
-
-.rbc-wrapper .rbc-slot-selection {
-  background: rgba(99, 102, 241, .1);
-  border-color: var(--primary);
 }
