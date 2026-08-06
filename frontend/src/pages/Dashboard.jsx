@@ -37,6 +37,33 @@ export default function Dashboard() {
     'Ghosted': '#F97316' // Orange
   }
 
+  const funnelStages = [
+    { 
+      key: 'Applied', 
+      label: 'Applications Sent', 
+      count: total, 
+      color: 'bg-primary'
+    },
+    { 
+      key: 'Contacted', 
+      label: 'Responses Received', 
+      count: Math.max(0, total - (funnel['Not Contacted'] || 0)), 
+      color: 'bg-info'
+    },
+    { 
+      key: 'Interviewing', 
+      label: 'Interviews Attended', 
+      count: funnel['Interviewing'] || 0, 
+      color: 'bg-warning'
+    },
+    { 
+      key: 'Offers', 
+      label: 'Offers Received', 
+      count: funnel['Offer Received'] || 0, 
+      color: 'bg-success'
+    }
+  ]
+
   return (
     <section className="animate-fade-in pb-10">
       <div className="mb-8 flex items-end justify-between">
@@ -65,27 +92,49 @@ export default function Dashboard() {
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
         {/* Application Funnel */}
         <div className="panel flex flex-col rounded-xl p-5 border border-border bg-surface">
-          <div className="flex items-center justify-between mb-6">
-             <h3 className="text-sm font-semibold text-foreground">Application Funnel</h3>
-             <span className="text-[10px] text-foreground-secondary bg-surface-secondary px-2 py-1 rounded">All Time</span>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-sm font-bold text-foreground">Application Funnel</h3>
+              <p className="text-[11px] text-foreground-secondary mt-0.5">Pipeline conversion rates</p>
+            </div>
+            <span className="text-[10px] font-bold text-foreground-secondary bg-surface-secondary px-2 py-1 rounded">All Time</span>
           </div>
-          <div className="flex-1 flex flex-col justify-center space-y-5 px-4">
-             {Object.entries({ 
-                Applied: total, 
-                Contacted: total - (funnel['Not Contacted'] || 0), 
-                Interviewing: funnel['Interviewing'] || 0, 
-                Offers: funnel['Offer Received'] || 0 
-             }).map(([k, v], i) => (
-                <div key={k} className="relative w-full group">
-                   <div className="flex items-center justify-between text-[11px] font-semibold text-foreground-secondary mb-1.5 z-10 relative px-1">
-                      <span className="uppercase tracking-wider">{k}</span> 
-                      <span className="text-foreground">{v}</span>
-                   </div>
-                   <div className="h-9 bg-surface-secondary rounded-lg overflow-hidden mx-auto transition-all shadow-inner" style={{ width: `${100 - i * 15}%` }}>
-                      <div className={`h-full ${['bg-primary', 'bg-blue-500', 'bg-emerald-500', 'bg-amber-500'][i]} bg-opacity-80 group-hover:bg-opacity-100 transition-colors`} style={{ width: '100%' }} />
-                   </div>
+
+          <div className="flex-1 flex flex-col justify-between space-y-2 py-1">
+            {funnelStages.map((stage, i) => {
+              const maxCount = total || 1
+              const pct = Math.round((stage.count / maxCount) * 100)
+              const prevCount = i > 0 ? funnelStages[i - 1].count : null
+              const passRate = prevCount && prevCount > 0 ? Math.round((stage.count / prevCount) * 100) : null
+
+              return (
+                <div key={stage.key} className="group p-2.5 rounded-lg bg-surface-secondary/40 hover:bg-surface-secondary/80 border border-border/50 transition-all">
+                  <div className="flex items-center justify-between text-xs mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className={`w-2.5 h-2.5 rounded-full ${stage.color} flex-shrink-0`} />
+                      <span className="font-semibold text-foreground">{stage.label}</span>
+                      {passRate !== null && (
+                        <span className="text-[10px] text-muted font-medium ml-1">
+                          ({passRate}% conv.)
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-foreground">{stage.count}</span>
+                      <span className="text-[10px] font-semibold text-muted w-9 text-right">{pct}%</span>
+                    </div>
+                  </div>
+
+                  {/* Contiguous Progress Fill Bar */}
+                  <div className="h-2 w-full bg-border/40 rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full ${stage.color} rounded-full transition-all duration-500 ease-out`} 
+                      style={{ width: `${pct}%` }} 
+                    />
+                  </div>
                 </div>
-             ))}
+              )
+            })}
           </div>
         </div>
 
