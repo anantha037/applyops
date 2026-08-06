@@ -28,3 +28,21 @@ Avoid a generic dashboard-template look — no default Bootstrap-style card grid
 
 ## Budget note
 I'm running this build on metered Codex credits. Keep implementations focused and avoid unnecessary exploratory back-and-forth — if something is ambiguous, ask a single clarifying question rather than generating multiple speculative versions.
+
+
+## Design system (v2 — full redesign)
+
+Persistent structure: dark sidebar/nav rail on every page (navy/near-black, 
+purple-indigo active-state highlight) — this is the one constant across 
+the whole app.
+
+Dashboard page only: dark content area, matching reference image 2 — 
+gradient stat cards, funnel chart, donut chart, "AI Coach" card with 
+glowing/gradient treatment, streak calendar strip.
+
+All other pages (Applications, Settings, Calendar, Follow-ups, Contacts, 
+Analytics, Reports): light content area with purple/indigo accent color, 
+white stat cards with colored icon badges, matching reference images 3-8.
+
+Typography, spacing, and card-corner-radius should stay consistent between 
+both content-area themes even though background/text color inverts.

@@ -4,12 +4,6 @@ Full-stack job application command center. Replaces manual spreadsheet tracking 
 
 ---
 
-## 0. Build tooling
-
-Built using Codex CLI — GPT-5.6 Terra as the default model, Luna for mechanical/boilerplate work. See AGENTS.md for the model + reasoning-effort assignment per phase.
-
----
-
 ## 1. Architecture
 
 ```
@@ -212,13 +206,105 @@ Phase 3 - LLM feedback engine (Day 2): Prompt design, single Groq call, test aga
 
 Phase 4 - Frontend dashboard (Day 2-3): React + Vite from your template, wire up all dashboard components against the backend API.
 
-Phase 5 - Deploy (Day 3): Docker + GCP Cloud Run + GitHub Actions CI/CD, matching your existing LexShield/NexusMCP deployment pattern exactly.
+Phase 5 - Free hosting deploy: backend on Render (native Python, no Docker), frontend on Vercel, PIN gate added, secrets moved to env-var-based config, external cron (cron-job.org) covering the reminder and daily-coaching triggers since Render's free tier sleeps.
 
-Phase 6 - Use it daily starting immediately after Phase 1-2. You do not need to wait for the full dashboard to start getting value; the backend plus Telegram reminders alone are usable mid-build.
+**Redesign & scope expansion (v2) — see section 8 for full detail:**
+
+Phase 6 - Dashboard redesign (frontend only): rebuild to match the dark, gradient-card "command center" reference, using data already available from existing endpoints - no new backend work.
+
+Phase 7 - Applications + Settings restyle (frontend only): light theme with purple/indigo accents, matching the reference screens - visual only, same underlying data and endpoints.
+
+Phase 8 - Calendar backend: new Calendar Events sheet tab, auto-created/updated events from next_action_due and interview_date, CRUD API.
+
+Phase 9 - Calendar frontend: month view, mini calendar, upcoming events list, matching the reference.
+
+Phase 10 - Contacts backend: aggregation endpoint computing contacts from Applications + Activity Log, plus a small Contacts_Manual tab for contacts not tied to any application.
+
+Phase 11 - Contacts frontend: stat cards, tabs by role, searchable table, matching the reference.
+
+Phase 12 - Analytics backend: Daily Snapshots tab written once a day by the scheduler, an overview aggregation endpoint reading that history for trend comparisons.
+
+Phase 13 - Analytics frontend: Overview tab only (funnel, status donut, applications-over-time, source breakdown) - the additional tabs shown in the reference (Interviews/Responses/Sources/Time Analysis/Conversion) are deferred, not built in this pass.
+
+Phase 14 - Reports backend: CSV export endpoint, filterable by date range and data type.
+
+Phase 15 - Reports frontend: simplified layout driven by CSV export rather than the branded chart-heavy PDF report shown in the reference - that's a materially bigger feature deferred for later.
+
+Phase 16 - Use it daily. You don't need to wait for every phase above - Phases 1-5 already make the tool fully usable; 6 onward is visual/scope upgrade layered on top, and can proceed in parallel with actually using the tool.
 
 ---
 
-## 8. Resume framing (once shipped)
+## 8. Redesign & Scope Expansion (v2)
+
+**Design system:** dark sidebar/nav rail is constant across every page (navy background, purple-indigo active-state highlight). Dashboard's content area stays dark, matching the gradient-card reference. Every other page (Applications, Settings, Calendar, Contacts, Analytics, Reports) uses a light content area with the same purple/indigo accent. Full detail lives in AGENTS.md's design system section - read that before any frontend phase below.
+
+**AI Mentor is explicitly out of scope** - it's a full conversational feature distinct from the existing once-a-day coaching message, and the biggest build on the reference list for the least immediate functional payoff. Not building it.
+
+### 8.1 Dashboard v2
+Same data sources as the original Dashboard (section 5), restyled and extended with a few more headline stat cards to match the reference: Applications Today, Response Rate, Interviews (count), Offers, Ghosted - each as its own gradient stat card with a trend indicator. Extend `GET /dashboard/summary` to include these values (mostly derivable from data already in Applications - response_rate = contacted-and-responded / total contacted, using Activity Log to determine "responded").
+
+### 8.2 New tab: Calendar Events
+| Column | Type | Notes |
+|---|---|---|
+| id | string (UUID) | |
+| title | string | e.g. "TCS - Follow-up 1" |
+| event_type | enum | Follow-up / Interview / Application Deadline / Reminder / Personal |
+| date | date | |
+| time | string | nullable, e.g. "10:30 AM" |
+| related_application_id | string | nullable - links back to Applications |
+| notes | string | |
+| source | enum | Auto / Manual |
+
+**Auto-sync logic:** whenever an Applications row's `next_action_due` or `interview_date` changes, upsert (not duplicate) a matching Calendar Events row keyed by `related_application_id` + `event_type`. If `next_action_due` is cleared (terminal stage), delete the corresponding auto-generated Follow-up event. Manual events (Personal, Reminder, standalone Application Deadline) are created directly via the API and never touched by this sync logic.
+
+**API:**
+```
+GET    /calendar/events?start=&end=   -> events in a date range
+POST   /calendar/events               -> create a manual event
+PATCH  /calendar/events/{id}
+DELETE /calendar/events/{id}
+```
+
+**Frontend:** month/week/day toggle, mini calendar, filterable by event type, upcoming events list. Use an existing calendar component library (e.g. `react-big-calendar` or `FullCalendar`) rather than building a month-grid from scratch - this is a case where a library saves real build time without hurting the design goal.
+
+### 8.3 Contacts (computed view, not duplicated data)
+Contacts are derived primarily from Applications (hr_name/hr_phone/hr_email) plus Activity Log (for last-contacted and response detection), so HR info never has to be maintained in two places. A small manual tab covers contacts not tied to any application yet.
+
+New tab: **Contacts_Manual** - id, name, company, role, email, phone, tags, notes.
+
+**API:**
+```
+GET  /contacts          -> merged view: derived-from-Applications contacts + Contacts_Manual, deduped by email
+POST /contacts          -> add a manual-only contact
+```
+
+**Frontend:** stat cards (Total/Active/Responded/Response Rate/Companies Covered), tabs filtering by a `tags` field (Recruiter/HR Manager/Referrer/Other), searchable table.
+
+### 8.4 Analytics
+New tab: **Daily Snapshots** - written once a day by the existing scheduler (extend the 9 PM job or add a new one), one row per day: date, total_applications, not_contacted, in_progress, interviewing, offer_received, rejected, ghosted, response_rate, calls_dialed, calls_connected, interviews_attended.
+
+Trend comparisons ("18% vs last month") are only meaningful once this has been running for a while - expect this page to look sparse for the first several days, that's expected, not a bug.
+
+**API:**
+```
+GET /analytics/overview?range=7d|30d|custom   -> current totals + trend deltas computed from Daily Snapshots history
+```
+
+**Frontend:** build only the Overview tab from the reference (headline stats, applications-over-time line chart, status donut, applications-by-source breakdown, top companies). The Interviews/Responses/Sources/Time Analysis/Conversion tabs shown in the reference are a future expansion, not part of this phase.
+
+### 8.5 Reports
+Scoped to CSV export, not the branded chart-heavy generated-PDF report shown in the reference - that's a real report-generation feature (templating, PDF rendering) worth its own dedicated build later, not something to fold into this pass.
+
+**API:**
+```
+GET /reports/export?type=applications|activity|full&start=&end=   -> returns a CSV file
+```
+
+**Frontend:** a simpler version of the reference layout - a few "templates" (Application Summary, Response Analytics, etc.) that each just trigger a filtered CSV download, plus the same headline stat cards used elsewhere.
+
+---
+
+## 9. Resume framing (once shipped)
 
 A suggested framing once complete: built and deployed a full-stack job-search operations tool - FastAPI + React, with two-way Google Sheets sync, an automated follow-up scheduler, Telegram-based reminders, and an LLM-generated daily performance coaching layer (Groq) - used to run and track a live 10-15 company/day outreach campaign.
 

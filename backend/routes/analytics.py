@@ -64,10 +64,17 @@ def get_analytics_overview(
             "response_rate": _compute_delta(current_snapshot.response_rate, past_snapshot.response_rate),
         }
         
+    # Calculate source breakdown from all applications
+    applications = sheets.list_applications()
+    from collections import Counter
+    sources = dict(Counter(app.application_method or "Others" for app in applications))
+
     return {
         "current": current_snapshot.model_dump(),
         "deltas": deltas,
-        "past_date": past_snapshot.date.isoformat() if past_snapshot else None
+        "past_date": past_snapshot.date.isoformat() if past_snapshot else None,
+        "history": [snap.model_dump() for snap in sorted(history, key=lambda x: x.date)],
+        "sources": sources
     }
 
 
