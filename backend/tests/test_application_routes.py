@@ -58,7 +58,10 @@ def test_application_crud_and_activity_routes() -> None:
     create_response = client.post("/applications", json={"company": "Acme", "job_title": "Engineer"})
     assert create_response.status_code == 201
     created = create_response.json()
-    assert created["next_action_due"] == "2026-08-07"
+    from backend.models import utc_now
+    from datetime import timedelta
+    expected_due = (utc_now().date() + timedelta(days=2)).isoformat()
+    assert created["next_action_due"] == expected_due
 
     patch_response = client.patch(
         f"/applications/{created['id']}", json={"stage": "Called", "last_touch_date": "2026-08-06"}

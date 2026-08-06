@@ -208,8 +208,8 @@ class SheetsClient:
             if activity_date is None or timestamp.date() == activity_date:
                 activities.append(
                     Activity(
-                        id=row["ID"], timestamp=timestamp, application_id=row["Application ID"],
-                        company=row["Company"], action_type=row["Action Type"], notes=row["Notes"],
+                        id=str(row["ID"]), timestamp=timestamp, application_id=str(row["Application ID"]),
+                        company=str(row.get("Company", "")), action_type=str(row.get("Action Type", "")), notes=str(row.get("Notes", "")),
                     )
                 )
         return activities
@@ -274,15 +274,15 @@ class SheetsClient:
     @staticmethod
     def _application_from_row(row: dict[str, Any]) -> Application:
         return Application(
-            id=row["ID"], date_applied=row["Date Applied"], company=row["Company"],
-            job_title=row["Job Title"], jd_summary=row["JD Summary"],
-            application_method=row["Application Method"], hr_name=row["HR Name"],
-            hr_phone=row["HR Phone"], hr_email=row["HR Email"], ctc=row["CTC"],
-            status=row["Status"], stage=row["Stage"], last_touch_date=row["Last Touch Date"] or None,
-            next_action_due=row["Next Action Due"] or None,
-            interview_date=row["Interview Date"] or None, interview_round=row["Interview Round"],
-            interview_attended=_as_optional_bool(row["Interview Attended"]),
-            latest_update=row["Latest Update"], remarks=row["Remarks"],
+            id=str(row["ID"]), date_applied=str(row["Date Applied"]), company=str(row["Company"]),
+            job_title=str(row["Job Title"]), jd_summary=str(row["JD Summary"]),
+            application_method=str(row["Application Method"]), hr_name=str(row["HR Name"]),
+            hr_phone=str(row["HR Phone"]), hr_email=str(row["HR Email"]), ctc=str(row["CTC"]),
+            status=str(row["Status"]), stage=str(row["Stage"]), last_touch_date=str(row["Last Touch Date"]) or None,
+            next_action_due=str(row["Next Action Due"]) or None,
+            interview_date=str(row["Interview Date"]) or None, interview_round=str(row["Interview Round"]),
+            interview_attended=_as_optional_bool(str(row["Interview Attended"])),
+            latest_update=str(row["Latest Update"]), remarks=str(row["Remarks"]),
         )
 
     # ── Calendar Events ─────────────────────────────────────────────────────
@@ -306,14 +306,14 @@ class SheetsClient:
     @staticmethod
     def _calendar_from_row(row: dict[str, Any]) -> CalendarEvent:
         return CalendarEvent(
-            id=row["ID"],
-            title=row["Title"],
-            event_type=row["Event Type"],
-            date=row["Date"],
-            time=row["Time"] or None,
-            related_application_id=row["Related Application ID"] or None,
-            notes=row["Notes"],
-            source=row["Source"],
+            id=str(row["ID"]),
+            title=str(row["Title"]),
+            event_type=str(row["Event Type"]),
+            date=str(row["Date"]),
+            time=str(row["Time"]) if row.get("Time") else None,
+            related_application_id=str(row["Related Application ID"]) if row.get("Related Application ID") else None,
+            notes=str(row["Notes"]),
+            source=str(row["Source"]),
         )
 
     def _calendar_row_number(self, event_id: str) -> int | None:
@@ -474,14 +474,14 @@ class SheetsClient:
     @staticmethod
     def _contact_manual_from_row(row: dict[str, Any]) -> ContactManual:
         return ContactManual(
-            id=row["ID"],
-            name=row["Name"],
-            company=row.get("Company", ""),
-            role=row.get("Role", ""),
-            email=row.get("Email", ""),
-            phone=row.get("Phone", ""),
-            tags=row.get("Tags", ""),
-            notes=row.get("Notes", ""),
+            id=str(row["ID"]),
+            name=str(row["Name"]),
+            company=str(row.get("Company", "")),
+            role=str(row.get("Role", "")),
+            email=str(row.get("Email", "")),
+            phone=str(row.get("Phone", "")),
+            tags=str(row.get("Tags", "")),
+            notes=str(row.get("Notes", "")),
         )
 
     def list_contacts_manual(self) -> list[ContactManual]:
