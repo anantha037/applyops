@@ -15,24 +15,24 @@ function StatCard({ icon, label, value, delta }) {
   const isNegative = delta < 0
   
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 relative overflow-hidden group">
+    <div className="card p-5 relative overflow-hidden group">
       <div className="flex items-center gap-3 mb-3">
-        <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center flex-shrink-0">
+        <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
           {icon}
         </div>
-        <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">{label}</p>
+        <p className="text-[10px] font-bold text-foreground-secondary uppercase tracking-wider">{label}</p>
       </div>
       <div className="flex items-end justify-between">
-        <p className="text-3xl font-black text-gray-900 tracking-tight">{value}</p>
+        <p className="text-3xl font-black text-foreground tracking-tight">{value}</p>
       </div>
       {delta !== undefined && delta !== null && (
         <div className="mt-3 flex items-center gap-1.5 text-xs font-semibold">
-          <span className={`flex items-center gap-1 ${isPositive ? 'text-emerald-600' : isNegative ? 'text-rose-600' : 'text-gray-500'}`}>
+          <span className={`flex items-center gap-1 ${isPositive ? 'text-success' : isNegative ? 'text-danger' : 'text-foreground-secondary'}`}>
             {isPositive && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="m18 15-6-6-6 6"/></svg>}
             {isNegative && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="m6 9 6 6 6-6"/></svg>}
             {Math.abs(delta)}%
           </span>
-          <span className="text-gray-400 font-medium">vs last period</span>
+          <span className="text-muted font-medium">vs last period</span>
         </div>
       )}
     </div>
@@ -40,9 +40,9 @@ function StatCard({ icon, label, value, delta }) {
 }
 
 const TEMPLATES = [
-  { id: 'applications', icon: <DocumentIcon/>, title: 'Application Summary', desc: 'Overview of all applications and statuses', color: 'text-indigo-600', bg: 'bg-indigo-50' },
-  { id: 'activity', icon: <ActivityIcon/>, title: 'Activity Report', desc: 'Detailed log of all calls, emails, and interviews', color: 'text-emerald-600', bg: 'bg-emerald-50' },
-  { id: 'full', icon: <DatabaseIcon/>, title: 'Full Export (Joined)', desc: 'Comprehensive data joining apps and activity', color: 'text-fuchsia-600', bg: 'bg-fuchsia-50' },
+  { id: 'applications', icon: <DocumentIcon/>, title: 'Application Summary', desc: 'Overview of all applications and statuses', color: 'text-primary', bg: 'bg-primary/10' },
+  { id: 'activity', icon: <ActivityIcon/>, title: 'Activity Report', desc: 'Detailed log of all outreach and interviews', color: 'text-success', bg: 'bg-success-light' },
+  { id: 'full', icon: <DatabaseIcon/>, title: 'Full Export (Joined)', desc: 'Comprehensive data joining apps and activity', color: 'text-info', bg: 'bg-info-light' },
 ]
 
 export default function Reports() {
@@ -78,11 +78,11 @@ export default function Reports() {
   }
 
   if (loading && !data) {
-    return <div className="h-full flex items-center justify-center text-sm font-semibold text-gray-400 animate-pulse">Loading Reports...</div>
+    return <div className="h-full flex items-center justify-center text-sm font-semibold text-muted animate-pulse">Loading Reports...</div>
   }
 
   if (error) {
-    return <div className="h-full flex flex-col gap-4 p-6"><p className="text-rose-600 font-bold bg-rose-50 p-4 rounded-xl">{error}</p></div>
+    return <div className="h-full flex flex-col gap-4 p-6"><p className="text-danger font-bold bg-danger-light p-4 rounded-xl">{error}</p></div>
   }
 
   const { current, deltas } = data
@@ -93,13 +93,13 @@ export default function Reports() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Reports</h2>
-          <p className="mt-1 text-sm text-gray-500">Generate and export detailed insights about your job search.</p>
+          <h2 className="text-2xl font-bold text-foreground">Reports</h2>
+          <p className="mt-1 text-sm text-foreground-secondary">Generate and export detailed insights about your job search.</p>
         </div>
       </div>
 
       {/* Stat Cards Row */}
-      <div className="grid grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5 sm:gap-4">
         <StatCard 
           icon={<DocumentIcon/>} 
           label="Total Applications" 
@@ -131,29 +131,29 @@ export default function Reports() {
         />
       </div>
 
-      <div className="flex gap-6 flex-1 min-h-[400px]">
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:min-h-[400px]">
         {/* Left Sidebar: Templates */}
-        <div className="w-64 flex-shrink-0 flex flex-col gap-4">
-          <h3 className="text-sm font-bold text-gray-900 px-1">Report Templates</h3>
-          <div className="space-y-2">
+        <div className="w-full lg:w-64 lg:flex-shrink-0 flex flex-col gap-4">
+          <h3 className="text-sm font-bold text-foreground px-1">Report Templates</h3>
+          <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-1">
             {TEMPLATES.map(t => (
               <button
                 key={t.id}
                 onClick={() => setActiveTemplate(t.id)}
                 className={`w-full flex items-start gap-3 p-3 rounded-xl transition-all border text-left group ${
                   activeTemplate === t.id 
-                    ? 'bg-white border-indigo-200 shadow-[0_4px_12px_rgba(79,70,229,0.06)]' 
-                    : 'bg-transparent border-transparent hover:bg-white hover:border-gray-200'
+                    ? 'bg-surface border-primary ring-2 ring-primary/20 shadow-sm' 
+                    : 'bg-transparent border-transparent hover:bg-surface hover:border-border'
                 }`}
               >
                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors ${
-                  activeTemplate === t.id ? t.bg + ' ' + t.color : 'bg-gray-100 text-gray-400 group-hover:bg-gray-200 group-hover:text-gray-600'
+                  activeTemplate === t.id ? t.bg + ' ' + t.color : 'bg-surface-secondary text-muted group-hover:bg-surface-tertiary group-hover:text-foreground-secondary'
                 }`}>
                   {t.icon}
                 </div>
                 <div>
-                  <p className={`text-sm font-bold ${activeTemplate === t.id ? 'text-gray-900' : 'text-gray-600 group-hover:text-gray-900'}`}>{t.title}</p>
-                  <p className={`text-[11px] mt-0.5 leading-snug ${activeTemplate === t.id ? 'text-gray-500' : 'text-gray-400'}`}>{t.desc}</p>
+                  <p className={`text-sm font-bold ${activeTemplate === t.id ? 'text-foreground' : 'text-foreground-secondary group-hover:text-foreground'}`}>{t.title}</p>
+                  <p className={`text-[11px] mt-0.5 leading-snug ${activeTemplate === t.id ? 'text-foreground-secondary' : 'text-muted'}`}>{t.desc}</p>
                 </div>
               </button>
             ))}
@@ -161,11 +161,11 @@ export default function Reports() {
         </div>
 
         {/* Main Panel */}
-        <div className="flex-1 bg-white rounded-2xl border border-gray-200 shadow-sm p-8 flex flex-col">
-          <div className="flex items-start justify-between border-b border-gray-100 pb-6 mb-8">
+        <div className="flex-1 card p-6 sm:p-8 flex flex-col">
+          <div className="flex items-start justify-between border-b border-border pb-6 mb-8">
             <div>
-              <h3 className="text-xl font-bold text-gray-900">{template.title}</h3>
-              <p className="mt-1 text-sm text-gray-500">{template.desc}</p>
+              <h3 className="text-xl font-bold text-foreground">{template.title}</h3>
+              <p className="mt-1 text-sm text-foreground-secondary">{template.desc}</p>
             </div>
             <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${template.bg} ${template.color}`}>
               {template.icon}
@@ -173,38 +173,38 @@ export default function Reports() {
           </div>
           
           <div className="max-w-md space-y-6">
-            <h4 className="text-sm font-bold text-gray-900">Configuration</h4>
+            <h4 className="text-sm font-bold text-foreground">Configuration</h4>
             
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Start Date</label>
+                <label className="block text-xs font-bold text-foreground-secondary uppercase tracking-wider mb-2">Start Date</label>
                 <input 
                   type="date" 
                   value={startDate}
                   onChange={e => setStartDate(e.target.value)}
-                  className="w-full light-field text-sm font-semibold text-gray-700" 
+                  className="w-full light-field text-sm font-semibold text-foreground-secondary cursor-pointer" 
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">End Date</label>
+                <label className="block text-xs font-bold text-foreground-secondary uppercase tracking-wider mb-2">End Date</label>
                 <input 
                   type="date" 
                   value={endDate}
                   onChange={e => setEndDate(e.target.value)}
-                  className="w-full light-field text-sm font-semibold text-gray-700" 
+                  className="w-full light-field text-sm font-semibold text-foreground-secondary cursor-pointer" 
                 />
               </div>
             </div>
 
-            <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 mt-6">
-              <p className="text-xs text-gray-500 leading-relaxed">
+            <div className="bg-surface-secondary rounded-xl p-4 border border-border mt-6">
+              <p className="text-xs text-foreground-secondary leading-relaxed">
                 Clicking Export will generate a CSV file containing your requested data. Ensure you select a valid date range. Blank dates will export all available data.
               </p>
             </div>
 
             <button 
               onClick={handleExport}
-              className="w-full mt-4 flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-3.5 text-sm font-bold text-white shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 hover:shadow-indigo-600/30 transition-all hover:-translate-y-0.5 active:translate-y-0"
+              className="btn btn-primary w-full mt-4 py-3"
             >
               <DownloadIcon />
               Download CSV Report

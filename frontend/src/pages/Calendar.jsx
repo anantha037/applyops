@@ -48,17 +48,17 @@ function MiniCalendar({ selected, onSelect, eventDates = [] }) {
   return (
     <div className="select-none">
       <div className="flex items-center justify-between mb-3">
-        <button onClick={() => setCurrent(subMonths(current, 1))} className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-colors">
+        <button onClick={() => setCurrent(subMonths(current, 1))} className="rounded p-1 text-text-muted hover:bg-surface-secondary hover:text-text-primary transition-colors">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="m15 18-6-6 6-6"/></svg>
         </button>
-        <span className="text-xs font-semibold text-gray-700">{format(current, 'MMMM yyyy')}</span>
-        <button onClick={() => setCurrent(addMonths(current, 1))} className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-colors">
+        <span className="text-xs font-semibold text-text-primary">{format(current, 'MMMM yyyy')}</span>
+        <button onClick={() => setCurrent(addMonths(current, 1))} className="rounded p-1 text-text-muted hover:bg-surface-secondary hover:text-text-primary transition-colors">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="m9 18 6-6-6-6"/></svg>
         </button>
       </div>
       <div className="grid grid-cols-7 mb-1">
         {days.map((d, i) => (
-          <div key={i} className="text-center text-[10px] font-semibold text-gray-400 py-1">{d}</div>
+          <div key={i} className="text-center text-[10px] font-semibold text-text-muted py-1">{d}</div>
         ))}
       </div>
       <div className="grid grid-cols-7 gap-y-0.5">
@@ -73,14 +73,14 @@ function MiniCalendar({ selected, onSelect, eventDates = [] }) {
               onClick={() => { onSelect(cell); setCurrent(cell) }}
               className={`
                 relative flex flex-col items-center justify-center rounded-lg text-[11px] h-7 w-full font-medium transition-colors
-                ${!isCurrentMonth ? 'text-gray-300' : 'text-gray-600 hover:bg-indigo-50 hover:text-indigo-600'}
-                ${isSelectedDay ? '!bg-indigo-600 !text-white' : ''}
-                ${isToday && !isSelectedDay ? 'bg-indigo-100 text-indigo-700 font-bold' : ''}
+                ${!isCurrentMonth ? 'text-text-muted/40' : 'text-text-secondary hover:bg-primary/10 hover:text-primary'}
+                ${isSelectedDay ? '!bg-primary !text-white' : ''}
+                ${isToday && !isSelectedDay ? 'bg-primary/15 text-primary font-bold' : ''}
               `}
             >
               {format(cell, 'd')}
               {hasEvent && !isSelectedDay && (
-                <span className="absolute bottom-0.5 h-1 w-1 rounded-full bg-indigo-400" />
+                <span className="absolute bottom-0.5 h-1 w-1 rounded-full bg-primary" />
               )}
             </button>
           )
@@ -403,15 +403,15 @@ export default function Calendar() {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               {/* View toggle */}
-              <div className="flex rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+              <div className="flex rounded-xl border border-border bg-surface shadow-sm overflow-hidden">
                 {['month', 'week', 'day'].map(v => (
                   <button
                     key={v}
                     onClick={() => setView(v)}
-                    className={`px-4 py-2 text-sm font-medium capitalize transition-colors ${
+                    className={`px-4 py-2 text-sm font-medium capitalize transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40 ${
                       view === v
-                        ? 'bg-indigo-600 text-white'
-                        : 'text-gray-600 hover:bg-gray-50'
+                        ? 'bg-primary text-white'
+                        : 'text-text-secondary hover:bg-surface-secondary'
                     }`}
                   >
                     {v}
@@ -420,27 +420,27 @@ export default function Calendar() {
               </div>
 
               {/* Nav */}
-              <button onClick={goPrev} className="rounded-xl border border-gray-200 bg-white p-2 text-gray-500 hover:bg-gray-50 shadow-sm transition-colors">
+              <button onClick={goPrev} className="rounded-xl border border-border bg-surface p-2 text-text-secondary hover:bg-surface-secondary shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="m15 18-6-6 6-6"/></svg>
               </button>
-              <button onClick={goNext} className="rounded-xl border border-gray-200 bg-white p-2 text-gray-500 hover:bg-gray-50 shadow-sm transition-colors">
+              <button onClick={goNext} className="rounded-xl border border-border bg-surface p-2 text-text-secondary hover:bg-surface-secondary shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="m9 18 6-6-6-6"/></svg>
               </button>
-              <button onClick={goToday} className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 shadow-sm transition-colors">Today</button>
+              <button onClick={goToToday} className="rounded-xl border border-border bg-surface px-3 py-2 text-sm font-medium text-text-secondary hover:bg-surface-secondary shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40">Today</button>
             </div>
 
-            <h3 className="text-base font-bold text-gray-800">{headerLabel}</h3>
+            <h3 className="text-base font-bold text-text-primary">{headerLabel}</h3>
 
             <div className="flex items-center gap-2">
-              {loading && <span className="text-xs text-gray-400 animate-pulse">Loading…</span>}
-              <button onClick={load} className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-500 hover:bg-gray-50 shadow-sm transition-colors">
+              {loading && <span className="text-xs text-text-muted animate-pulse">Loading…</span>}
+              <button onClick={load} className="rounded-xl border border-border bg-surface px-3 py-2 text-xs font-medium text-text-secondary hover:bg-surface-secondary shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40">
                 Refresh ↻
               </button>
             </div>
           </div>
 
           {/* The calendar itself */}
-          <div className="flex-1 rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden rbc-wrapper">
+          <div className="flex-1 rounded-2xl border border-border bg-surface shadow-sm overflow-hidden rbc-wrapper">
             <BigCalendar
               localizer={localizer}
               events={rbcEvents}

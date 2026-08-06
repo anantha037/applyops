@@ -2,37 +2,385 @@
 @tailwind components;
 @tailwind utilities;
 
-:root { font-family: Inter, ui-sans-serif, system-ui, sans-serif; color: #d7e1ee; background: #07111f; }
-* { box-sizing: border-box; }
-body { margin: 0; min-width: 320px; background: #07111f; }
-button, input, select, textarea { font: inherit; }
-.panel { border: 1px solid #1b3045; background: #0b1828; box-shadow: 0 12px 30px rgb(0 0 0 / .15); }
-.label { color: #8092a9; font-size: .68rem; letter-spacing: .12em; text-transform: uppercase; }
-.field { width: 100%; border: 1px solid #23415e; border-radius: .35rem; background: #091522; color: #e5edf7; padding: .58rem .7rem; }
-.light-field { width: 100%; border: 1px solid #e2e8f0; border-radius: .6rem; background: #fff; color: #1e293b; padding: .55rem .75rem; outline: none; transition: border-color .15s, box-shadow .15s; }
-.light-field:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,.12); }
+/* ═══════════════════════════════════════════════════════════════════════════
+   DESIGN TOKENS — ApplyOps Design System
+   All colors are semantic variables. Components must never hardcode colors.
+   ═══════════════════════════════════════════════════════════════════════════ */
 
-/* ── react-big-calendar theme overrides ──────────────────────────────────── */
-.rbc-wrapper { font-family: inherit; }
-.rbc-wrapper .rbc-calendar { font-family: inherit; font-size: 12px; }
-.rbc-wrapper .rbc-header { padding: 10px 4px; font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: .06em; border-bottom: 1px solid #f3f4f6; background: #fafafa; }
-.rbc-wrapper .rbc-month-view, .rbc-wrapper .rbc-time-view { border: none; }
-.rbc-wrapper .rbc-day-bg { border-color: #f3f4f6; }
-.rbc-wrapper .rbc-off-range-bg { background: #fafafa; }
-.rbc-wrapper .rbc-today { background: #eef2ff; }
-.rbc-wrapper .rbc-date-cell { padding: 6px 8px; font-size: 11px; font-weight: 600; color: #374151; }
-.rbc-wrapper .rbc-date-cell.rbc-off-range { color: #d1d5db; }
-.rbc-wrapper .rbc-show-more { font-size: 10px; font-weight: 700; color: #6366f1; background: transparent; padding: 1px 6px; }
-.rbc-wrapper .rbc-event { padding: 0; border-radius: 6px; border: none; box-shadow: 0 1px 2px rgba(0,0,0,.06); }
-.rbc-wrapper .rbc-event.rbc-selected { outline: 2px solid #6366f1; outline-offset: 1px; box-shadow: none; }
-.rbc-wrapper .rbc-event-label { display: none; }
-.rbc-wrapper .rbc-toolbar { display: none; }
-.rbc-wrapper .rbc-time-header-content .rbc-header { border-bottom: 1px solid #f3f4f6; }
-.rbc-wrapper .rbc-time-slot { font-size: 10px; color: #9ca3af; }
-.rbc-wrapper .rbc-timeslot-group { border-color: #f3f4f6; }
-.rbc-wrapper .rbc-time-content { border-top: 1px solid #f3f4f6; }
-.rbc-wrapper .rbc-current-time-indicator { background: #6366f1; height: 2px; }
-.rbc-wrapper .rbc-row-segment .rbc-event-content { font-size: 11px; font-weight: 600; }
-.rbc-wrapper .rbc-month-row { border-color: #f3f4f6; }
-.rbc-wrapper .rbc-day-slot .rbc-time-slot { border-color: #f9fafb; }
-.rbc-wrapper .rbc-slot-selection { background: rgba(99,102,241,.1); border-color: #6366f1; }
+:root {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  /* ── Surfaces ─────────────────────────────────────────────────────────── */
+  --background: #F8FAFC;
+  --surface: #FFFFFF;
+  --surface-secondary: #F1F5F9;
+  --surface-tertiary: #E8EDF2;
+  --card: #FFFFFF;
+
+  /* ── Borders ──────────────────────────────────────────────────────────── */
+  --border: #E2E8F0;
+  --border-secondary: #CBD5E1;
+
+  /* ── Typography ───────────────────────────────────────────────────────── */
+  --foreground: #0F172A;
+  --foreground-secondary: #475569;
+  --muted: #94A3B8;
+  --placeholder: #CBD5E1;
+
+  /* ── Brand / Action ───────────────────────────────────────────────────── */
+  --primary: #4F46E5;
+  --primary-hover: #4338CA;
+  --primary-foreground: #FFFFFF;
+  --ring: rgba(99, 102, 241, 0.25);
+
+  /* ── Semantic ─────────────────────────────────────────────────────────── */
+  --success: #059669;
+  --success-light: #ECFDF5;
+  --warning: #D97706;
+  --warning-light: #FFFBEB;
+  --danger: #DC2626;
+  --danger-light: #FEF2F2;
+  --info: #0284C7;
+  --info-light: #F0F9FF;
+
+  /* ── Sidebar (Light Theme - Commercial SaaS Palette) ─────────────────── */
+  --sidebar-bg: #F8FAFC;
+  --sidebar-surface: #FFFFFF;
+  --sidebar-border: #E2E8F0;
+  --sidebar-text: #0F172A;
+  --sidebar-text-muted: #64748B;
+  --sidebar-active-bg: #EEF2FF;
+  --sidebar-active-text: #4F46E5;
+  --sidebar-hover: #F1F5F9;
+
+  /* ── Misc ──────────────────────────────────────────────────────────────── */
+  --overlay: rgba(0, 0, 0, 0.5);
+  --shadow-color: rgba(15, 23, 42, 0.05);
+}
+
+/* ── Dark Theme ──────────────────────────────────────────────────────────── */
+[data-theme="dark"] {
+  --background: #0B0F19;
+  --surface: #131B2E;
+  --surface-secondary: #1A243B;
+  --surface-tertiary: #23304B;
+  --card: #131B2E;
+
+  --border: #1E293B;
+  --border-secondary: #2E3E58;
+
+  --foreground: #F8FAFC;
+  --foreground-secondary: #94A3B8;
+  --muted: #64748B;
+  --placeholder: #475569;
+
+  --primary: #818CF8;
+  --primary-hover: #6366F1;
+  --primary-foreground: #FFFFFF;
+  --ring: rgba(129, 140, 248, 0.3);
+
+  --success: #34D399;
+  --success-light: rgba(52, 211, 153, 0.12);
+  --warning: #FBBF24;
+  --warning-light: rgba(251, 191, 36, 0.12);
+  --danger: #F87171;
+  --danger-light: rgba(248, 113, 113, 0.12);
+  --info: #38BDF8;
+  --info-light: rgba(56, 189, 248, 0.12);
+
+  /* ── Sidebar (Dark Theme - Commercial SaaS Dark) ───────────────────────── */
+  --sidebar-bg: #0B0F19;
+  --sidebar-surface: #131B2E;
+  --sidebar-border: #1E293B;
+  --sidebar-text: #F8FAFC;
+  --sidebar-text-muted: #64748B;
+  --sidebar-active-bg: rgba(99, 102, 241, 0.15);
+  --sidebar-active-text: #818CF8;
+  --sidebar-hover: rgba(255, 255, 255, 0.05);
+
+  --overlay: rgba(0, 0, 0, 0.7);
+  --shadow-color: rgba(0, 0, 0, 0.25);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BASE STYLES
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background: var(--background);
+  color: var(--foreground);
+  overflow-x: hidden;
+  transition: background-color 200ms ease-in-out, color 200ms ease-in-out;
+}
+
+/* Hide scrollbars for Chrome, Safari and Opera */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+/* Hide scrollbars for IE, Edge and Firefox */
+.scrollbar-none {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+button, input, select, textarea {
+  font: inherit;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   COMPONENT CLASSES
+   Reusable classes consumed by JSX components via className.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Card / Panel ───────────────────────────────────────────────────────── */
+.card {
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--card);
+  transition: background-color 200ms ease-in-out, border-color 200ms ease-in-out;
+}
+
+/* Legacy alias — keep until all pages migrate */
+.panel {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: 0 1px 3px var(--shadow-color);
+  transition: background-color 200ms ease-in-out, border-color 200ms ease-in-out, box-shadow 200ms ease-in-out;
+}
+
+/* ── Labels ─────────────────────────────────────────────────────────────── */
+.label {
+  color: var(--foreground-secondary);
+  font-size: .68rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+/* ── Input fields ───────────────────────────────────────────────────────── */
+.field {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: .5rem;
+  background: var(--surface-secondary);
+  color: var(--foreground);
+  padding: .58rem .7rem;
+  outline: none;
+  transition: border-color .15s, background-color 200ms ease-in-out, color 200ms ease-in-out;
+}
+
+.field:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--ring);
+}
+
+.field::placeholder {
+  color: var(--placeholder);
+}
+
+.light-field {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: .6rem;
+  background: var(--surface);
+  color: var(--foreground);
+  padding: .55rem .75rem;
+  outline: none;
+  transition: border-color .15s, box-shadow .15s, background-color 200ms ease-in-out, color 200ms ease-in-out;
+}
+
+.light-field:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--ring);
+}
+
+.light-field::placeholder {
+  color: var(--placeholder);
+}
+
+/* ── Buttons ────────────────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.625rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  transition: all 150ms ease-in-out;
+  cursor: pointer;
+  border: none;
+  outline: none;
+}
+
+.btn:focus-visible {
+  box-shadow: 0 0 0 3px var(--ring);
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+.btn-primary:hover:not(:disabled) {
+  background: var(--primary-hover);
+}
+
+.btn-secondary {
+  background: var(--surface-secondary);
+  color: var(--foreground);
+  border: 1px solid var(--border);
+}
+.btn-secondary:hover:not(:disabled) {
+  background: var(--surface-tertiary);
+  border-color: var(--border-secondary);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--foreground-secondary);
+}
+.btn-ghost:hover:not(:disabled) {
+  background: var(--surface-secondary);
+  color: var(--foreground);
+}
+
+.btn-danger {
+  background: var(--danger);
+  color: white;
+}
+.btn-danger:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   REACT-BIG-CALENDAR THEME OVERRIDES
+   ═══════════════════════════════════════════════════════════════════════════ */
+.rbc-wrapper {
+  font-family: inherit;
+}
+
+.rbc-wrapper .rbc-calendar {
+  font-family: inherit;
+  font-size: 12px;
+}
+
+.rbc-wrapper .rbc-header {
+  padding: 10px 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--foreground-secondary);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-secondary);
+}
+
+.rbc-wrapper .rbc-month-view, .rbc-wrapper .rbc-time-view {
+  border: none;
+}
+
+.rbc-wrapper .rbc-day-bg {
+  border-color: var(--border);
+}
+
+.rbc-wrapper .rbc-off-range-bg {
+  background: var(--surface-secondary);
+  opacity: 0.5;
+}
+
+.rbc-wrapper .rbc-today {
+  background: rgba(99, 102, 241, 0.08);
+}
+
+.rbc-wrapper .rbc-date-cell {
+  padding: 6px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.rbc-wrapper .rbc-date-cell.rbc-off-range {
+  color: var(--muted);
+}
+
+.rbc-wrapper .rbc-show-more {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--primary);
+  background: transparent;
+  padding: 1px 6px;
+}
+
+.rbc-wrapper .rbc-event {
+  padding: 0;
+  border-radius: 6px;
+  border: none;
+  box-shadow: 0 1px 2px var(--shadow-color);
+}
+
+.rbc-wrapper .rbc-event.rbc-selected {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+  box-shadow: none;
+}
+
+.rbc-wrapper .rbc-event-label {
+  display: none;
+}
+
+.rbc-wrapper .rbc-toolbar {
+  display: none;
+}
+
+.rbc-wrapper .rbc-time-header-content .rbc-header {
+  border-bottom: 1px solid var(--border);
+}
+
+.rbc-wrapper .rbc-time-slot {
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.rbc-wrapper .rbc-timeslot-group {
+  border-color: var(--border);
+}
+
+.rbc-wrapper .rbc-time-content {
+  border-top: 1px solid var(--border);
+}
+
+.rbc-wrapper .rbc-current-time-indicator {
+  background: var(--primary);
+  height: 2px;
+}
+
+.rbc-wrapper .rbc-row-segment .rbc-event-content {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.rbc-wrapper .rbc-month-row {
+  border-color: var(--border);
+}
+
+.rbc-wrapper .rbc-day-slot .rbc-time-slot {
+  border-color: var(--border);
+}
+
+.rbc-wrapper .rbc-slot-selection {
+  background: rgba(99, 102, 241, .1);
+  border-color: var(--primary);
+}

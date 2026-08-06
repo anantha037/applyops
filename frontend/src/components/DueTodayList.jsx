@@ -1,1 +1,35 @@
-export default function DueTodayList({ applications = [], onLog }) { return <div className="panel rounded-lg p-4"><div className="mb-4 flex justify-between"><p className="label">Due today</p><span className="text-xs text-cyan-300">{applications.length} open</span></div>{applications.length ? <div className="space-y-2">{applications.map(app => <div key={app.id} className="flex items-center justify-between border-l-2 border-cyan-400 bg-slate-950/30 p-3"><div><p className="font-semibold">{app.company}</p><p className="text-xs text-slate-400">{app.job_title} · {app.stage}</p></div><button onClick={() => onLog(app)} className="rounded border border-cyan-400 px-2 py-1 text-xs text-cyan-300">Log action</button></div>)}</div> : <p className="text-sm text-slate-500">No follow-ups due today.</p>}</div> }
+import React from 'react'
+
+export default function DueTodayList({ applications = [], onLog }) {
+  return (
+    <div className="space-y-3">
+      {applications.length ? (
+        <div className="divide-y divide-border rounded-lg border border-border overflow-hidden bg-surface-secondary">
+          {applications.map((app) => (
+            <div 
+              key={app.id} 
+              className="flex items-center justify-between p-3.5 bg-surface hover:bg-surface-secondary/50 transition-colors"
+            >
+              <div>
+                <p className="font-semibold text-sm text-foreground">{app.company}</p>
+                <p className="text-xs text-foreground-secondary mt-0.5">
+                  {app.job_title} <span className="text-muted">·</span> {app.stage}
+                </p>
+              </div>
+              <button 
+                onClick={() => onLog(app)} 
+                className="btn btn-secondary px-3 py-1.5 text-xs"
+              >
+                Log outreach
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-6 border border-dashed border-border rounded-lg bg-surface">
+          <p className="text-sm text-foreground-secondary">No reminders due today.</p>
+        </div>
+      )}
+    </div>
+  )
+}

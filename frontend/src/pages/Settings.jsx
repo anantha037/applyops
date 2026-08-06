@@ -3,14 +3,14 @@ import { api } from '../api/client'
 
 function SectionCard({ title, description, icon, children }) {
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-      <div className="flex items-start gap-4 border-b border-gray-100 px-6 py-5">
-        <div className="mt-0.5 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 text-lg">
+    <div className="rounded-2xl border border-border bg-surface shadow-sm overflow-hidden">
+      <div className="flex items-start gap-4 border-b border-border px-6 py-5">
+        <div className="mt-0.5 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary text-lg">
           {icon}
         </div>
         <div>
-          <h3 className="font-semibold text-gray-900">{title}</h3>
-          {description && <p className="mt-0.5 text-xs text-gray-500">{description}</p>}
+          <h3 className="font-semibold text-text-primary">{title}</h3>
+          {description && <p className="mt-0.5 text-xs text-text-secondary">{description}</p>}
         </div>
       </div>
       <div className="px-6 py-5">{children}</div>
@@ -22,8 +22,8 @@ function FieldRow({ label, hint, children }) {
   return (
     <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-8">
       <div className="flex-1">
-        <label className="block text-sm font-medium text-gray-800">{label}</label>
-        {hint && <p className="mt-0.5 text-xs text-gray-400">{hint}</p>}
+        <label className="block text-sm font-medium text-text-primary">{label}</label>
+        {hint && <p className="mt-0.5 text-xs text-text-muted">{hint}</p>}
       </div>
       <div className="sm:w-64 flex-shrink-0">{children}</div>
     </div>
@@ -68,8 +68,8 @@ export default function Settings() {
     <section className="max-w-3xl pb-10">
       {/* Page header */}
       <div className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-900">Settings</h2>
-        <p className="mt-1 text-sm text-gray-500">Configure your daily goals, working hours, and notification preferences.</p>
+        <h2 className="text-2xl font-bold text-text-primary">Settings</h2>
+        <p className="mt-1 text-sm text-text-secondary">Configure your daily goals, working hours, and notification preferences.</p>
       </div>
 
       <form onSubmit={save} className="space-y-4">
@@ -92,7 +92,7 @@ export default function Settings() {
               />
             </FieldRow>
 
-            <div className="border-t border-gray-50" />
+            <div className="border-t border-border/40" />
 
             <FieldRow
               label="Working hours start"
@@ -105,7 +105,7 @@ export default function Settings() {
               />
             </FieldRow>
 
-            <div className="border-t border-gray-50" />
+            <div className="border-t border-border/40" />
 
             <FieldRow
               label="Working hours end"
@@ -121,10 +121,10 @@ export default function Settings() {
         </SectionCard>
 
         {/* Info card — read-only context */}
-        <div className="rounded-2xl border border-indigo-100 bg-indigo-50/60 px-5 py-4 text-xs text-indigo-700 flex items-start gap-3">
+        <div className="rounded-2xl border border-primary/20 bg-primary/5 px-5 py-4 text-xs text-primary flex items-start gap-3">
           <span className="text-base">ℹ️</span>
           <span>
-            Telegram and Groq settings are configured via <code className="font-mono bg-indigo-100 px-1 py-0.5 rounded">.env</code> — edit that file and restart the backend to change notification credentials.
+            Telegram and Groq settings are configured via <code className="font-mono bg-primary/10 px-1 py-0.5 rounded">.env</code> — edit that file and restart the backend to change notification credentials.
           </span>
         </div>
 
@@ -132,7 +132,7 @@ export default function Settings() {
         <div className="flex items-center justify-between">
           <div>
             {message && (
-              <p className={`text-sm font-medium ${isError ? 'text-rose-600' : 'text-emerald-600'}`}>
+              <p className={`text-sm font-medium ${isError ? 'text-rose-500' : 'text-emerald-500'}`}>
                 {isError ? '✗ ' : '✓ '}{message}
               </p>
             )}
@@ -140,7 +140,7 @@ export default function Settings() {
           <button
             type="submit"
             disabled={saving}
-            className="flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-60 transition-colors"
+            className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-hover disabled:opacity-60 transition-colors"
           >
             {saving ? (
               <>

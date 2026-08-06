@@ -13,24 +13,24 @@ function StatCard({ icon, label, value, delta }) {
   const isNegative = delta < 0
   
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 relative overflow-hidden group">
+    <div className="card p-5 relative overflow-hidden group">
       <div className="flex items-center gap-3 mb-3">
-        <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center flex-shrink-0">
+        <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
           {icon}
         </div>
-        <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">{label}</p>
+        <p className="text-[10px] font-bold text-foreground-secondary uppercase tracking-wider">{label}</p>
       </div>
       <div className="flex items-end justify-between">
-        <p className="text-3xl font-black text-gray-900 tracking-tight">{value}</p>
+        <p className="text-3xl font-black text-foreground tracking-tight">{value}</p>
       </div>
       {delta !== undefined && delta !== null && (
         <div className="mt-3 flex items-center gap-1.5 text-xs font-semibold">
-          <span className={`flex items-center gap-1 ${isPositive ? 'text-emerald-600' : isNegative ? 'text-rose-600' : 'text-gray-500'}`}>
+          <span className={`flex items-center gap-1 ${isPositive ? 'text-success' : isNegative ? 'text-danger' : 'text-foreground-secondary'}`}>
             {isPositive && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="m18 15-6-6-6 6"/></svg>}
             {isNegative && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="m6 9 6 6 6-6"/></svg>}
             {Math.abs(delta)}%
           </span>
-          <span className="text-gray-400 font-medium">vs last period</span>
+          <span className="text-muted font-medium">vs last period</span>
         </div>
       )}
     </div>
@@ -65,23 +65,31 @@ export default function Analytics() {
     return () => { active = false }
   }, [range])
 
+  const chartThemeColors = useMemo(() => {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark' || document.body.getAttribute('data-theme') === 'dark'
+    return {
+      grid: isDark ? '#2A3547' : '#f3f4f6',
+      text: isDark ? '#8896A8' : '#9ca3af',
+      tooltipBg: isDark ? '#151D2E' : '#FFFFFF',
+      tooltipBorder: isDark ? '#2A3547' : '#E2E8F0',
+    }
+  }, [loading, data])
+
   if (loading && !data) {
-    return <div className="h-full flex items-center justify-center text-sm font-semibold text-gray-400 animate-pulse">Loading Analytics...</div>
+    return <div className="h-full flex items-center justify-center text-sm font-semibold text-muted animate-pulse">Loading Analytics...</div>
   }
 
   if (error) {
-    return <div className="h-full flex flex-col gap-4 p-6"><p className="text-rose-600 font-bold bg-rose-50 p-4 rounded-xl">{error}</p></div>
+    return <div className="h-full flex flex-col gap-4 p-6"><p className="text-danger font-bold bg-danger-light p-4 rounded-xl">{error}</p></div>
   }
 
   const { current, deltas, history, sources } = data
   
-  // Format history for LineChart
   const chartData = history.map(snap => ({
     date: format(parseISO(snap.date), 'd MMM'),
     Total: snap.total_applications,
   }))
 
-  // Format Status for Donut
   const COLORS = {
     'In Progress': '#3b82f6', // blue
     'Interviewing': '#f59e0b', // amber
@@ -101,7 +109,6 @@ export default function Analytics() {
   
   const totalStatus = statusData.reduce((acc, curr) => acc + curr.value, 0)
   
-  // Format Sources for Donut
   const SOURCE_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#64748b']
   const sourceData = Object.entries(sources || {})
     .map(([name, value]) => ({ name, value }))
@@ -110,12 +117,9 @@ export default function Analytics() {
     
   const totalSources = sourceData.reduce((acc, curr) => acc + curr.value, 0)
 
-  // Computed rates
   const interviewRate = current.total_applications ? Math.round((current.interviews_attended / current.total_applications) * 100) : 0
   const offerRate = current.total_applications ? Math.round((current.offer_received / current.total_applications) * 100) : 0
-  // Note: API computes response_rate for us in current.response_rate.
 
-  // Custom Legend for Recharts Donut
   const renderLegend = (props, data, total) => {
     const { payload } = props
     return (
@@ -127,11 +131,11 @@ export default function Analytics() {
             <li key={`item-${index}`} className="flex items-center justify-between gap-6">
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entry.color }} />
-                <span className="text-gray-700">{entry.value}</span>
+                <span className="text-foreground-secondary">{entry.value}</span>
               </div>
               <div className="flex items-center gap-3 text-right">
-                <span className="text-gray-900">{item.value}</span>
-                <span className="text-gray-400 w-8">({pct}%)</span>
+                <span className="text-foreground">{item.value}</span>
+                <span className="text-muted w-8">({pct}%)</span>
               </div>
             </li>
           )
@@ -145,31 +149,31 @@ export default function Analytics() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Analytics</h2>
-          <p className="mt-1 text-sm text-gray-500">Track your performance and uncover insights to improve your job search.</p>
+          <h2 className="text-2xl font-bold text-foreground">Analytics</h2>
+          <p className="mt-1 text-sm text-foreground-secondary">Track your performance and uncover insights to improve your job search.</p>
         </div>
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-4 py-2 shadow-sm text-sm font-semibold text-gray-700">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-gray-400"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            <select className="bg-transparent outline-none cursor-pointer" value={range} onChange={e => setRange(e.target.value)}>
+          <div className="flex items-center gap-2 bg-surface border border-border rounded-xl px-4 py-2 shadow-sm text-sm font-semibold text-foreground-secondary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-muted"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <select className="bg-transparent outline-none cursor-pointer text-foreground-secondary" value={range} onChange={e => setRange(e.target.value)}>
               <option value="7d">Last 7 Days</option>
               <option value="30d">Last 30 Days</option>
             </select>
           </div>
-          <button className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition-colors">
+          <button className="btn btn-secondary py-2">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Export Report
           </button>
         </div>
       </div>
       
-      {/* Visual Tab Bar (Placeholder) */}
-      <div className="flex gap-6 border-b border-gray-200 overflow-x-auto">
+      {/* Visual Tab Bar */}
+      <div className="flex gap-6 border-b border-border overflow-x-auto">
         {['Overview', 'Applications', 'Interviews', 'Responses', 'Sources', 'Time Analysis', 'Conversion'].map(tab => (
           <button
             key={tab}
             className={`pb-3 text-sm font-bold flex items-center gap-2 border-b-[3px] transition-colors whitespace-nowrap ${
-              tab === 'Overview' ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-400 cursor-default'
+              tab === 'Overview' ? 'border-primary text-primary' : 'border-transparent text-muted cursor-default'
             }`}
           >
             {tab}
@@ -178,7 +182,7 @@ export default function Analytics() {
       </div>
 
       {/* Stat Cards Row */}
-      <div className="grid grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5 sm:gap-4">
         <StatCard 
           icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>} 
           label="Total Applications" 
@@ -209,39 +213,39 @@ export default function Analytics() {
         />
       </div>
 
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Line Chart */}
-        <div className="col-span-2 bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+        <div className="lg:col-span-2 card p-6">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-sm font-bold text-gray-900">Applications Over Time</h3>
-            <div className="flex items-center gap-4 text-xs font-bold text-gray-500">
-              <div className="flex items-center gap-2"><span className="w-3 h-1 bg-indigo-600 rounded-full" /> This Period</div>
+            <h3 className="text-sm font-bold text-foreground">Applications Over Time</h3>
+            <div className="flex items-center gap-4 text-xs font-bold text-foreground-secondary">
+              <div className="flex items-center gap-2"><span className="w-3 h-1 bg-primary rounded-full" /> This Period</div>
             </div>
           </div>
           <div className="h-[260px]">
             {chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-                  <XAxis dataKey="date" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#9ca3af', fontWeight: 600 }} dy={10} />
-                  <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#9ca3af', fontWeight: 600 }} />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartThemeColors.grid} />
+                  <XAxis dataKey="date" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: chartThemeColors.text, fontWeight: 600 }} dy={10} />
+                  <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: chartThemeColors.text, fontWeight: 600 }} />
                   <Tooltip 
-                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}
-                    itemStyle={{ fontSize: '12px', fontWeight: 'bold' }}
-                    labelStyle={{ fontSize: '11px', color: '#6b7280', fontWeight: 'bold', marginBottom: '4px' }}
+                    contentStyle={{ borderRadius: '12px', border: 'none', background: chartThemeColors.tooltipBg, boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}
+                    itemStyle={{ fontSize: '12px', color: '#6366f1', fontWeight: 'bold' }}
+                    labelStyle={{ fontSize: '11px', color: chartThemeColors.text, fontWeight: 'bold', marginBottom: '4px' }}
                   />
-                  <Line type="monotone" dataKey="Total" stroke="#6366f1" strokeWidth={3} dot={{ r: 4, strokeWidth: 2, fill: '#fff' }} activeDot={{ r: 6, fill: '#6366f1' }} />
+                  <Line type="monotone" dataKey="Total" stroke="#6366f1" strokeWidth={3} dot={{ r: 4, strokeWidth: 2, fill: chartThemeColors.tooltipBg }} activeDot={{ r: 6, fill: '#6366f1' }} />
                 </LineChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-full flex items-center justify-center text-xs text-gray-400 font-semibold">Not enough data to display trend.</div>
+              <div className="h-full flex items-center justify-center text-xs text-muted font-semibold">Not enough data to display trend.</div>
             )}
           </div>
         </div>
 
         {/* Status Donut */}
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-          <h3 className="text-sm font-bold text-gray-900 mb-2">Applications by Status</h3>
+        <div className="card p-6">
+          <h3 className="text-sm font-bold text-foreground mb-2">Applications by Status</h3>
           <div className="flex items-center justify-center h-[280px]">
             {statusData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
@@ -261,23 +265,24 @@ export default function Analytics() {
                   </Pie>
                   <Tooltip 
                     formatter={(val, name) => [`${val} (${Math.round((val/totalStatus)*100)}%)`, name]}
-                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: '12px', fontWeight: 'bold' }}
+                    contentStyle={{ borderRadius: '8px', border: 'none', background: chartThemeColors.tooltipBg, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: '12px', fontWeight: 'bold' }}
+                    itemStyle={{ color: '#6366f1' }}
                   />
                   <Legend content={(props) => renderLegend(props, statusData, totalStatus)} layout="vertical" verticalAlign="middle" align="right" />
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <span className="text-xs text-gray-400 font-semibold">No status data available.</span>
+              <span className="text-xs text-muted font-semibold">No status data available.</span>
             )}
           </div>
         </div>
       </div>
 
       {/* Second Row: Sources Breakdown */}
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Applications by Source Donut */}
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-          <h3 className="text-sm font-bold text-gray-900 mb-2">Applications by Source</h3>
+        <div className="card p-6">
+          <h3 className="text-sm font-bold text-foreground mb-2">Applications by Source</h3>
           <div className="flex items-center justify-center h-[220px]">
             {sourceData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
@@ -297,20 +302,20 @@ export default function Analytics() {
                   </Pie>
                   <Tooltip 
                     formatter={(val, name) => [`${val} (${Math.round((val/totalSources)*100)}%)`, name]}
-                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: '12px', fontWeight: 'bold' }}
+                    contentStyle={{ borderRadius: '8px', border: 'none', background: chartThemeColors.tooltipBg, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: '12px', fontWeight: 'bold' }}
+                    itemStyle={{ color: '#6366f1' }}
                   />
                   <Legend content={(props) => renderLegend(props, sourceData, totalSources)} layout="vertical" verticalAlign="middle" align="right" />
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <span className="text-xs text-gray-400 font-semibold">No source data available.</span>
+              <span className="text-xs text-muted font-semibold">No source data available.</span>
             )}
           </div>
         </div>
         
-        {/* Placeholder for future charts or insights to fill space */}
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 flex items-center justify-center">
-           <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">More Insights Coming Soon</p>
+        <div className="card p-6 flex items-center justify-center border-dashed border-border min-h-[220px]">
+           <p className="text-xs font-bold text-muted uppercase tracking-widest">More Insights Coming Soon</p>
         </div>
       </div>
     </section>
