@@ -32,13 +32,6 @@ const TIME_OPTIONS = [
   { label: '05:00 PM', value: '05:00 PM' }
 ]
 
-const MOCK_RESUMES = {
-  Stripe: { fileName: 'Frontend_Engineer_Resume.pdf', fileSize: '248 KB', uploadedAt: '2026-07-30' },
-  Linear: { fileName: 'Product_Engineer_Resume.pdf', fileSize: '312 KB', uploadedAt: '2026-08-01' },
-  Vercel: { fileName: 'Design_Systems_Resume.pdf', fileSize: '276 KB', uploadedAt: '2026-07-28' },
-  Figma: { fileName: 'React_UI_Engineer_Resume.pdf', fileSize: '221 KB', uploadedAt: '2026-08-02' },
-}
-
 const STATUS_TRIGGER_CLASSES = {
   'In Progress':   'bg-info/10 text-info hover:bg-info/20',
   'Interviewing':  'bg-primary/10 text-primary hover:bg-primary/20',
@@ -1123,7 +1116,7 @@ export default function Applications() {
                 </tr>
               ) : (
                 visible.map(app => {
-                  const res = MOCK_RESUMES[app.company] || app.resume
+                  const res = app.resume
                   return (
                     <tr key={app.id} className="group hover:bg-surface-secondary/30 transition-colors duration-150">
                       <td className="px-5 py-4">
