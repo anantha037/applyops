@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { TrendingUp, ArrowUpRight, Calendar, Sparkles } from 'lucide-react'
 import Dropdown from './ui/Dropdown'
+import { useGoalContext } from '../context/GoalContext'
 
 const MOCK_7_DAYS = [
   { day: 'Mon', date: 'Aug 1', count: 2 },
@@ -30,6 +31,7 @@ const MOCK_14_DAYS = [
 ]
 
 export default function DailyProgressCard({ data: propData }) {
+  const { weeklyGoal, weeklyApplications, weeklyProgress } = useGoalContext()
   const [timeframe, setTimeframe] = useState('7d')
   const [hoveredIndex, setHoveredIndex] = useState(null)
 
@@ -215,13 +217,12 @@ export default function DailyProgressCard({ data: propData }) {
           </div>
         </div>
 
-        {/* Metric 2: Weekly Goal */}
         <div className="flex flex-col gap-0.5">
           <span className="text-[10px] font-semibold text-foreground-secondary uppercase tracking-wider">Weekly Goal</span>
           <div className="flex items-center gap-2">
-            <span className="text-base font-extrabold text-foreground">80%</span>
-            <div className="flex-1 h-1.5 bg-surface-tertiary rounded-full overflow-hidden">
-              <div className="h-full bg-primary rounded-full" style={{ width: '80%' }} />
+            <span className="text-base font-extrabold text-foreground">{weeklyApplications} / {weeklyGoal}</span>
+            <div className="flex-1 h-1.5 bg-surface-tertiary rounded-full overflow-hidden" title={`${weeklyProgress}% complete`}>
+              <div className="h-full bg-primary rounded-full transition-all duration-500" style={{ width: `${Math.min(100, weeklyProgress)}%` }} />
             </div>
           </div>
         </div>
