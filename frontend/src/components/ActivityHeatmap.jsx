@@ -1,6 +1,5 @@
 import React, { useState, useRef } from 'react'
 import { Flame, Calendar, CheckCircle2, Award, Filter } from 'lucide-react'
-import { generateMockStreakData } from '../api/streakMockData'
 
 const RANGE_OPTIONS = [
   { label: '7 Days', value: 7 },
@@ -20,7 +19,7 @@ const TYPE_OPTIONS = [
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
 export default function ActivityHeatmap({ data: propData }) {
-  const streakData = propData || generateMockStreakData()
+  const streakData = propData || {}
   const [rangeDays, setRangeDays] = useState(30)
   const [selectedType, setSelectedType] = useState('all')
   const [hoveredCell, setHoveredCell] = useState(null)
