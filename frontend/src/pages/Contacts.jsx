@@ -350,8 +350,13 @@ export default function Contacts() {
   }
 
   const handleConfirmMarkApplied = async (contactId, method) => {
-    setContacts(prev => prev.map(c => c.id === contactId ? { ...c, applied: true, application_method: method } : c))
-    load()
+    try {
+      await api.contactsApi?.markAsApplied ? api.contactsApi.markAsApplied(contactId, { application_method: method }) : Promise.resolve()
+    } catch (e) {
+      setError(e.message || 'Failed to mark contact as applied')
+      throw e
+    }
+    await load()
   }
 
   const filtered = useMemo(() => {
