@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api/client'
+import { useGoalContext } from '../context/GoalContext'
 import { 
   Target, 
   Clock, 
@@ -15,14 +16,16 @@ import {
 } from 'lucide-react'
 
 export default function Settings() {
+  const { updateWeeklyGoal } = useGoalContext()
+
   const [initialSettings, setInitialSettings] = useState({
-    daily_goal: 5,
+    weekly_goal: 25,
     working_hours_start: '09:00',
     working_hours_end: '21:00',
   })
   
   const [settings, setSettings] = useState({
-    daily_goal: 5,
+    weekly_goal: 25,
     working_hours_start: '09:00',
     working_hours_end: '21:00',
   })
@@ -46,8 +49,9 @@ export default function Settings() {
     api.settings()
       .then(res => {
         if (active && res) {
+          const loadedGoal = res.weekly_goal ?? (res.daily_goal ? res.daily_goal * 5 : 25)
           const loaded = {
-            daily_goal: res.daily_goal ?? 5,
+            weekly_goal: loadedGoal,
             working_hours_start: res.working_hours_start || '09:00',
             working_hours_end: res.working_hours_end || '21:00',
           }
@@ -68,7 +72,7 @@ export default function Settings() {
   }, [])
 
   const hasChanges = 
-    settings.daily_goal !== initialSettings.daily_goal ||
+    settings.weekly_goal !== initialSettings.weekly_goal ||
     settings.working_hours_start !== initialSettings.working_hours_start ||
     settings.working_hours_end !== initialSettings.working_hours_end
 
@@ -80,7 +84,7 @@ export default function Settings() {
   const handleGoalChange = (delta) => {
     setSettings(prev => ({
       ...prev,
-      daily_goal: Math.max(1, (prev.daily_goal || 0) + delta)
+      weekly_goal: Math.max(1, (prev.weekly_goal || 0) + delta)
     }))
   }
 
@@ -102,13 +106,15 @@ export default function Settings() {
     setMessage('')
     api.updateSettings(settings)
       .then(s => {
+        const updatedGoal = s.weekly_goal ?? settings.weekly_goal
         const updated = {
-          daily_goal: s.daily_goal ?? settings.daily_goal,
+          weekly_goal: updatedGoal,
           working_hours_start: s.working_hours_start || settings.working_hours_start,
           working_hours_end: s.working_hours_end || settings.working_hours_end,
         }
         setSettings(updated)
         setInitialSettings(updated)
+        updateWeeklyGoal(updatedGoal)
         setMessage('Settings saved successfully.')
         setIsError(false)
       })
@@ -134,7 +140,7 @@ export default function Settings() {
       <div>
         <h2 className="text-2xl font-bold tracking-tight text-foreground">Settings</h2>
         <p className="mt-1 text-xs md:text-sm text-foreground-secondary">
-          Configure your job-search goals, working hours, and notification preferences.
+          Configure your weekly application goal, working hours, and notification preferences.
         </p>
       </div>
 
@@ -188,9 +194,9 @@ export default function Settings() {
                   <Target className="w-4.5 h-4.5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-foreground">Daily Goals & Schedule</h3>
+                  <h3 className="text-sm font-bold text-foreground">Weekly Goal & Schedule</h3>
                   <p className="text-xs text-foreground-secondary font-medium mt-0.5">
-                    Set your application target and the hours you actively work on your job search.
+                    Set your weekly application target and the hours you actively work on your job search.
                   </p>
                 </div>
               </div>
@@ -199,9 +205,9 @@ export default function Settings() {
                 <div className="p-4 rounded-xl bg-surface-secondary/40 space-y-2">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
-                      <label className="block text-xs font-bold text-foreground">Daily application goal</label>
+                      <label className="block text-xs font-bold text-foreground">Weekly application goal</label>
                       <p className="text-[11px] text-foreground-secondary font-medium mt-0.5">
-                        How many applications do you aim to submit each day? Drives Dashboard progress & streak targets.
+                        Set the number of job applications you want to submit each week.
                       </p>
                     </div>
 
@@ -216,9 +222,9 @@ export default function Settings() {
                       <input
                         type="number"
                         min="1"
-                        max="50"
-                        value={settings.daily_goal}
-                        onChange={e => setSettings({ ...settings, daily_goal: Math.max(1, parseInt(e.target.value) || 1) })}
+                        max="200"
+                        value={settings.weekly_goal}
+                        onChange={e => setSettings({ ...settings, weekly_goal: Math.max(1, parseInt(e.target.value) || 1) })}
                         className="w-12 text-center text-xs font-bold text-foreground bg-transparent outline-none"
                       />
                       <button
@@ -230,13 +236,16 @@ export default function Settings() {
                       </button>
                     </div>
                   </div>
+                  <p className="text-[10px] text-foreground-secondary/80 font-medium pt-1 border-t border-border/40">
+                    This goal powers your weekly progress, dashboard goal pace, and application streak insights.
+                  </p>
                 </div>
 
                 <div className="p-4 rounded-xl bg-surface-secondary/40 space-y-3">
                   <div>
                     <label className="block text-xs font-bold text-foreground">Working hours</label>
                     <p className="text-[11px] text-foreground-secondary font-medium mt-0.5">
-                      Used for follow-up reminders, outreach windows, and daily AI coaching messages.
+                      Used for reminders and daily job-search activity.
                     </p>
                   </div>
 
@@ -522,9 +531,9 @@ export default function Settings() {
               <div className="flex items-center justify-between p-2.5 rounded-xl bg-surface-secondary/40">
                 <div className="flex items-center gap-2.5">
                   <Target className="w-3.5 h-3.5 text-primary" />
-                  <span className="text-xs font-medium text-foreground-secondary">Daily Goal</span>
+                  <span className="text-xs font-medium text-foreground-secondary">Weekly Goal</span>
                 </div>
-                <span className="text-xs font-bold text-foreground">{settings.daily_goal} apps</span>
+                <span className="text-xs font-bold text-foreground">{settings.weekly_goal} apps/wk</span>
               </div>
 
               <div className="flex items-center justify-between p-2.5 rounded-xl bg-surface-secondary/40">
