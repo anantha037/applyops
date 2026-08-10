@@ -1,61 +1,8 @@
 import React from 'react'
 import { Activity, ArrowUpRight, CheckCircle2, Clock, Send, Calendar, PhoneCall, Trophy } from 'lucide-react'
 
-const DEFAULT_ACTIVITIES = [
-  {
-    id: 'act_1',
-    company: 'Google',
-    domain: 'google.com',
-    action: 'Applied for Senior Frontend Engineer',
-    type: 'Applied',
-    timestamp: '10m ago',
-    icon: Send,
-    color: 'text-blue-500 bg-blue-500/15'
-  },
-  {
-    id: 'act_2',
-    company: 'Stripe',
-    domain: 'stripe.com',
-    action: 'Technical Interview Scheduled',
-    type: 'Interview',
-    timestamp: '2h ago',
-    icon: Calendar,
-    color: 'text-amber-500 bg-amber-500/15'
-  },
-  {
-    id: 'act_3',
-    company: 'Amazon',
-    domain: 'amazon.com',
-    action: 'Recruiter Call Completed',
-    type: 'Call Dialed',
-    timestamp: '5h ago',
-    icon: PhoneCall,
-    color: 'text-emerald-500 bg-emerald-500/15'
-  },
-  {
-    id: 'act_4',
-    company: 'Vercel',
-    domain: 'vercel.com',
-    action: 'Follow-up Email Sent',
-    type: 'Follow-up',
-    timestamp: 'Yesterday',
-    icon: Clock,
-    color: 'text-indigo-500 bg-indigo-500/15'
-  },
-  {
-    id: 'act_5',
-    company: 'Netflix',
-    domain: 'netflix.com',
-    action: 'Offer Letter Received',
-    type: 'Offer',
-    timestamp: '2 days ago',
-    icon: Trophy,
-    color: 'text-rose-500 bg-rose-500/15'
-  }
-]
-
-export default function RecentActivityCard({ activities: propActivities, onViewAll }) {
-  const activities = propActivities || DEFAULT_ACTIVITIES
+export default function RecentActivityCard({ activities: propActivities = [], onViewAll }) {
+  const activities = propActivities
   const displayActivities = activities.slice(0, 5)
 
   return (
