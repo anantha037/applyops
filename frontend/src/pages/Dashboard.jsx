@@ -50,48 +50,38 @@ export default function Dashboard() {
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3.5 lg:gap-4 mb-6">
         <StatCard 
           title="Applications Today" 
-          value={summary.applications_today ?? 5} 
+          value={error ? '—' : (summary.applications_today ?? 0)} 
           icon={Send}
           gradient="from-indigo-600/20 via-primary/10 to-transparent" 
           iconColor="text-primary bg-primary/15"
-          badge="+2 vs target"
-          badgePositive={true}
         />
         <StatCard 
           title="Response Rate" 
-          value={`${summary.response_rate ?? 34}%`} 
+          value={error ? '—' : `${summary.response_rate ?? 0}%`} 
           icon={TrendingUp}
           gradient="from-emerald-600/20 via-teal-500/10 to-transparent" 
           iconColor="text-emerald-400 bg-emerald-500/15"
-          badge="+6% vs last week"
-          badgePositive={true}
         />
         <StatCard 
           title="Interviews" 
-          value={summary.interviews_count ?? 4} 
+          value={error ? '—' : (summary.interviews_count ?? 0)} 
           icon={CalendarCheck}
           gradient="from-blue-600/20 via-indigo-500/10 to-transparent" 
           iconColor="text-blue-400 bg-blue-500/15"
-          badge="3 scheduled"
-          badgePositive={true}
         />
         <StatCard 
           title="Offers" 
-          value={summary.offers_count ?? 1} 
+          value={error ? '—' : (summary.offers_count ?? 0)} 
           icon={Trophy}
           gradient="from-amber-600/20 via-orange-500/10 to-transparent" 
           iconColor="text-amber-400 bg-amber-500/15"
-          badge="1 pending review"
-          badgePositive={true}
         />
         <StatCard 
           title="Ghosted" 
-          value={summary.ghosted_count ?? 2} 
+          value={error ? '—' : (summary.ghosted_count ?? 0)} 
           icon={Ghost}
           gradient="from-rose-600/20 via-pink-500/10 to-transparent" 
           iconColor="text-rose-400 bg-rose-500/15"
-          badge="2 inactive >14d"
-          badgePositive={false}
         />
       </div>
 
