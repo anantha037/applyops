@@ -236,7 +236,7 @@ export default function Settings() {
                       </button>
                     </div>
                   </div>
-                  <p className="text-[10px] text-foreground-secondary/80 font-medium pt-1 border-t border-border/40">
+                  <p className="text-[10px] text-foreground-secondary/80 font-medium pt-0.5">
                     This goal powers your weekly progress, dashboard goal pace, and application streak insights.
                   </p>
                 </div>
