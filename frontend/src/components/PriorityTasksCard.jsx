@@ -2,51 +2,8 @@ import React, { useState } from 'react'
 import { Check, CheckCircle2, ArrowUpRight } from 'lucide-react'
 import Dropdown from './ui/Dropdown'
 
-const INITIAL_TASKS = [
-  {
-    id: 'pt_1',
-    company: 'Google',
-    domain: 'google.com',
-    taskTitle: 'Recruiter Follow-up',
-    taskType: 'Recruiter Call',
-    dueDate: 'Today',
-    priority: 'High',
-    completed: false
-  },
-  {
-    id: 'pt_2',
-    company: 'Stripe',
-    domain: 'stripe.com',
-    taskTitle: 'Online Assessment',
-    taskType: 'Online Assessment',
-    dueDate: 'Today',
-    priority: 'Medium',
-    completed: false
-  },
-  {
-    id: 'pt_3',
-    company: 'Amazon',
-    domain: 'amazon.com',
-    taskTitle: 'Update Resume for Senior Role',
-    taskType: 'Resume Update',
-    dueDate: 'Tomorrow',
-    priority: 'Low',
-    completed: false
-  },
-  {
-    id: 'pt_4',
-    company: 'Vercel',
-    domain: 'vercel.com',
-    taskTitle: 'Design System Portfolio Review',
-    taskType: 'Portfolio Update',
-    dueDate: 'Aug 8',
-    priority: 'High',
-    completed: false
-  }
-]
-
 export default function PriorityTasksCard({ tasks: initialPropTasks, onViewAll }) {
-  const [tasks, setTasks] = useState(initialPropTasks || INITIAL_TASKS)
+  const [tasks, setTasks] = useState(initialPropTasks || [])
   const [filterPriority, setFilterPriority] = useState('all')
 
   const toggleComplete = (id, e) => {
