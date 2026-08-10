@@ -5,7 +5,7 @@ import Applications from './pages/Applications'
 import Calendar from './pages/Calendar'
 import Contacts from './pages/Contacts'
 import Analytics from './pages/Analytics'
-import Reports from './pages/Reports'
+import Updates from './pages/Updates'
 import Settings from './pages/Settings'
 
 const views = { 
@@ -14,7 +14,7 @@ const views = {
   calendar: Calendar, 
   contacts: Contacts, 
   analytics: Analytics, 
-  reports: Reports, 
+  updates: Updates, 
   settings: Settings 
 }
 
@@ -25,7 +25,6 @@ export default function App() {
   })
   
   useEffect(() => {
-    // Set default hash if not present
     if (!window.location.hash || !views[window.location.hash.replace('#/', '')]) {
       window.location.hash = `#/dashboard`
     }
