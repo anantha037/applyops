@@ -1,3 +1,12 @@
+import React from 'react'
+
 export default function CoachingCard() {
-  return <div className="panel rounded-lg border-l-2 border-cyan-400 p-4"><p className="label">Daily coaching</p><p className="mt-2 text-sm leading-6 text-slate-300">Your next coaching message arrives at 9:00 PM IST via Telegram. Log your activity as it happens so the feedback has a real signal to work with.</p></div>
+  return (
+    <div className="rounded-xl border border-primary/20 bg-primary/5 p-4.5">
+      <p className="text-[10px] font-bold uppercase tracking-wider text-primary">Daily coaching</p>
+      <p className="mt-2 text-xs leading-relaxed text-foreground-secondary">
+        Your next coaching message arrives at 9:00 PM IST via Telegram. Log your activity as it happens so the feedback has a real signal to work with.
+      </p>
+    </div>
+  )
 }
