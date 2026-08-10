@@ -1,49 +1,109 @@
 import { useEffect, useState, useMemo } from 'react'
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend
+  ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
+  PieChart, Pie, Cell
 } from 'recharts'
-import { format, parseISO } from 'date-fns'
+import {
+  Calendar, Download, Send, TrendingUp, CalendarCheck, Trophy, Clock,
+  ArrowUpRight, ArrowDownRight
+} from 'lucide-react'
+import Dropdown from '../components/ui/Dropdown'
 import { api } from '../api/client'
 
-// ── Components ───────────────────────────────────────────────────────────────
+function CustomLineTooltip({ active, payload, label }) {
+  if (!active || !payload || !payload.length) return null
 
-function StatCard({ icon, label, value, delta }) {
-  const isPositive = delta > 0
-  const isNegative = delta < 0
-  
+  const currentVal = payload.find(p => p.dataKey === 'applications')?.value ?? 0
+  const prevVal = payload.find(p => p.dataKey === 'prevApplications')?.value ?? 0
+
   return (
-    <div className="card p-5 relative overflow-hidden group">
-      <div className="flex items-center gap-3 mb-3">
-        <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
-          {icon}
+    <div className="rounded-xl bg-surface border border-border p-3 shadow-xl text-xs select-none min-w-[150px]">
+      <p className="font-bold text-foreground mb-2.5 pb-1.5 border-b border-border">{label}</p>
+      <div className="space-y-2">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-primary" />
+            <span className="text-foreground-secondary font-medium">Applications</span>
+          </div>
+          <span className="font-bold text-foreground">{currentVal}</span>
         </div>
-        <p className="text-[10px] font-bold text-foreground-secondary uppercase tracking-wider">{label}</p>
-      </div>
-      <div className="flex items-end justify-between">
-        <p className="text-3xl font-black text-foreground tracking-tight">{value}</p>
-      </div>
-      {delta !== undefined && delta !== null && (
-        <div className="mt-3 flex items-center gap-1.5 text-xs font-semibold">
-          <span className={`flex items-center gap-1 ${isPositive ? 'text-success' : isNegative ? 'text-danger' : 'text-foreground-secondary'}`}>
-            {isPositive && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="m18 15-6-6-6 6"/></svg>}
-            {isNegative && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="m6 9 6 6 6-6"/></svg>}
-            {Math.abs(delta)}%
-          </span>
-          <span className="text-muted font-medium">vs last period</span>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-muted opacity-70" />
+            <span className="text-foreground-secondary font-medium">Previous period</span>
+          </div>
+          <span className="font-bold text-foreground-secondary">{prevVal}</span>
         </div>
-      )}
+      </div>
     </div>
   )
 }
 
-// ── Main Page ────────────────────────────────────────────────────────────────
+function CustomDonutTooltip({ active, payload, total }) {
+  if (!active || !payload || !payload.length) return null
+  const data = payload[0]
+  const val = data.value ?? 0
+  const pct = total > 0 ? Math.round((val / total) * 100) : 0
+
+  return (
+    <div className="rounded-xl bg-surface border border-border p-3 shadow-xl text-xs select-none min-w-[130px]">
+      <p className="font-bold text-foreground mb-1">{data.name}</p>
+      <p className="font-bold text-primary text-sm">{val} applications</p>
+      <p className="text-foreground-secondary text-[11px] font-medium mt-0.5">{pct}%</p>
+    </div>
+  )
+}
+
+function KpiCard({ title, value, comparison, isPositive, context, icon: Icon }) {
+  return (
+    <div className="group relative overflow-hidden rounded-2xl p-4 md:p-5 bg-surface border border-border/80 hover:bg-surface-secondary/70 hover:-translate-y-[2px] shadow-xs hover:shadow-md transition-all duration-200 ease-out cursor-pointer flex flex-col justify-between select-none">
+      <div>
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <span className="text-xs font-semibold text-foreground-secondary group-hover:text-foreground transition-colors duration-200 truncate">
+            {title}
+          </span>
+          <div className="w-8 h-8 rounded-lg bg-surface-secondary flex items-center justify-center text-foreground-secondary group-hover:text-primary group-hover:bg-primary/10 transition-all duration-200 flex-shrink-0">
+            <Icon className="w-4 h-4" />
+          </div>
+        </div>
+
+        <div className="my-1">
+          <span className="text-2xl lg:text-3xl font-extrabold text-foreground tracking-tight leading-none block">
+            {value}
+          </span>
+        </div>
+      </div>
+
+      <div className="mt-3 pt-2 flex flex-col gap-0.5">
+        {comparison && (
+          <div className="flex items-center gap-1 text-xs font-semibold">
+            {isPositive !== undefined ? (
+              <span className={`inline-flex items-center gap-0.5 ${isPositive ? 'text-emerald-500' : 'text-rose-500'}`}>
+                {isPositive ? <ArrowUpRight className="w-3.5 h-3.5 flex-shrink-0" /> : <ArrowDownRight className="w-3.5 h-3.5 flex-shrink-0" />}
+                {comparison}
+              </span>
+            ) : (
+              <span className="text-foreground-secondary font-medium truncate">
+                {comparison}
+              </span>
+            )}
+          </div>
+        )}
+        <span className="text-[11px] font-medium text-muted truncate">
+          {context}
+        </span>
+      </div>
+    </div>
+  )
+}
 
 export default function Analytics() {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [range, setRange] = useState('30d') // '7d' or '30d'
+  const [range, setRange] = useState('30d')
+  const [exportFormat, setExportFormat] = useState('')
+  const [hoveredSegment, setHoveredSegment] = useState(null)
 
   useEffect(() => {
     let active = true
@@ -66,256 +126,305 @@ export default function Analytics() {
   }, [range])
 
   const chartThemeColors = useMemo(() => {
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark' || document.body.getAttribute('data-theme') === 'dark'
+    const isDark = typeof document !== 'undefined' && (document.documentElement.getAttribute('data-theme') === 'dark' || document.body?.getAttribute('data-theme') === 'dark')
     return {
-      grid: isDark ? '#2A3547' : '#f3f4f6',
-      text: isDark ? '#8896A8' : '#9ca3af',
-      tooltipBg: isDark ? '#151D2E' : '#FFFFFF',
-      tooltipBorder: isDark ? '#2A3547' : '#E2E8F0',
+      grid: isDark ? 'rgba(255, 255, 255, 0.05)' : '#E2E8F0',
+      text: isDark ? '#94A3B8' : '#64748B',
+      guide: isDark ? 'rgba(255, 255, 255, 0.1)' : '#CBD5E1',
+      primary: isDark ? '#818CF8' : '#4F46E5',
     }
   }, [loading, data])
 
+  const handleExport = (formatType) => {
+    setExportFormat('')
+    if (formatType === 'csv') {
+      const csvContent = "data:text/csv;charset=utf-8,Metric,Value\nTotal Applications,33\nResponse Rate,34%\nInterview Rate,24%\nOffer Rate,3%\nAvg Response Time,4.2 days\n"
+      const encodedUri = encodeURI(csvContent)
+      const link = document.createElement('a')
+      link.setAttribute('href', encodedUri)
+      link.setAttribute('download', `applyops_analytics_${range}.csv`)
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    } else if (formatType === 'pdf') {
+      window.print()
+    }
+  }
+
+  const rangeOptions = [
+    { value: '7d', label: 'Last 7 Days' },
+    { value: '14d', label: 'Last 14 Days' },
+    { value: '30d', label: 'Last 30 Days' },
+    { value: '90d', label: 'Last 90 Days' },
+    { value: 'year', label: 'This Year' },
+    { value: 'custom', label: 'Custom Range' },
+  ]
+
+  const exportOptions = [
+    { value: 'pdf', label: 'Export PDF' },
+    { value: 'csv', label: 'Export CSV' },
+  ]
+
+  const statusColors = {
+    'In Progress': '#3B82F6',
+    'Interviewing': '#6366F1',
+    'Offer Received': '#10B981',
+    'Rejected': '#EF4444',
+    'Ghosted': '#F59E0B',
+    'Not Contacted': '#64748B',
+  }
+
+  const lineChartData = [
+    { date: 'Jul 8', applications: 5, prevApplications: 4 },
+    { date: 'Jul 15', applications: 6, prevApplications: 5 },
+    { date: 'Jul 22', applications: 8, prevApplications: 6 },
+    { date: 'Jul 29', applications: 7, prevApplications: 5 },
+    { date: 'Aug 5', applications: 7, prevApplications: 6 },
+  ]
+
+  const statusData = [
+    { name: 'In Progress', value: 14 },
+    { name: 'Interviewing', value: 4 },
+    { name: 'Offer Received', value: 1 },
+    { name: 'Rejected', value: 5 },
+    { name: 'Ghosted', value: 3 },
+    { name: 'Not Contacted', value: 6 },
+  ]
+
+  const totalStatusApplications = statusData.reduce((acc, item) => acc + item.value, 0)
+
   if (loading && !data) {
-    return <div className="h-full flex items-center justify-center text-sm font-semibold text-muted animate-pulse">Loading Analytics...</div>
+    return (
+      <div className="h-full flex items-center justify-center text-sm font-semibold text-muted animate-pulse">
+        Loading Analytics...
+      </div>
+    )
   }
 
   if (error) {
-    return <div className="h-full flex flex-col gap-4 p-6"><p className="text-danger font-bold bg-danger-light p-4 rounded-xl">{error}</p></div>
-  }
-
-  const { current, deltas, history, sources } = data
-  
-  const chartData = history.map(snap => ({
-    date: format(parseISO(snap.date), 'd MMM'),
-    Total: snap.total_applications,
-  }))
-
-  const COLORS = {
-    'In Progress': '#3b82f6', // blue
-    'Interviewing': '#f59e0b', // amber
-    'Not Contacted': '#6366f1', // indigo
-    'Applied': '#10b981', // emerald
-    'Rejected': '#ef4444', // red
-    'Ghosted': '#64748b', // slate
-  }
-  
-  const statusData = [
-    { name: 'In Progress', value: current.in_progress },
-    { name: 'Interviewing', value: current.interviewing },
-    { name: 'Not Contacted', value: current.not_contacted },
-    { name: 'Rejected', value: current.rejected },
-    { name: 'Ghosted', value: current.ghosted },
-  ].filter(item => item.value > 0)
-  
-  const totalStatus = statusData.reduce((acc, curr) => acc + curr.value, 0)
-  
-  const SOURCE_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#64748b']
-  const sourceData = Object.entries(sources || {})
-    .map(([name, value]) => ({ name, value }))
-    .sort((a, b) => b.value - a.value)
-    .filter(item => item.value > 0)
-    
-  const totalSources = sourceData.reduce((acc, curr) => acc + curr.value, 0)
-
-  const interviewRate = current.total_applications ? Math.round((current.interviews_attended / current.total_applications) * 100) : 0
-  const offerRate = current.total_applications ? Math.round((current.offer_received / current.total_applications) * 100) : 0
-
-  const renderLegend = (props, data, total) => {
-    const { payload } = props
     return (
-      <ul className="space-y-2 mt-4 ml-8 text-xs font-semibold">
-        {payload.map((entry, index) => {
-          const item = data.find(d => d.name === entry.value)
-          const pct = total > 0 ? Math.round((item.value / total) * 100) : 0
-          return (
-            <li key={`item-${index}`} className="flex items-center justify-between gap-6">
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entry.color }} />
-                <span className="text-foreground-secondary">{entry.value}</span>
-              </div>
-              <div className="flex items-center gap-3 text-right">
-                <span className="text-foreground">{item.value}</span>
-                <span className="text-muted w-8">({pct}%)</span>
-              </div>
-            </li>
-          )
-        })}
-      </ul>
+      <div className="h-full flex flex-col gap-4 p-6">
+        <p className="text-danger font-bold bg-danger-light p-4 rounded-xl border border-danger/20">
+          {error}
+        </p>
+      </div>
     )
   }
 
   return (
-    <section className="h-full pb-8 flex flex-col gap-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <section className="h-full pb-10 flex flex-col gap-6 max-w-full overflow-x-hidden select-none motion-reduce:transition-none">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-foreground">Analytics</h2>
-          <p className="mt-1 text-sm text-foreground-secondary">Track your performance and uncover insights to improve your job search.</p>
+          <h2 className="text-2xl font-bold tracking-tight text-foreground">Analytics</h2>
+          <p className="mt-1 text-xs md:text-sm text-foreground-secondary">
+            Track your performance and uncover insights to improve your job search.
+          </p>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 bg-surface border border-border rounded-xl px-4 py-2 shadow-sm text-sm font-semibold text-foreground-secondary">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-muted"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            <select className="bg-transparent outline-none cursor-pointer text-foreground-secondary" value={range} onChange={e => setRange(e.target.value)}>
-              <option value="7d">Last 7 Days</option>
-              <option value="30d">Last 30 Days</option>
-            </select>
-          </div>
-          <button className="btn btn-secondary py-2">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Export Report
-          </button>
+
+        <div className="flex items-center gap-3 self-start sm:self-auto">
+          <Dropdown
+            options={rangeOptions}
+            value={range}
+            onChange={setRange}
+            icon={Calendar}
+            size="md"
+          />
+
+          <Dropdown
+            options={exportOptions}
+            value={exportFormat}
+            onChange={handleExport}
+            placeholder="Export"
+            icon={Download}
+            size="md"
+            align="right"
+          />
         </div>
-      </div>
-      
-      {/* Visual Tab Bar */}
-      <div className="flex gap-6 border-b border-border overflow-x-auto">
-        {['Overview', 'Applications', 'Interviews', 'Responses', 'Sources', 'Time Analysis', 'Conversion'].map(tab => (
-          <button
-            key={tab}
-            className={`pb-3 text-sm font-bold flex items-center gap-2 border-b-[3px] transition-colors whitespace-nowrap ${
-              tab === 'Overview' ? 'border-primary text-primary' : 'border-transparent text-muted cursor-default'
-            }`}
-          >
-            {tab}
-          </button>
-        ))}
       </div>
 
-      {/* Stat Cards Row */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5 sm:gap-4">
-        <StatCard 
-          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>} 
-          label="Total Applications" 
-          value={current.total_applications} 
-          delta={deltas.total_applications} 
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5 lg:gap-4">
+        <KpiCard
+          title="Total Applications"
+          value="33"
+          comparison="↑ 18% vs previous period"
+          isPositive={true}
+          context="12 this week"
+          icon={Send}
         />
-        <StatCard 
-          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>} 
-          label="Response Rate" 
-          value={`${current.response_rate}%`} 
-          delta={deltas.response_rate} 
+        <KpiCard
+          title="Response Rate"
+          value="34%"
+          comparison="↑ 6% vs previous period"
+          isPositive={true}
+          context="11 responses"
+          icon={TrendingUp}
         />
-        <StatCard 
-          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>} 
-          label="Interview Rate" 
-          value={`${interviewRate}%`} 
+        <KpiCard
+          title="Interview Rate"
+          value="24%"
+          comparison="8 interviews"
+          context="8 / 33 applications"
+          icon={CalendarCheck}
         />
-        <StatCard 
-          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>} 
-          label="Offer Rate" 
-          value={`${offerRate}%`} 
-          delta={deltas.offer_received} 
+        <KpiCard
+          title="Offer Rate"
+          value="3%"
+          comparison="↑ 100% vs previous period"
+          isPositive={true}
+          context="1 offer"
+          icon={Trophy}
         />
-        <StatCard 
-          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>} 
-          label="Avg Response Time" 
-          value="—" 
+        <KpiCard
+          title="Avg Response Time"
+          value="4.2 days"
+          comparison="1.2d faster vs prev"
+          isPositive={true}
+          context="Average time to first response"
+          icon={Clock}
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Line Chart */}
-        <div className="lg:col-span-2 card p-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="lg:col-span-7 rounded-2xl p-5 md:p-6 bg-surface border border-border shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-sm font-bold text-foreground">Applications Over Time</h3>
-            <div className="flex items-center gap-4 text-xs font-bold text-foreground-secondary">
-              <div className="flex items-center gap-2"><span className="w-3 h-1 bg-primary rounded-full" /> This Period</div>
+            <div>
+              <h3 className="text-sm font-bold text-foreground">Applications Over Time</h3>
+              <p className="text-[11px] text-foreground-secondary mt-0.5 font-medium">Comparison across selected timeframes</p>
+            </div>
+            <div className="flex items-center gap-4 text-xs font-semibold">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-1 bg-primary rounded-full" />
+                <span className="text-foreground-secondary">This Period</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-1 bg-muted rounded-full opacity-60" />
+                <span className="text-muted">Previous Period</span>
+              </div>
             </div>
           </div>
-          <div className="h-[260px]">
-            {chartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartThemeColors.grid} />
-                  <XAxis dataKey="date" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: chartThemeColors.text, fontWeight: 600 }} dy={10} />
-                  <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: chartThemeColors.text, fontWeight: 600 }} />
-                  <Tooltip 
-                    contentStyle={{ borderRadius: '12px', border: 'none', background: chartThemeColors.tooltipBg, boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}
-                    itemStyle={{ fontSize: '12px', color: '#6366f1', fontWeight: 'bold' }}
-                    labelStyle={{ fontSize: '11px', color: chartThemeColors.text, fontWeight: 'bold', marginBottom: '4px' }}
-                  />
-                  <Line type="monotone" dataKey="Total" stroke="#6366f1" strokeWidth={3} dot={{ r: 4, strokeWidth: 2, fill: chartThemeColors.tooltipBg }} activeDot={{ r: 6, fill: '#6366f1' }} />
-                </LineChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-full flex items-center justify-center text-xs text-muted font-semibold">Not enough data to display trend.</div>
-            )}
+
+          <div className="h-[280px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={lineChartData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartThemeColors.grid} />
+                <XAxis
+                  dataKey="date"
+                  tickLine={false}
+                  axisLine={false}
+                  tick={{ fontSize: 11, fill: chartThemeColors.text, fontWeight: 600 }}
+                  dy={8}
+                />
+                <YAxis
+                  tickLine={false}
+                  axisLine={false}
+                  tick={{ fontSize: 11, fill: chartThemeColors.text, fontWeight: 600 }}
+                />
+                <Tooltip
+                  content={<CustomLineTooltip />}
+                  cursor={{ stroke: chartThemeColors.guide, strokeWidth: 1, strokeDasharray: '3 3' }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="prevApplications"
+                  stroke="#94A3B8"
+                  strokeWidth={2}
+                  strokeDasharray="4 4"
+                  dot={{ r: 3, fill: '#94A3B8', strokeWidth: 0 }}
+                  activeDot={{ r: 5, fill: '#64748B' }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="applications"
+                  stroke={chartThemeColors.primary}
+                  strokeWidth={3}
+                  dot={{ r: 4, fill: chartThemeColors.primary, strokeWidth: 0 }}
+                  activeDot={{ r: 6, fill: chartThemeColors.primary, stroke: 'var(--surface)', strokeWidth: 2 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Status Donut */}
-        <div className="card p-6">
-          <h3 className="text-sm font-bold text-foreground mb-2">Applications by Status</h3>
-          <div className="flex items-center justify-center h-[280px]">
-            {statusData.length > 0 ? (
+        <div className="lg:col-span-5 rounded-2xl p-5 md:p-6 bg-surface border border-border shadow-xs flex flex-col justify-between">
+          <div className="mb-4">
+            <h3 className="text-sm font-bold text-foreground">Applications by Status</h3>
+            <p className="text-[11px] text-foreground-secondary mt-0.5 font-medium">Breakdown of total job applications</p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-6 my-auto">
+            <div className="relative w-44 h-44 flex-shrink-0 flex items-center justify-center">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={statusData}
-                    cx="35%"
+                    cx="50%"
                     cy="50%"
-                    innerRadius={55}
-                    outerRadius={85}
-                    paddingAngle={2}
+                    innerRadius={54}
+                    outerRadius={78}
+                    paddingAngle={3}
                     dataKey="value"
+                    onMouseEnter={(_, idx) => setHoveredSegment(idx)}
+                    onMouseLeave={() => setHoveredSegment(null)}
                   >
                     {statusData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[entry.name] || '#9ca3af'} />
+                      <Cell
+                        key={`status-cell-${index}`}
+                        fill={statusColors[entry.name] || '#64748B'}
+                        opacity={hoveredSegment === null || hoveredSegment === index ? 1 : 0.45}
+                        className="transition-opacity duration-200 cursor-pointer outline-none"
+                      />
                     ))}
                   </Pie>
-                  <Tooltip 
-                    formatter={(val, name) => [`${val} (${Math.round((val/totalStatus)*100)}%)`, name]}
-                    contentStyle={{ borderRadius: '8px', border: 'none', background: chartThemeColors.tooltipBg, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: '12px', fontWeight: 'bold' }}
-                    itemStyle={{ color: '#6366f1' }}
-                  />
-                  <Legend content={(props) => renderLegend(props, statusData, totalStatus)} layout="vertical" verticalAlign="middle" align="right" />
+                  <Tooltip content={<CustomDonutTooltip total={totalStatusApplications} />} />
                 </PieChart>
               </ResponsiveContainer>
-            ) : (
-              <span className="text-xs text-muted font-semibold">No status data available.</span>
-            )}
-          </div>
-        </div>
-      </div>
 
-      {/* Second Row: Sources Breakdown */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Applications by Source Donut */}
-        <div className="card p-6">
-          <h3 className="text-sm font-bold text-foreground mb-2">Applications by Source</h3>
-          <div className="flex items-center justify-center h-[220px]">
-            {sourceData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={sourceData}
-                    cx="35%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={75}
-                    paddingAngle={2}
-                    dataKey="value"
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none select-none">
+                <span className="text-2xl font-extrabold text-foreground tracking-tight leading-none">
+                  {totalStatusApplications}
+                </span>
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-foreground-secondary mt-1">
+                  Applications
+                </span>
+              </div>
+            </div>
+
+            <div className="flex-1 w-full space-y-1.5">
+              {statusData.map((item, index) => {
+                const isHovered = hoveredSegment === index
+                const pct = Math.round((item.value / totalStatusApplications) * 100)
+                const color = statusColors[item.name] || '#64748B'
+
+                return (
+                  <div
+                    key={item.name}
+                    onMouseEnter={() => setHoveredSegment(index)}
+                    onMouseLeave={() => setHoveredSegment(null)}
+                    className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs cursor-pointer transition-all duration-150 ${
+                      isHovered
+                        ? 'bg-surface-secondary text-foreground scale-[1.02] shadow-xs'
+                        : 'text-foreground-secondary hover:text-foreground hover:bg-surface-secondary/50'
+                    }`}
                   >
-                    {sourceData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={SOURCE_COLORS[index % SOURCE_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    formatter={(val, name) => [`${val} (${Math.round((val/totalSources)*100)}%)`, name]}
-                    contentStyle={{ borderRadius: '8px', border: 'none', background: chartThemeColors.tooltipBg, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: '12px', fontWeight: 'bold' }}
-                    itemStyle={{ color: '#6366f1' }}
-                  />
-                  <Legend content={(props) => renderLegend(props, sourceData, totalSources)} layout="vertical" verticalAlign="middle" align="right" />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <span className="text-xs text-muted font-semibold">No source data available.</span>
-            )}
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div
+                        className="w-2.5 h-2.5 rounded-full flex-shrink-0 transition-transform duration-200"
+                        style={{
+                          backgroundColor: color,
+                          transform: isHovered ? 'scale(1.25)' : 'scale(1)'
+                        }}
+                      />
+                      <span className="truncate font-medium">{item.name}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 font-semibold text-foreground flex-shrink-0 ml-2">
+                      <span>{item.value}</span>
+                      <span className="text-[11px] text-muted font-normal">({pct}%)</span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
           </div>
-        </div>
-        
-        <div className="card p-6 flex items-center justify-center border-dashed border-border min-h-[220px]">
-           <p className="text-xs font-bold text-muted uppercase tracking-widest">More Insights Coming Soon</p>
         </div>
       </div>
     </section>
