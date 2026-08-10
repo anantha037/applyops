@@ -172,10 +172,14 @@ function ViewResumeModal({ resume, onClose }) {
   if (!resume) return null
 
   const handleDownload = () => {
+    if (resume.url) {
+      window.open(resume.url, '_blank')
+      return
+    }
     const element = document.createElement('a')
-    const file = new Blob([`Mock PDF Content for ${resume.fileName}`], { type: 'text/plain' })
+    const file = new Blob([`Resume document for ${resume.fileName || 'application'}`], { type: 'text/plain' })
     element.href = URL.createObjectURL(file)
-    element.download = resume.fileName
+    element.download = resume.fileName || 'Resume.pdf'
     document.body.appendChild(element)
     element.click()
     document.body.removeChild(element)
@@ -867,10 +871,14 @@ export default function Applications() {
   }
 
   const handleDownloadResume = (res) => {
+    if (res?.url) {
+      window.open(res.url, '_blank')
+      return
+    }
     const element = document.createElement('a')
-    const file = new Blob([`Mock PDF Content for ${res.fileName}`], { type: 'text/plain' })
+    const file = new Blob([`Resume document for ${res?.fileName || 'application'}`], { type: 'text/plain' })
     element.href = URL.createObjectURL(file)
-    element.download = res.fileName
+    element.download = res?.fileName || 'Resume.pdf'
     document.body.appendChild(element)
     element.click()
     document.body.removeChild(element)
