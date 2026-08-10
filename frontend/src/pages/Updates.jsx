@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { updatesApi } from '../api/client'
 import Dropdown from '../components/ui/Dropdown'
 import {
   Sparkles,
@@ -23,107 +24,38 @@ import {
   Layers
 } from 'lucide-react'
 
-const INITIAL_SUPPORT_TICKETS = [
-  {
-    id: 'TICK-104',
-    title: 'Google Sheets sync delay on batch updates',
-    type: 'Bug Report',
-    date: 'Yesterday',
-    status: 'Resolved',
-    statusBg: 'bg-emerald-500/15 text-emerald-500',
-    response: 'Resolved in v1.4.1 patch by optimizing gspread batch request rate limits.'
-  },
-  {
-    id: 'TICK-102',
-    title: 'Custom tags for recruiter contacts',
-    type: 'Feature Request',
-    date: '3 days ago',
-    status: 'In Progress',
-    statusBg: 'bg-blue-500/15 text-blue-500',
-    response: 'Added to current sprint roadmap. Expected in v1.5 release.'
-  },
-  {
-    id: 'TICK-099',
-    title: 'Telegram reminder timezone offset adjustment',
-    type: 'Feedback',
-    date: '1 week ago',
-    status: 'Under Review',
-    statusBg: 'bg-amber-500/15 text-amber-500',
-    response: 'Under review by engineering team for multi-timezone support.'
-  }
-]
-
-const INITIAL_UPDATES = [
-  {
-    id: 'up_1',
-    title: 'Application Streak',
-    description: "You've applied to jobs for 7 consecutive days. Keep the momentum going.",
-    timestamp: 'Today',
-    category: 'Notifications & Reminders',
-    unread: true,
-    icon: Flame,
-    iconColor: 'text-amber-500 bg-amber-500/15',
-    actionText: 'View Activity',
-    actionHref: '#/analytics'
-  },
-  {
-    id: 'up_2',
-    title: 'Interview Tomorrow',
-    description: 'Your Stripe technical interview is scheduled for tomorrow at 4:30 PM.',
-    timestamp: 'Tomorrow',
-    category: 'Notifications & Reminders',
-    unread: true,
-    priority: 'high',
-    icon: CalendarCheck,
-    iconColor: 'text-blue-500 bg-blue-500/15',
-    actionText: 'View Calendar',
-    actionHref: '#/calendar'
-  },
-  {
-    id: 'up_3',
-    title: 'Follow-up Due',
-    description: 'Your follow-up with Linear is due today.',
-    timestamp: 'Today',
-    category: 'Notifications & Reminders',
-    unread: true,
-    priority: 'high',
-    icon: Clock,
-    iconColor: 'text-rose-500 bg-rose-500/15',
-    actionText: 'View Application',
-    actionHref: '#/applications'
-  },
-  {
-    id: 'up_4',
-    title: 'Resume Tracking Feature',
-    description: 'You can now attach tailored resumes to individual applications.',
-    timestamp: 'Yesterday',
-    category: 'Product Changelog',
-    unread: false,
-    icon: FileText,
-    iconColor: 'text-primary bg-primary/15',
-    actionText: 'View Applications',
-    actionHref: '#/applications'
-  },
-  {
-    id: 'up_5',
-    title: 'Calendar Filtering Update',
-    description: 'Calendar filtering and scheduling performance have been improved.',
-    timestamp: '3 days ago',
-    category: 'Product Changelog',
-    unread: false,
-    icon: Sparkles,
-    iconColor: 'text-indigo-500 bg-indigo-500/15'
-  }
-]
-
 export default function Updates() {
-  const [updates, setUpdates] = useState(INITIAL_UPDATES)
-  const [tickets, setTickets] = useState(INITIAL_SUPPORT_TICKETS)
+  const [updates, setUpdates] = useState([])
+  const [tickets, setTickets] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [tab, setTab] = useState('All Updates')
   const [showModal, setShowModal] = useState(false)
   const [ticketType, setTicketType] = useState('Feedback')
   const [ticketTitle, setTicketTitle] = useState('')
   const [ticketDesc, setTicketDesc] = useState('')
+
+  useEffect(() => {
+    let active = true
+    setLoading(true)
+    updatesApi.getUpdates()
+      .then(res => {
+        if (active && Array.isArray(res)) {
+          setUpdates(res)
+          setError('')
+        }
+      })
+      .catch(err => {
+        if (active) {
+          setError(err.message || 'Updates API pending backend implementation.')
+          setUpdates([])
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+    return () => { active = false }
+  }, [])
 
   useEffect(() => {
     if (!showModal) return
@@ -134,14 +66,23 @@ export default function Updates() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [showModal])
 
-  const unreadCount = updates.filter(u => u.unread).length
+  const unreadCount = updates.filter(u => u.unread || u.read === false).length
 
-  const handleMarkAllRead = () => {
-    setUpdates(prev => prev.map(u => ({ ...u, unread: false })))
+  const handleMarkAllRead = async () => {
+    try {
+      await updatesApi.markAllAsRead()
+      setUpdates(prev => prev.map(u => ({ ...u, unread: false, read: true })))
+    } catch {
+      setUpdates(prev => prev.map(u => ({ ...u, unread: false, read: true })))
+    }
   }
 
-  const handleToggleRead = (id) => {
-    setUpdates(prev => prev.map(u => u.id === id ? { ...u, unread: !u.unread } : u))
+  const handleToggleRead = async (id) => {
+    try {
+      await updatesApi.markAsRead(id)
+    } catch {
+    }
+    setUpdates(prev => prev.map(u => u.id === id ? { ...u, unread: !u.unread, read: true } : u))
   }
 
   const handleCreateTicket = (e) => {
