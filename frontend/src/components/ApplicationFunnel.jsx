@@ -6,7 +6,7 @@ export default function ApplicationFunnel({ summary = {} }) {
   const [timeRange, setTimeRange] = useState('all')
 
   const funnel = summary.funnel || {}
-  const totalApps = summary.total_applications || 128
+  const totalApps = summary.total_applications || (summary.funnel ? Object.values(summary.funnel).reduce((a, b) => a + b, 0) : 0)
 
   const stages = [
     { 
@@ -19,30 +19,30 @@ export default function ApplicationFunnel({ summary = {} }) {
     { 
       id: 'in_progress', 
       label: 'In Progress', 
-      count: funnel['In Progress'] ?? 37, 
+      count: funnel['In Progress'] ?? 0, 
       grad: ['#14B8A6', '#10B981'],
-      percent: Math.round(((funnel['In Progress'] ?? 37) / totalApps) * 100)
+      percent: totalApps > 0 ? Math.round(((funnel['In Progress'] ?? 0) / totalApps) * 100) : 0
     },
     { 
       id: 'interviewing', 
       label: 'Interviewing', 
-      count: funnel['Interviewing'] ?? 15, 
+      count: funnel['Interviewing'] ?? 0, 
       grad: ['#3B82F6', '#2563EB'],
-      percent: Math.round(((funnel['Interviewing'] ?? 15) / totalApps) * 100)
+      percent: totalApps > 0 ? Math.round(((funnel['Interviewing'] ?? 0) / totalApps) * 100) : 0
     },
     { 
       id: 'offer', 
       label: 'Offer Received', 
-      count: funnel['Offer Received'] ?? 2, 
+      count: funnel['Offer Received'] ?? 0, 
       grad: ['#F59E0B', '#D97706'],
-      percent: Math.round(((funnel['Offer Received'] ?? 2) / totalApps) * 100)
+      percent: totalApps > 0 ? Math.round(((funnel['Offer Received'] ?? 0) / totalApps) * 100) : 0
     },
     { 
       id: 'rejected', 
       label: 'Rejected', 
-      count: funnel['Rejected'] ?? 9, 
+      count: funnel['Rejected'] ?? 0, 
       grad: ['#F43F5E', '#E11D48'],
-      percent: Math.round(((funnel['Rejected'] ?? 9) / totalApps) * 100)
+      percent: totalApps > 0 ? Math.round(((funnel['Rejected'] ?? 0) / totalApps) * 100) : 0
     }
   ]
 
