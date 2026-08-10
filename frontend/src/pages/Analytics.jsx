@@ -392,6 +392,7 @@ export default function Analytics() {
                       outerRadius={78}
                       paddingAngle={3}
                       dataKey="value"
+                      stroke="none"
                       onMouseEnter={(_, idx) => setHoveredSegment(idx)}
                       onMouseLeave={() => setHoveredSegment(null)}
                     >
@@ -399,8 +400,9 @@ export default function Analytics() {
                         <Cell
                           key={`status-cell-${index}`}
                           fill={statusColors[entry.name] || '#64748B'}
+                          stroke="none"
                           opacity={hoveredSegment === null || hoveredSegment === index ? 1 : 0.45}
-                          className="transition-opacity duration-200 cursor-pointer outline-none"
+                          className="transition-opacity duration-200 cursor-pointer outline-none focus:outline-none"
                         />
                       ))}
                     </Pie>
