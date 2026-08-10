@@ -3,39 +3,12 @@ import { TrendingUp, ArrowUpRight, Calendar, Sparkles } from 'lucide-react'
 import Dropdown from './ui/Dropdown'
 import { useGoalContext } from '../context/GoalContext'
 
-const MOCK_7_DAYS = [
-  { day: 'Mon', date: 'Aug 1', count: 2 },
-  { day: 'Tue', date: 'Aug 2', count: 4 },
-  { day: 'Wed', date: 'Aug 3', count: 3 },
-  { day: 'Thu', date: 'Aug 4', count: 6 },
-  { day: 'Fri', date: 'Aug 5', count: 5 },
-  { day: 'Sat', date: 'Aug 6', count: 2 },
-  { day: 'Sun', date: 'Today', count: 4 },
-]
-
-const MOCK_14_DAYS = [
-  { day: 'Jul 25', date: 'Jul 25', count: 1 },
-  { day: 'Jul 26', date: 'Jul 26', count: 3 },
-  { day: 'Jul 27', date: 'Jul 27', count: 2 },
-  { day: 'Jul 28', date: 'Jul 28', count: 4 },
-  { day: 'Jul 29', date: 'Jul 29', count: 5 },
-  { day: 'Jul 30', date: 'Jul 30', count: 1 },
-  { day: 'Jul 31', date: 'Jul 31', count: 3 },
-  { day: 'Aug 1', date: 'Aug 1', count: 2 },
-  { day: 'Aug 2', date: 'Aug 2', count: 4 },
-  { day: 'Aug 3', date: 'Aug 3', count: 3 },
-  { day: 'Aug 4', date: 'Aug 4', count: 6 },
-  { day: 'Aug 5', date: 'Aug 5', count: 5 },
-  { day: 'Aug 6', date: 'Aug 6', count: 2 },
-  { day: 'Today', date: 'Today', count: 4 },
-]
-
 export default function DailyProgressCard({ data: propData }) {
   const { weeklyGoal, weeklyApplications, weeklyProgress } = useGoalContext()
   const [timeframe, setTimeframe] = useState('7d')
   const [hoveredIndex, setHoveredIndex] = useState(null)
 
-  const dataset = propData || (timeframe === '7d' ? MOCK_7_DAYS : MOCK_14_DAYS)
+  const dataset = propData || []
   
   const timeframeOptions = [
     { value: '7d', label: 'Last 7 Days' },
