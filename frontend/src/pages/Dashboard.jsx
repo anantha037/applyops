@@ -6,6 +6,7 @@ import PriorityTasksCard from '../components/PriorityTasksCard'
 import DailyProgressCard from '../components/DailyProgressCard'
 import RecentActivityCard from '../components/RecentActivityCard'
 import MiniCalendarCard from '../components/MiniCalendarCard'
+import ApplicationStreakCard from '../components/ApplicationStreakCard'
 import { Send, TrendingUp, CalendarCheck, Trophy, Ghost, ArrowUpRight, ArrowDownRight } from 'lucide-react'
 
 export default function Dashboard() {
@@ -22,7 +23,6 @@ export default function Dashboard() {
 
   return (
     <section className="animate-fade-in pb-10 select-none max-w-full">
-      {/* Top Header Banner */}
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
@@ -47,7 +47,6 @@ export default function Dashboard() {
         </p>
       )}
 
-      {/* Top Stat Cards Grid — Micro-Motion Hover Interactive Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3.5 lg:gap-4 mb-6">
         <StatCard 
           title="Applications Today" 
@@ -96,60 +95,46 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* Middle Dashboard Analytics Row */}
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Application Funnel */}
         <ApplicationFunnel summary={summary} />
-
-        {/* Applications by Status Donut */}
         <ApplicationsByStatus summary={summary} />
-
-        {/* Priority Tasks Card */}
         <PriorityTasksCard />
-       </div>
+      </div>
 
-       {/* Daily Progress & Quick Actions Row */}
-       <div className="mt-6 grid gap-6 lg:grid-cols-3">
-          <div className="lg:col-span-2">
-             <DailyProgressCard />
+      <div className="mt-6 grid gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2 flex flex-col gap-6">
+          <DailyProgressCard />
+          <RecentActivityCard />
+        </div>
+        <div className="flex flex-col gap-6">
+          <div className="panel rounded-2xl p-5 border border-border bg-surface shadow-xs flex flex-col justify-between">
+            <h3 className="text-sm font-bold text-foreground mb-4">Quick Actions</h3>
+            <div className="grid grid-cols-2 gap-3 flex-1">
+              <button className="flex flex-col items-center justify-center gap-2.5 rounded-xl bg-surface-secondary/40 border border-transparent hover:border-primary/40 hover:bg-surface-secondary p-4 transition-all group focus:outline-none focus:ring-2 focus:ring-primary/40">
+                <span className="text-2xl text-primary group-hover:scale-110 transition-transform">+</span>
+                <span className="text-[11px] font-semibold text-foreground-secondary group-hover:text-foreground">Add Application</span>
+              </button>
+              <button className="flex flex-col items-center justify-center gap-2.5 rounded-xl bg-surface-secondary/40 border border-transparent hover:border-emerald-500/40 hover:bg-surface-secondary p-4 transition-all group focus:outline-none focus:ring-2 focus:ring-primary/40">
+                <span className="text-2xl text-emerald-400 group-hover:scale-110 transition-transform">📅</span>
+                <span className="text-[11px] font-semibold text-foreground-secondary group-hover:text-foreground">Schedule</span>
+              </button>
+              <button className="flex flex-col items-center justify-center gap-2.5 rounded-xl bg-surface-secondary/40 border border-transparent hover:border-blue-500/40 hover:bg-surface-secondary p-4 transition-all group focus:outline-none focus:ring-2 focus:ring-primary/40">
+                <span className="text-2xl text-blue-400 group-hover:scale-110 transition-transform">📊</span>
+                <span className="text-[11px] font-semibold text-foreground-secondary group-hover:text-foreground">View Analytics</span>
+              </button>
+              <button className="flex flex-col items-center justify-center gap-2.5 rounded-xl bg-surface-secondary/40 border border-transparent hover:border-amber-500/40 hover:bg-surface-secondary p-4 transition-all group focus:outline-none focus:ring-2 focus:ring-primary/40">
+                <span className="text-2xl text-amber-400 group-hover:scale-110 transition-transform">📥</span>
+                <span className="text-[11px] font-semibold text-foreground-secondary group-hover:text-foreground">Export Report</span>
+              </button>
+            </div>
           </div>
-          <div>
-             <div className="panel rounded-2xl p-5 h-full border border-border bg-surface shadow-xs flex flex-col justify-between">
-                <h3 className="text-sm font-bold text-foreground mb-4">Quick Actions</h3>
-                <div className="grid grid-cols-2 gap-3 flex-1">
-                   <button className="flex flex-col items-center justify-center gap-2.5 rounded-xl bg-surface-secondary/40 border border-transparent hover:border-primary/40 hover:bg-surface-secondary p-4 transition-all group focus:outline-none focus:ring-2 focus:ring-primary/40">
-                      <span className="text-2xl text-primary group-hover:scale-110 transition-transform">+</span>
-                      <span className="text-[11px] font-semibold text-foreground-secondary group-hover:text-foreground">Add Application</span>
-                   </button>
-                   <button className="flex flex-col items-center justify-center gap-2.5 rounded-xl bg-surface-secondary/40 border border-transparent hover:border-emerald-500/40 hover:bg-surface-secondary p-4 transition-all group focus:outline-none focus:ring-2 focus:ring-primary/40">
-                      <span className="text-2xl text-emerald-400 group-hover:scale-110 transition-transform">📅</span>
-                      <span className="text-[11px] font-semibold text-foreground-secondary group-hover:text-foreground">Schedule</span>
-                   </button>
-                   <button className="flex flex-col items-center justify-center gap-2.5 rounded-xl bg-surface-secondary/40 border border-transparent hover:border-blue-500/40 hover:bg-surface-secondary p-4 transition-all group focus:outline-none focus:ring-2 focus:ring-primary/40">
-                      <span className="text-2xl text-blue-400 group-hover:scale-110 transition-transform">📊</span>
-                      <span className="text-[11px] font-semibold text-foreground-secondary group-hover:text-foreground">View Analytics</span>
-                   </button>
-                   <button className="flex flex-col items-center justify-center gap-2.5 rounded-xl bg-surface-secondary/40 border border-transparent hover:border-amber-500/40 hover:bg-surface-secondary p-4 transition-all group focus:outline-none focus:ring-2 focus:ring-primary/40">
-                      <span className="text-2xl text-amber-400 group-hover:scale-110 transition-transform">📥</span>
-                      <span className="text-[11px] font-semibold text-foreground-secondary group-hover:text-foreground">Export Report</span>
-                   </button>
-                </div>
-             </div>
-          </div>
-       </div>
-
-       {/* Bottom Row: Recent Activity & Mini Calendar */}
-       <div className="mt-6 grid gap-6 lg:grid-cols-3">
-          <div className="lg:col-span-2">
-             <RecentActivityCard />
-          </div>
-          <div>
-             <MiniCalendarCard onViewFullCalendar={() => window.location.hash = '#/calendar'} />
-          </div>
-       </div>
-     </section>
-   )
- }
+          <ApplicationStreakCard />
+          <MiniCalendarCard onViewFullCalendar={() => window.location.hash = '#/calendar'} />
+        </div>
+      </div>
+    </section>
+  )
+}
 
  function StatCard({ title, value, icon: Icon, gradient, iconColor, badge, badgePositive }) {
    return (

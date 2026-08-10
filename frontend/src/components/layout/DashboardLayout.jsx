@@ -13,6 +13,7 @@ export default function DashboardLayout({ children, currentView, onViewChange, o
 
   useEffect(() => {
     localStorage.setItem('applyops-theme', theme)
+    document.documentElement.setAttribute('data-theme', theme)
   }, [theme])
 
   useEffect(() => {
