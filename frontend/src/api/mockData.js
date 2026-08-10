@@ -73,8 +73,17 @@ export const MOCK_APPLICATIONS = [
     stage: 'Recruiter Screen',
     status: 'In Progress',
     application_method: 'LinkedIn Easy Apply',
-    date_applied: '2026-08-01',
-    next_action_due: '2026-08-07'
+    date_applied: new Date().toISOString().split('T')[0],
+    next_action_due: '2026-08-12',
+    next_action: {
+      id: 'act_1',
+      type: 'Follow Up',
+      title: 'Follow up with recruiter',
+      date: '2026-08-12',
+      time: '10:00 AM',
+      completed: false,
+      calendarEventId: 'evt_app_1'
+    }
   },
   {
     id: 'app_2',
@@ -83,8 +92,17 @@ export const MOCK_APPLICATIONS = [
     stage: 'Technical Interview',
     status: 'Interviewing',
     application_method: 'Employee Referral',
-    date_applied: '2026-07-28',
-    next_action_due: '2026-08-07'
+    date_applied: new Date().toISOString().split('T')[0],
+    next_action_due: '2026-08-12',
+    next_action: {
+      id: 'act_2',
+      type: 'Prepare for Interview',
+      title: 'Prepare for interview',
+      date: '2026-08-12',
+      time: '02:00 PM',
+      completed: false,
+      calendarEventId: 'evt_app_2'
+    }
   },
   {
     id: 'app_3',
@@ -93,8 +111,17 @@ export const MOCK_APPLICATIONS = [
     stage: 'Portfolio Review',
     status: 'Interviewing',
     application_method: 'Company Portal',
-    date_applied: '2026-07-25',
-    next_action_due: '2026-08-08'
+    date_applied: new Date().toISOString().split('T')[0],
+    next_action_due: '2026-08-14',
+    next_action: {
+      id: 'act_3',
+      type: 'Prepare for Interview',
+      title: 'Prepare for interview',
+      date: '2026-08-14',
+      time: '11:00 AM',
+      completed: false,
+      calendarEventId: 'evt_app_3'
+    }
   },
   {
     id: 'app_4',
@@ -103,8 +130,17 @@ export const MOCK_APPLICATIONS = [
     stage: 'Application Sent',
     status: 'In Progress',
     application_method: 'LinkedIn Easy Apply',
-    date_applied: '2026-08-03',
-    next_action_due: '2026-08-09'
+    date_applied: new Date().toISOString().split('T')[0],
+    next_action_due: '2026-08-13',
+    next_action: {
+      id: 'act_4',
+      type: 'Follow Up',
+      title: 'Follow up with recruiter',
+      date: '2026-08-13',
+      time: '10:00 AM',
+      completed: false,
+      calendarEventId: 'evt_app_4'
+    }
   },
   {
     id: 'app_5',
@@ -113,8 +149,17 @@ export const MOCK_APPLICATIONS = [
     stage: 'Offer Received',
     status: 'Offer Received',
     application_method: 'Employee Referral',
-    date_applied: '2026-07-15',
-    next_action_due: '2026-08-10'
+    date_applied: new Date().toISOString().split('T')[0],
+    next_action_due: '2026-08-11',
+    next_action: {
+      id: 'act_5',
+      type: 'Review Offer',
+      title: 'Review offer',
+      date: '2026-08-11',
+      time: '10:00 AM',
+      completed: false,
+      calendarEventId: 'evt_app_5'
+    }
   },
   {
     id: 'app_6',
@@ -123,8 +168,9 @@ export const MOCK_APPLICATIONS = [
     stage: 'Not Contacted',
     status: 'Not Contacted',
     application_method: 'Indeed',
-    date_applied: '2026-08-04',
-    next_action_due: null
+    date_applied: new Date().toISOString().split('T')[0],
+    next_action_due: null,
+    next_action: null
   },
   {
     id: 'app_7',
@@ -133,8 +179,9 @@ export const MOCK_APPLICATIONS = [
     stage: 'Rejected',
     status: 'Rejected',
     application_method: 'Company Portal',
-    date_applied: '2026-07-10',
-    next_action_due: null
+    date_applied: new Date().toISOString().split('T')[0],
+    next_action_due: null,
+    next_action: null
   },
   {
     id: 'app_8',
@@ -143,8 +190,127 @@ export const MOCK_APPLICATIONS = [
     stage: 'No Response',
     status: 'Ghosted',
     application_method: 'Cold Email',
-    date_applied: '2026-07-01',
-    next_action_due: null
+    date_applied: new Date().toISOString().split('T')[0],
+    next_action_due: '2026-08-13',
+    next_action: {
+      id: 'act_8',
+      type: 'Custom',
+      title: 'Final follow-up',
+      date: '2026-08-13',
+      time: '10:00 AM',
+      completed: false,
+      calendarEventId: 'evt_app_8'
+    }
+  },
+  {
+    id: 'app_9',
+    company: 'Supabase',
+    job_title: 'Full Stack Engineer',
+    stage: 'Application Sent',
+    status: 'In Progress',
+    application_method: 'Company Portal',
+    date_applied: new Date().toISOString().split('T')[0],
+    next_action_due: null,
+    next_action: null
+  },
+  {
+    id: 'app_10',
+    company: 'Datadog',
+    job_title: 'Senior UI Platform Engineer',
+    stage: 'Recruiter Screen',
+    status: 'In Progress',
+    application_method: 'LinkedIn Easy Apply',
+    date_applied: new Date().toISOString().split('T')[0],
+    next_action_due: null,
+    next_action: null
+  },
+  {
+    id: 'app_11',
+    company: 'OpenAI',
+    job_title: 'Frontend Engineer - Web',
+    stage: 'Application Sent',
+    status: 'In Progress',
+    application_method: 'Company Portal',
+    date_applied: new Date().toISOString().split('T')[0],
+    next_action_due: null,
+    next_action: null
+  },
+  {
+    id: 'app_12',
+    company: 'Anthropic',
+    job_title: 'Product Engineer - Claude UI',
+    stage: 'Technical Interview',
+    status: 'Interviewing',
+    application_method: 'Employee Referral',
+    date_applied: new Date().toISOString().split('T')[0],
+    next_action_due: null,
+    next_action: null
+  },
+  {
+    id: 'app_13',
+    company: 'Cloudflare',
+    job_title: 'Systems Engineer - Developer Platform',
+    stage: 'Application Sent',
+    status: 'In Progress',
+    application_method: 'LinkedIn Easy Apply',
+    date_applied: new Date().toISOString().split('T')[0],
+    next_action_due: null,
+    next_action: null
+  },
+  {
+    id: 'app_14',
+    company: 'DoorDash',
+    job_title: 'Senior Web Engineer',
+    stage: 'Application Sent',
+    status: 'In Progress',
+    application_method: 'Company Portal',
+    date_applied: new Date().toISOString().split('T')[0],
+    next_action_due: null,
+    next_action: null
+  },
+  {
+    id: 'app_15',
+    company: 'Uber',
+    job_title: 'Frontend Lead',
+    stage: 'Application Sent',
+    status: 'In Progress',
+    application_method: 'Indeed',
+    date_applied: new Date().toISOString().split('T')[0],
+    next_action_due: null,
+    next_action: null
+  },
+  {
+    id: 'app_16',
+    company: 'Retool',
+    job_title: 'Frontend Systems Engineer',
+    stage: 'Application Sent',
+    status: 'In Progress',
+    application_method: 'LinkedIn Easy Apply',
+    date_applied: new Date().toISOString().split('T')[0],
+    next_action_due: null,
+    next_action: null
+  },
+  {
+    id: 'app_17',
+    company: 'Resend',
+    job_title: 'Product Engineer',
+    stage: 'Application Sent',
+    status: 'In Progress',
+    application_method: 'Company Portal',
+    date_applied: new Date().toISOString().split('T')[0],
+    next_action_due: null,
+    next_action: null
+  },
+  {
+    id: 'app_18',
+    company: 'Viam',
+    job_title: 'Frontend Engineer',
+    stage: 'Application Sent',
+    status: 'In Progress',
+    application_method: 'LinkedIn Easy Apply',
+    date_applied: new Date().toISOString().split('T')[0],
+    next_action_due: null,
+    next_action: null
   }
 ]
 
@@ -260,6 +426,8 @@ export const MOCK_CALENDAR_EVENTS = [
 ]
 
 export const MOCK_SETTINGS = {
+  weekly_goal: 25,
+  daily_goal: 5,
   target_daily_applications: 5,
   telegram_bot_active: true,
   daily_coaching_time: '21:00',
