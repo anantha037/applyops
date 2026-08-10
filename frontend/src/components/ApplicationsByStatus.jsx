@@ -49,7 +49,7 @@ export default function ApplicationsByStatus({ summary = {} }) {
   ]
 
   return (
-    <div className="panel flex flex-col rounded-xl p-5 border border-border bg-surface h-full select-none">
+    <div className="panel flex flex-col rounded-xl p-5 bg-surface h-full select-none shadow-xs">
       {/* Card Header with Reusable Dropdown */}
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-bold text-foreground">Applications by Status</h3>
@@ -72,9 +72,9 @@ export default function ApplicationsByStatus({ summary = {} }) {
               cy="50"
               r={radius}
               fill="transparent"
-              stroke="var(--border)"
+              stroke="var(--surface-tertiary)"
               strokeWidth="14"
-              opacity="0.3"
+              opacity="0.5"
             />
 
             {/* Interactive Donut Segments */}
