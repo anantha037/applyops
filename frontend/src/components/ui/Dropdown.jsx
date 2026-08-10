@@ -110,7 +110,7 @@ export default function Dropdown({
       {isOpen && createPortal(
         <div 
           ref={menuRef}
-          className="fixed rounded-xl bg-surface border border-border-secondary shadow-2xl p-1"
+          className="fixed rounded-xl bg-surface shadow-2xl p-1.5"
           style={{
             zIndex: 100,
             ...(pos
