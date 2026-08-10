@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { GoalProvider } from './context/GoalContext'
 import DashboardLayout from './components/layout/DashboardLayout'
 import Dashboard from './pages/Dashboard'
 import Applications from './pages/Applications'
@@ -48,12 +49,14 @@ export default function App() {
   const View = views[view]
 
   return (
-    <DashboardLayout 
-      currentView={view} 
-      onViewChange={handleViewChange}
-      onLogout={() => alert('Logged out successfully.')}
-    >
-      <View />
-    </DashboardLayout>
+    <GoalProvider>
+      <DashboardLayout 
+        currentView={view} 
+        onViewChange={handleViewChange}
+        onLogout={() => alert('Logged out successfully.')}
+      >
+        <View />
+      </DashboardLayout>
+    </GoalProvider>
   )
 }
