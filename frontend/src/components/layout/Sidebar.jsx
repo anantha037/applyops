@@ -15,6 +15,15 @@ import {
 import SidebarItem from './SidebarItem'
 import SidebarGroup from './SidebarGroup'
 import SidebarFooter from './SidebarFooter'
+import { useGoalContext } from '../../context/GoalContext'
+
+function getMotivationalCopy(pct, remaining) {
+  if (pct >= 100) return 'Weekly goal achieved'
+  if (pct >= 70) return remaining > 0 ? `Keep going — ${remaining} application${remaining > 1 ? 's' : ''} left` : 'Almost there'
+  if (pct >= 40) return 'Good progress'
+  if (pct > 0) return 'Keep building momentum'
+  return 'Start your week strong'
+}
 
 const NAV_GROUPS = [
   {
@@ -47,8 +56,8 @@ export default function Sidebar({
   isCollapsed,
   onToggleCollapse
 }) {
+  const { weeklyGoal, weeklyApplications, weeklyProgress, applicationsRemaining } = useGoalContext()
 
-  // Keyboard shortcut Cmd+B / Ctrl+B to toggle collapse
   useEffect(() => {
     function handleKeyDown(e) {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'b') {
@@ -65,13 +74,11 @@ export default function Sidebar({
 
   const sidebarContent = (
     <div className="flex flex-col h-full max-h-screen bg-sidebar-bg text-sidebar-text overflow-hidden transition-all duration-300 ease-in-out select-none">
-      {/* Header Area — Dynamic Theme Border */}
       <div className={`flex items-center border-b border-sidebar-border flex-shrink-0 transition-all duration-300 ${
         isCollapsed ? 'px-2 py-3.5 justify-center' : 'px-3.5 py-3.5 justify-between'
       }`}>
         {!isCollapsed ? (
           <div className="flex items-center gap-3 px-2 py-1.5 min-w-0">
-            {/* Logo Icon — 18px matching Nav item icon size & axis */}
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary flex-shrink-0">
               <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
             </svg>
@@ -85,7 +92,6 @@ export default function Sidebar({
             </div>
           </div>
         ) : (
-          /* Collapsed Brand Mark Button — centered 44px target */
           <button
             onClick={onToggleCollapse}
             className="w-11 h-11 rounded-xl text-primary hover:bg-sidebar-hover transition-all duration-150 focus:outline-none flex items-center justify-center"
@@ -98,7 +104,6 @@ export default function Sidebar({
           </button>
         )}
 
-        {/* Collapse toggle button when expanded */}
         {!isCollapsed && !isOpenMobile && (
           <button
             onClick={onToggleCollapse}
@@ -121,23 +126,21 @@ export default function Sidebar({
         )}
       </div>
 
-      {/* Quick Search Shortcut Bar (Expanded Mode Only) */}
       {!isCollapsed && (
         <div className="px-3.5 pt-2 flex-shrink-0">
           <button 
             onClick={() => onViewChange('applications')}
-            className="w-full flex items-center justify-between px-3 py-2 text-xs rounded-xl bg-sidebar-surface/70 border border-sidebar-border text-sidebar-text-muted hover:text-sidebar-text hover:bg-sidebar-hover transition-all duration-150 group shadow-2xs"
+            className="w-full flex items-center justify-between px-3 py-2 text-xs rounded-xl bg-sidebar-surface/80 border border-sidebar-border/80 text-sidebar-text-muted hover:text-sidebar-text hover:bg-sidebar-hover hover:border-primary/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-all duration-150 group shadow-2xs cursor-pointer"
           >
             <span className="flex items-center gap-2 font-medium">
-              <Search className="w-3.5 h-3.5 text-sidebar-text-muted group-hover:text-sidebar-text" />
+              <Search className="w-3.5 h-3.5 text-sidebar-text-muted group-hover:text-primary transition-colors" />
               Quick search...
             </span>
-            <kbd className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-sidebar-surface text-sidebar-text-muted border border-sidebar-border">⌘K</kbd>
+            <kbd className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-sidebar-surface text-sidebar-text-muted border border-sidebar-border group-hover:border-primary/30 transition-colors">⌘K</kbd>
           </button>
         </div>
       )}
 
-      {/* Navigation Groups List */}
       <nav className={`flex-1 overflow-y-auto overflow-x-hidden scrollbar-none transition-all duration-300 ${
         isCollapsed ? 'px-2 py-4 flex flex-col gap-3' : 'px-3.5 py-4 flex flex-col gap-5'
       }`} aria-label="Main navigation">
@@ -160,26 +163,34 @@ export default function Sidebar({
           </SidebarGroup>
         ))}
 
-        {/* Goal Progress Widget (Expanded Mode Only) */}
         {!isCollapsed && (
           <div className="mt-auto px-1 pt-3 flex-shrink-0">
-            <div className="rounded-xl bg-sidebar-surface/60 border border-sidebar-border p-3.5 space-y-2.5 shadow-2xs transition-all duration-200">
+            <div 
+              onClick={() => onViewChange('dashboard')}
+              className="rounded-xl bg-sidebar-surface/60 border border-sidebar-border p-3.5 space-y-2.5 shadow-2xs hover:bg-sidebar-hover/80 hover:border-primary/30 transition-all duration-200 cursor-pointer group"
+            >
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-sidebar-text-muted flex items-center gap-1.5">
-                  <Zap className="w-3 h-3 text-amber-400 fill-amber-400/20" /> Goal Pace
+                <span className="text-[10px] font-bold uppercase tracking-wider text-sidebar-text-muted flex items-center gap-1.5 group-hover:text-sidebar-text transition-colors">
+                  <Zap className="w-3 h-3 text-amber-400 fill-amber-400/20" /> WEEKLY GOAL
                 </span>
                 <span className="text-[10px] font-bold text-sidebar-active-text bg-sidebar-active-bg px-1.5 py-0.5 rounded">
-                  80%
+                  {weeklyProgress}%
                 </span>
               </div>
-              <div className="space-y-1">
-                <div className="flex justify-between text-[11px] font-semibold text-sidebar-text">
-                  <span>Weekly outreach</span>
-                  <span>4 / 5 days</span>
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-[11px] font-semibold text-sidebar-text">
+                  <span>{weeklyApplications} / {weeklyGoal} applications</span>
+                  <span className="text-[10px] font-normal text-sidebar-text-muted opacity-0 group-hover:opacity-100 transition-opacity">View progress →</span>
                 </div>
                 <div className="h-1.5 w-full bg-sidebar-hover rounded-full overflow-hidden">
-                  <div className="h-full bg-sidebar-active-text rounded-full transition-all duration-500" style={{ width: '80%' }} />
+                  <div 
+                    className="h-full bg-primary rounded-full transition-all duration-500" 
+                    style={{ width: `${Math.min(100, weeklyProgress)}%` }} 
+                  />
                 </div>
+                <p className="text-[10px] font-medium text-sidebar-text-muted pt-0.5 truncate">
+                  {getMotivationalCopy(weeklyProgress, applicationsRemaining)}
+                </p>
               </div>
             </div>
           </div>
