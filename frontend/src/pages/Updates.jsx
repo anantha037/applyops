@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import Dropdown from '../components/ui/Dropdown'
 import {
   Sparkles,
   Flame,
@@ -586,15 +587,17 @@ export default function Updates() {
             <form onSubmit={handleCreateTicket} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-foreground-secondary mb-1.5">Category</label>
-                <select
+                <Dropdown
+                  options={[
+                    { value: 'Bug Report', label: 'Bug Report' },
+                    { value: 'Feature Request', label: 'Feature Request' },
+                    { value: 'Feedback', label: 'Feedback' }
+                  ]}
                   value={ticketType}
-                  onChange={e => setTicketType(e.target.value)}
-                  className="w-full bg-surface-secondary text-foreground text-xs font-semibold rounded-xl p-2.5 outline-none cursor-pointer"
-                >
-                  <option value="Bug Report">Bug Report</option>
-                  <option value="Feature Request">Feature Request</option>
-                  <option value="Feedback">Feedback</option>
-                </select>
+                  onChange={setTicketType}
+                  className="w-full"
+                  triggerClassName="w-full justify-between bg-surface-secondary text-foreground text-xs font-semibold py-2.5 px-3 rounded-xl border-none"
+                />
               </div>
 
               <div>
