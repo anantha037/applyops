@@ -18,8 +18,8 @@ function CustomLineTooltip({ active, payload, label }) {
   const prevVal = payload.find(p => p.dataKey === 'prevApplications')?.value ?? 0
 
   return (
-    <div className="rounded-xl bg-surface border border-border p-3 shadow-xl text-xs select-none min-w-[150px]">
-      <p className="font-bold text-foreground mb-2.5 pb-1.5 border-b border-border">{label}</p>
+    <div className="rounded-xl bg-surface p-3 shadow-xl text-xs select-none min-w-[150px]">
+      <p className="font-bold text-foreground mb-2 pb-1 text-[11px] uppercase tracking-wider">{label}</p>
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-1.5">
@@ -47,7 +47,7 @@ function CustomDonutTooltip({ active, payload, total }) {
   const pct = total > 0 ? Math.round((val / total) * 100) : 0
 
   return (
-    <div className="rounded-xl bg-surface border border-border p-3 shadow-xl text-xs select-none min-w-[130px]">
+    <div className="rounded-xl bg-surface p-3 shadow-xl text-xs select-none min-w-[130px]">
       <p className="font-bold text-foreground mb-1">{data.name}</p>
       <p className="font-bold text-primary text-sm">{val} applications</p>
       <p className="text-foreground-secondary text-[11px] font-medium mt-0.5">{pct}%</p>
@@ -57,7 +57,7 @@ function CustomDonutTooltip({ active, payload, total }) {
 
 function KpiCard({ title, value, comparison, isPositive, context, icon: Icon }) {
   return (
-    <div className="group relative overflow-hidden rounded-2xl p-4 md:p-5 bg-surface border border-border/80 hover:bg-surface-secondary/70 hover:-translate-y-[2px] shadow-xs hover:shadow-md transition-all duration-200 ease-out cursor-pointer flex flex-col justify-between select-none">
+    <div className="group relative overflow-hidden rounded-2xl p-4 md:p-5 bg-surface hover:bg-surface-secondary/70 hover:-translate-y-[2px] shadow-xs hover:shadow-md transition-all duration-200 ease-out cursor-pointer flex flex-col justify-between select-none">
       <div>
         <div className="flex items-center justify-between gap-2 mb-3">
           <span className="text-xs font-semibold text-foreground-secondary group-hover:text-foreground transition-colors duration-200 truncate">
@@ -132,7 +132,7 @@ export default function Analytics() {
   const chartThemeColors = useMemo(() => {
     const isDark = typeof document !== 'undefined' && (document.documentElement.getAttribute('data-theme') === 'dark' || document.body?.getAttribute('data-theme') === 'dark')
     return {
-      grid: isDark ? 'rgba(255, 255, 255, 0.05)' : '#E2E8F0',
+      grid: isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.04)',
       text: isDark ? '#94A3B8' : '#64748B',
       guide: isDark ? 'rgba(255, 255, 255, 0.1)' : '#CBD5E1',
       primary: isDark ? '#818CF8' : '#4F46E5',
@@ -196,10 +196,10 @@ export default function Analytics() {
   ]
 
   const funnelStages = [
-    { stage: 'Applications', count: 33, pct: 100, color: 'bg-primary/20 text-primary border-primary/30', note: '33 total applications submitted' },
-    { stage: 'Responses', count: 11, pct: 34, color: 'bg-blue-500/20 text-blue-400 border-blue-500/30', note: '11 responses received (34% of applications)' },
-    { stage: 'Interviews', count: 8, pct: 24, color: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30', note: '8 interview invites (24% of applications)' },
-    { stage: 'Offers', count: 1, pct: 3, color: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30', note: '1 offer received (3% of applications)' },
+    { stage: 'Applications', count: 33, pct: 100, color: 'bg-primary/20 text-primary', note: '33 total applications submitted' },
+    { stage: 'Responses', count: 11, pct: 34, color: 'bg-blue-500/20 text-blue-400', note: '11 responses received (34% of applications)' },
+    { stage: 'Interviews', count: 8, pct: 24, color: 'bg-indigo-500/20 text-indigo-400', note: '8 interview invites (24% of applications)' },
+    { stage: 'Offers', count: 1, pct: 3, color: 'bg-emerald-500/20 text-emerald-400', note: '1 offer received (3% of applications)' },
   ]
 
   const methodPerformance = [
@@ -232,7 +232,7 @@ export default function Analytics() {
   if (error) {
     return (
       <div className="h-full flex flex-col gap-4 p-6">
-        <p className="text-danger font-bold bg-danger-light p-4 rounded-xl border border-danger/20">
+        <p className="text-danger font-bold bg-danger-light p-4 rounded-xl">
           {error}
         </p>
       </div>
@@ -313,7 +313,7 @@ export default function Analytics() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-7 rounded-2xl p-5 md:p-6 bg-surface border border-border/80 shadow-xs flex flex-col justify-between">
+        <div className="lg:col-span-7 rounded-2xl p-5 md:p-6 bg-surface shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="text-sm font-bold text-foreground">Applications Over Time</h3>
@@ -374,7 +374,7 @@ export default function Analytics() {
         </div>
 
         <div className="lg:col-span-5 flex flex-col gap-6">
-          <div className="rounded-2xl p-5 md:p-6 bg-surface border border-border/80 shadow-xs flex-1 flex flex-col justify-between">
+          <div className="rounded-2xl p-5 md:p-6 bg-surface shadow-xs flex-1 flex flex-col justify-between">
             <div className="mb-4">
               <h3 className="text-sm font-bold text-foreground">Applications by Status</h3>
               <p className="text-[11px] text-foreground-secondary mt-0.5 font-medium">Breakdown of total job applications</p>
@@ -456,7 +456,7 @@ export default function Analytics() {
             </div>
           </div>
 
-          <div className="rounded-2xl p-4 bg-surface border border-border/80 shadow-xs">
+          <div className="rounded-2xl p-4 bg-surface shadow-xs">
             <div className="flex items-center justify-between mb-3">
               <div>
                 <h4 className="text-xs font-bold text-foreground">Application Consistency</h4>
@@ -472,10 +472,10 @@ export default function Analytics() {
               {activeDaysData.map((d) => (
                 <div
                   key={d.day}
-                  className={`flex flex-col items-center justify-center p-2 rounded-xl border text-center transition-all duration-150 ${
+                  className={`flex flex-col items-center justify-center p-2 rounded-xl text-center transition-all duration-150 ${
                     d.active
-                      ? 'bg-primary/10 border-primary/20 text-primary font-semibold'
-                      : 'bg-surface-secondary/40 border-transparent text-muted'
+                      ? 'bg-primary/10 text-primary font-semibold'
+                      : 'bg-surface-secondary/40 text-muted'
                   }`}
                 >
                   <span className="text-[10px] uppercase font-bold tracking-wider">{d.day}</span>
@@ -488,7 +488,7 @@ export default function Analytics() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-6 rounded-2xl p-5 md:p-6 bg-surface border border-border/80 shadow-xs flex flex-col justify-between">
+        <div className="lg:col-span-6 rounded-2xl p-5 md:p-6 bg-surface shadow-xs flex flex-col justify-between">
           <div className="mb-5">
             <h3 className="text-sm font-bold text-foreground">Application Funnel</h3>
             <p className="text-[11px] text-foreground-secondary mt-0.5 font-medium">Conversion rate across key recruitment stages</p>
@@ -502,14 +502,14 @@ export default function Analytics() {
                   <div
                     onMouseEnter={() => setHoveredFunnel(idx)}
                     onMouseLeave={() => setHoveredFunnel(null)}
-                    className={`relative p-3.5 rounded-xl border transition-all duration-200 cursor-pointer flex items-center justify-between gap-4 ${
+                    className={`relative p-3.5 rounded-xl transition-all duration-200 cursor-pointer flex items-center justify-between gap-4 ${
                       isHovered
-                        ? 'bg-surface-secondary/80 border-primary/40 shadow-xs translate-x-1'
-                        : 'bg-surface-secondary/40 border-border/60 hover:bg-surface-secondary/60'
+                        ? 'bg-surface-secondary/80 shadow-xs translate-x-1'
+                        : 'bg-surface-secondary/40 hover:bg-surface-secondary/60'
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs border ${stg.color}`}>
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs ${stg.color}`}>
                         {stg.pct}%
                       </div>
                       <div>
@@ -539,7 +539,7 @@ export default function Analytics() {
           </div>
         </div>
 
-        <div className="lg:col-span-6 rounded-2xl p-5 md:p-6 bg-surface border border-border/80 shadow-xs flex flex-col justify-between">
+        <div className="lg:col-span-6 rounded-2xl p-5 md:p-6 bg-surface shadow-xs flex flex-col justify-between">
           <div className="mb-5">
             <h3 className="text-sm font-bold text-foreground">Application Method Performance</h3>
             <p className="text-[11px] text-foreground-secondary mt-0.5 font-medium">Response rates by submission channel</p>
@@ -552,7 +552,7 @@ export default function Analytics() {
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-foreground">{item.method}</span>
                     {item.best && (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-500 border border-emerald-500/20">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-500">
                         Best Channel
                       </span>
                     )}
@@ -563,7 +563,7 @@ export default function Analytics() {
                   </div>
                 </div>
 
-                <div className="w-full h-2.5 bg-surface-secondary rounded-full overflow-hidden p-0.5 border border-border/40">
+                <div className="w-full h-2.5 bg-surface-secondary rounded-full overflow-hidden p-0.5">
                   <div
                     className={`h-full rounded-full transition-all duration-500 ${
                       item.best ? 'bg-gradient-to-r from-primary to-emerald-400' : 'bg-primary/70'
@@ -578,14 +578,14 @@ export default function Analytics() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-7 rounded-2xl p-5 md:p-6 bg-surface border border-border/80 shadow-xs flex flex-col justify-between">
+        <div className="lg:col-span-7 rounded-2xl p-5 md:p-6 bg-surface shadow-xs flex flex-col justify-between">
           <div className="mb-4">
             <h3 className="text-sm font-bold text-foreground">Key Insights</h3>
             <p className="text-[11px] text-foreground-secondary mt-0.5 font-medium">Pattern recognition from your application activity</p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-            <div className="p-3.5 rounded-xl bg-surface-secondary/40 border border-border/60 hover:bg-surface-secondary/70 transition-colors">
+            <div className="p-3.5 rounded-xl bg-surface-secondary/40 hover:bg-surface-secondary/70 transition-colors">
               <div className="flex items-center gap-2 mb-1.5">
                 <div className="w-6 h-6 rounded-md bg-amber-500/15 text-amber-500 flex items-center justify-center">
                   <Zap className="w-3.5 h-3.5" />
@@ -597,7 +597,7 @@ export default function Analytics() {
               </p>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-surface-secondary/40 border border-border/60 hover:bg-surface-secondary/70 transition-colors">
+            <div className="p-3.5 rounded-xl bg-surface-secondary/40 hover:bg-surface-secondary/70 transition-colors">
               <div className="flex items-center gap-2 mb-1.5">
                 <div className="w-6 h-6 rounded-md bg-emerald-500/15 text-emerald-500 flex items-center justify-center">
                   <TrendingUp className="w-3.5 h-3.5" />
@@ -609,7 +609,7 @@ export default function Analytics() {
               </p>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-surface-secondary/40 border border-border/60 hover:bg-surface-secondary/70 transition-colors">
+            <div className="p-3.5 rounded-xl bg-surface-secondary/40 hover:bg-surface-secondary/70 transition-colors">
               <div className="flex items-center gap-2 mb-1.5">
                 <div className="w-6 h-6 rounded-md bg-rose-500/15 text-rose-500 flex items-center justify-center">
                   <AlertCircle className="w-3.5 h-3.5" />
@@ -621,7 +621,7 @@ export default function Analytics() {
               </p>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-surface-secondary/40 border border-border/60 hover:bg-surface-secondary/70 transition-colors">
+            <div className="p-3.5 rounded-xl bg-surface-secondary/40 hover:bg-surface-secondary/70 transition-colors">
               <div className="flex items-center gap-2 mb-1.5">
                 <div className="w-6 h-6 rounded-md bg-blue-500/15 text-blue-500 flex items-center justify-center">
                   <Clock className="w-3.5 h-3.5" />
@@ -635,7 +635,7 @@ export default function Analytics() {
           </div>
         </div>
 
-        <div className="lg:col-span-5 rounded-2xl p-5 md:p-6 bg-surface border border-border/80 shadow-xs flex flex-col justify-between">
+        <div className="lg:col-span-5 rounded-2xl p-5 md:p-6 bg-surface shadow-xs flex flex-col justify-between">
           <div>
             <div className="flex items-center gap-2.5 mb-3">
               <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
@@ -647,7 +647,7 @@ export default function Analytics() {
               </div>
             </div>
 
-            <div className="p-4 rounded-xl bg-primary/5 border border-primary/15 mt-3 space-y-2">
+            <div className="p-4 rounded-xl bg-primary/5 mt-3 space-y-2">
               <div className="flex items-center gap-2 text-xs font-bold text-primary">
                 <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
                 <span>Focus on High-Yield Channels</span>
@@ -658,7 +658,7 @@ export default function Analytics() {
             </div>
           </div>
 
-          <div className="mt-4 pt-3 border-t border-border/50 flex items-center justify-between text-[11px] text-muted">
+          <div className="mt-4 pt-3 flex items-center justify-between text-[11px] text-muted">
             <span>Based on 33 total application records</span>
             <span className="font-semibold text-primary">Updated today</span>
           </div>
