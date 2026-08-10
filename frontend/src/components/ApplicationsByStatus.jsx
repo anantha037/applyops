@@ -8,13 +8,13 @@ export default function ApplicationsByStatus({ summary = {} }) {
   const funnel = summary.funnel || {}
 
   const defaultStatusData = [
-    { label: 'Not Contacted', count: funnel['Not Contacted'] ?? 12, color: '#64748B' },
-    { label: 'In Progress',   count: funnel['In Progress'] ?? 37,   color: '#2563EB' },
-    { label: 'Interviewing',  count: funnel['Interviewing'] ?? 16,  color: '#8B5CF6' },
-    { label: 'Offer Received',count: funnel['Offer Received'] ?? 2, color: '#10B981' },
-    { label: 'Rejected',      count: funnel['Rejected'] ?? 9,       color: '#EF4444' },
-    { label: 'Ghosted',       count: funnel['Ghosted'] ?? 23,      color: '#F97316' },
-    { label: 'Closed',        count: funnel['Closed'] ?? 30,       color: '#0D9488' },
+    { label: 'Not Contacted', count: funnel['Not Contacted'] ?? 0, color: '#64748B' },
+    { label: 'In Progress',   count: funnel['In Progress'] ?? 0,   color: '#2563EB' },
+    { label: 'Interviewing',  count: funnel['Interviewing'] ?? 0,  color: '#8B5CF6' },
+    { label: 'Offer Received',count: funnel['Offer Received'] ?? 0, color: '#10B981' },
+    { label: 'Rejected',      count: funnel['Rejected'] ?? 0,       color: '#EF4444' },
+    { label: 'Ghosted',       count: funnel['Ghosted'] ?? 0,      color: '#F97316' },
+    { label: 'Closed',        count: funnel['Closed'] ?? 0,       color: '#0D9488' },
   ]
 
   const total = defaultStatusData.reduce((acc, item) => acc + item.count, 0) || 1
