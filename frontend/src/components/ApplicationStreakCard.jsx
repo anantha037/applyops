@@ -1,6 +1,5 @@
 import React, { useState, useRef } from 'react'
 import { Flame, ArrowRight } from 'lucide-react'
-import { generateMockStreakData } from '../api/streakMockData'
 import { format, parseISO } from 'date-fns'
 
 const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
@@ -25,7 +24,7 @@ export default function ApplicationStreakCard({ data: propData, onViewHistory })
   const cardRef = useRef(null)
   const cellMap = useRef({})
 
-  const d = propData || generateMockStreakData()
+  const d = propData || {}
   const {
     currentStreak = 0,
     bestStreak = 0,
