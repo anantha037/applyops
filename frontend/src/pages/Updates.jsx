@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Dropdown from '../components/ui/Dropdown'
 import {
   Sparkles,
@@ -124,6 +124,15 @@ export default function Updates() {
   const [ticketType, setTicketType] = useState('Feedback')
   const [ticketTitle, setTicketTitle] = useState('')
   const [ticketDesc, setTicketDesc] = useState('')
+
+  useEffect(() => {
+    if (!showModal) return
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') setShowModal(false)
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [showModal])
 
   const unreadCount = updates.filter(u => u.unread).length
 
@@ -571,8 +580,11 @@ export default function Updates() {
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
-          <div className="bg-surface rounded-2xl shadow-2xl p-6 w-full max-w-md space-y-4 animate-in fade-in zoom-in-95 duration-150 select-none">
+        <div 
+          onClick={e => e.target === e.currentTarget && setShowModal(false)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs cursor-pointer"
+        >
+          <div className="bg-surface rounded-2xl shadow-2xl p-6 w-full max-w-md space-y-4 animate-in fade-in zoom-in-95 duration-150 select-none cursor-default">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold text-foreground">Submit Support Request</h3>
               <button
