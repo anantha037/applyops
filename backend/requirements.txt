@@ -10,4 +10,8 @@ python-dotenv
 groq
 google-generativeai
 pytest
-
+# Phase A — Postgres + R2
+sqlmodel
+alembic
+psycopg2-binary
+boto3
