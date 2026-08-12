@@ -22,7 +22,7 @@ import uuid
 from datetime import date, datetime, timezone
 from typing import IO
 
-from sqlmodel import Session, col, select
+from sqlmodel import Session, col, select, func
 
 from backend.db.models import (
     ActivityLog,
@@ -46,6 +46,7 @@ from backend.models import (
     DailySnapshot,
     Settings,
     SettingsUpdate,
+    ContactView,
     utc_now,
 )
 from backend.r2_client import (
@@ -89,6 +90,8 @@ def _app_to_pydantic(row: DBApplication) -> Application:
         interview_attended=row.interview_attended,
         latest_update=row.latest_update or "",
         remarks=row.remarks or "",
+        contact_id=row.contact_id,
+        resume_id=row.resume_id,
     )
 
 
@@ -185,6 +188,57 @@ def find_or_create_contact(
     session.add(contact)
     session.flush()   # flush so the ID is available before the caller commits
     return contact
+
+def list_contacts() -> list[ContactView]:
+    """Return all contacts, enriched with activity data for last_contacted/responded."""
+    with Session(engine) as session:
+        # Load all contacts
+        contacts = session.exec(select(Contact)).all()
+        
+        # Load all activities to compute last_contacted and responded
+        activities = session.exec(select(ActivityLog).where(ActivityLog.contact_id.is_not(None))).all()
+        
+        # Group activities by contact_id
+        from collections import defaultdict
+        act_by_contact = defaultdict(list)
+        for act in activities:
+            act_by_contact[act.contact_id].append(act)
+            
+        # Also need application_id? A contact can have multiple applications. 
+        # We'll just grab the most recent application_id if any.
+        apps = session.exec(select(DBApplication).where(DBApplication.contact_id.is_not(None))).all()
+        app_by_contact = {}
+        for app in apps:
+            app_by_contact[app.contact_id] = app.id
+            
+        results = []
+        for c in contacts:
+            c_acts = act_by_contact[c.id]
+            last_contact = None
+            if c_acts:
+                last_contact = max(a.timestamp for a in c_acts).date().isoformat()
+            
+            responded = any(
+                a.action_type in ("Call Connected", "Interview Completed", "Email Reply Received") 
+                for a in c_acts
+            )
+            
+            results.append(ContactView(
+                id=c.id,
+                name=c.name or "",
+                company=c.company or "",
+                role=c.role or "",
+                email=c.email or "",
+                phone=c.phone or "",
+                tags="",
+                notes="",
+                source="postgres",
+                application_id=app_by_contact.get(c.id),
+                last_contacted=last_contact,
+                responded=responded,
+            ))
+            
+        return results
 
 
 # ---------------------------------------------------------------------------
@@ -596,8 +650,74 @@ def sync_interview_event(
 
 
 # ---------------------------------------------------------------------------
-# Daily snapshots
+# Daily snapshots & Analytics
 # ---------------------------------------------------------------------------
+
+def get_current_pipeline_stats() -> dict:
+    """Return lightweight aggregate queries for current pipeline stats."""
+    with Session(engine) as session:
+        # Applications counts
+        app_counts = session.exec(
+            select(DBApplication.status, func.count(DBApplication.id))
+            .group_by(DBApplication.status)
+        ).all()
+        counts = {status: count for status, count in app_counts}
+        total = sum(counts.values())
+
+        # Response rate
+        total_contacted = session.exec(
+            select(func.count(DBApplication.id))
+            .where(DBApplication.status != "Not Contacted")
+        ).one()
+        
+        responded_subq = select(ActivityLog.application_id).where(
+            col(ActivityLog.action_type).in_(["Call Connected", "Interview Completed"]),
+            ActivityLog.application_id.is_not(None)
+        ).distinct()
+        
+        contacted_and_responded = session.exec(
+            select(func.count(DBApplication.id))
+            .where(
+                DBApplication.status != "Not Contacted",
+                col(DBApplication.id).in_(responded_subq)
+            )
+        ).one()
+        
+        response_rate = (contacted_and_responded / total_contacted * 100) if total_contacted > 0 else 0.0
+        
+        # Activity counts
+        act_counts = session.exec(
+            select(ActivityLog.action_type, func.count(ActivityLog.id))
+            .group_by(ActivityLog.action_type)
+        ).all()
+        activities = {atype: count for atype, count in act_counts}
+        
+    return {
+        "Total": total,
+        "Not Contacted": counts.get("Not Contacted", 0),
+        "In Progress": counts.get("In Progress", 0),
+        "Interviewing": counts.get("Interviewing", 0),
+        "Offer Received": counts.get("Offer Received", 0),
+        "Rejected": counts.get("Rejected", 0),
+        "Ghosted": counts.get("Ghosted", 0),
+        "response_rate": response_rate,
+        "calls_dialed": activities.get("Call Dialed", 0),
+        "calls_connected": activities.get("Call Connected", 0),
+        "interviews_attended": activities.get("Interview Completed", 0)
+    }
+
+def get_application_sources() -> dict[str, int]:
+    """Aggregate counts by application_method."""
+    with Session(engine) as session:
+        rows = session.exec(
+            select(DBApplication.application_method, func.count(DBApplication.id))
+            .group_by(DBApplication.application_method)
+        ).all()
+        sources = {}
+        for method, count in rows:
+            name = method if method else "Others"
+            sources[name] = sources.get(name, 0) + count
+        return sources
 
 def list_daily_snapshots() -> list[DailySnapshot]:
     with Session(engine) as session:

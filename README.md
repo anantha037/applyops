@@ -19,7 +19,19 @@ Phase 1 is implemented locally: the FastAPI API persists applications and activi
 
 Copy `.env.example` to `.env` and replace each placeholder with the appropriate local value. Keep `.env`, service-account JSON keys, and API tokens out of version control.
 
-For Phase 1, set `GOOGLE_SHEET_ID` to the ID in the spreadsheet URL and set `GOOGLE_SERVICE_ACCOUNT_JSON` to either an absolute path to the downloaded service-account JSON key or the complete JSON object on one line. Share the target spreadsheet with the service account's `client_email` as an Editor.
+### Required Production Configuration
+
+The following environment variables are mandatory for the application to run correctly in production (e.g., Render):
+
+- `DATABASE_URL`: Must use the Neon pooled (`-pooler`) connection string.
+- `R2_ACCOUNT_ID`: Cloudflare account ID.
+- `R2_ACCESS_KEY_ID`: Cloudflare R2 access key.
+- `R2_SECRET_ACCESS_KEY`: Cloudflare R2 secret key.
+- `R2_BUCKET_NAME`: Name of the private R2 bucket (e.g., `applyops-resumes`).
+
+### Historical / Migration Tooling (Optional)
+
+Google Sheets is **no longer required** for runtime operations. The `migrate_sheets_to_postgres.py` script and legacy `sheets_client` are retained only as fallback historical tools. If you need to re-run the migration, install `requirements-migration.txt` and provide `GOOGLE_SHEET_ID` and `GOOGLE_SERVICE_ACCOUNT_JSON` locally.
 
 ### Backend
 
