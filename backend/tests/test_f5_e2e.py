@@ -9,6 +9,8 @@ os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-for-auth-tests-only")
 
 from fastapi.testclient import TestClient
 from backend.main import app
+from backend.db.session import engine
+from sqlmodel import Session, text
 
 @pytest.fixture(scope="module")
 def client_a():
@@ -164,3 +166,140 @@ def test_item_10_cookie_presence(client_b):
     res = client_b.get("/auth/me")
     assert res.status_code == 200
     assert "id" in res.json()
+
+def test_item_11_resume_isolation(client_a, client_b, user_a):
+    """11. Resume isolation end-to-end."""
+    # client_a was logged out in test 9, so log back in
+    client_a.post("/auth/login", json={"email": user_a["email"], "password": user_a["password"]})
+    
+    # User A uploads a resume
+    # We simulate an upload by mocking the file content
+    file_content = b"fake pdf content"
+    files = {"file": ("resume_a.pdf", file_content, "application/pdf")}
+    res_a_upload = client_a.post("/resumes", files=files)
+    assert res_a_upload.status_code in (200, 201)
+    resume_id = res_a_upload.json()["id"]
+
+    # User B cannot list it
+    res_b_list = client_b.get("/resumes")
+    b_resumes = [r["id"] for r in res_b_list.json()]
+    assert resume_id not in b_resumes
+
+    # User B cannot retrieve presigned URL for it
+    res_b_url = client_b.get(f"/resumes/{resume_id}/url")
+    assert res_b_url.status_code == 404
+    
+    # User B cannot attach it to their own application
+    try:
+        res_b_app = client_b.post("/applications", json={
+            "company": "Company B",
+            "job_title": "Engineer B",
+            "stage": "Applied",
+            "status": "In Progress",
+            "resume_id": resume_id
+        })
+        assert res_b_app.status_code in (404, 400, 403, 500)
+    except ValueError as e:
+        assert "Invalid or unauthorized resume_id" in str(e)
+
+def test_item_12_owner_data_intact():
+    """12. Verify original owner pre-migration data is fully intact."""
+    with Session(engine) as s:
+        # Owner ID corresponds to darylldixon77@gmail.com
+        owner = s.exec(text("SELECT id FROM users WHERE email='darylldixon77@gmail.com'")).first()
+        assert owner is not None, "Owner account not found"
+        owner_id = owner[0]
+
+        app_count = s.exec(text(f"SELECT COUNT(*) FROM applications WHERE user_id='{owner_id}'")).one()[0]
+        contact_count = s.exec(text(f"SELECT COUNT(*) FROM contacts WHERE user_id='{owner_id}'")).one()[0]
+        resume_count = s.exec(text(f"SELECT COUNT(*) FROM resumes WHERE user_id='{owner_id}'")).one()[0]
+        activity_count = s.exec(text(f"SELECT COUNT(*) FROM activity_log WHERE user_id='{owner_id}'")).one()[0]
+        cal_count = s.exec(text(f"SELECT COUNT(*) FROM calendar_events WHERE user_id='{owner_id}'")).one()[0]
+        snap_count = s.exec(text(f"SELECT COUNT(*) FROM daily_snapshots WHERE user_id='{owner_id}'")).one()[0]
+        settings_count = s.exec(text(f"SELECT COUNT(*) FROM settings WHERE user_id='{owner_id}'")).one()[0]
+
+        assert app_count == 20, f"Expected 20 applications, got {app_count}"
+        assert contact_count == 6, f"Expected 6 contacts, got {contact_count}"
+        assert resume_count == 4, f"Expected 4 resumes, got {resume_count}"
+        assert activity_count == 5, f"Expected 5 activity logs, got {activity_count}"
+        assert cal_count == 23, f"Expected 23 calendar events, got {cal_count}"
+        assert snap_count == 4, f"Expected 4 daily snapshots, got {snap_count}"
+        assert settings_count == 1, f"Expected 1 settings row, got {settings_count}"
+
+def test_item_13_scheduler_isolation(client_a, client_b):
+    """13. Re-verify scheduler isolation with per-user output."""
+    from backend.scheduler import send_due_today_reminder
+    from datetime import datetime
+    
+    # 1. Setup User A with a Telegram ID and a due-today application
+    client_a.patch("/settings", json={"telegram_chat_id": "CHAT_A_123"})
+    
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    client_a.post("/applications", json={
+        "company": "SchedulerCompany A",
+        "job_title": "Role A",
+        "stage": "Applied",
+        "status": "In Progress",
+        "date_applied": today_str,
+        "last_touch_date": today_str
+    })
+    
+    # 2. Setup User B with a DIFFERENT Telegram ID and a due-today application
+    client_b.patch("/settings", json={"telegram_chat_id": "CHAT_B_456"})
+    client_b.post("/applications", json={
+        "company": "SchedulerCompany B",
+        "job_title": "Role B",
+        "stage": "Applied",
+        "status": "In Progress",
+        "date_applied": today_str,
+        "last_touch_date": today_str
+    })
+
+    # 3. Create a mock telegram bot that records the calls
+    class MockTelegramBot:
+        def __init__(self):
+            self.calls = []
+        def send_due_today_reminder(self, applications, chat_id):
+            self.calls.append({
+                "chat_id": chat_id,
+                "companies": [app.company for app in applications]
+            })
+    
+    mock_tg = MockTelegramBot()
+    
+    # 4. Trigger the scheduler function
+    # It should iterate through all users and call send_due_today_reminder for each user that needs it
+    from zoneinfo import ZoneInfo
+    today_date = datetime.now(ZoneInfo("Asia/Kolkata")).date()
+    
+    # Force the dates to match today so they trigger the reminder
+    with Session(engine) as s:
+        s.exec(text(f"UPDATE applications SET next_action_due='{today_date.isoformat()}' WHERE company LIKE 'SchedulerCompany%'"))
+        s.commit()
+    
+    send_due_today_reminder(mock_tg, today=today_date)
+    
+    # 5. Verify the isolation
+    # There should be exactly two calls (one for A, one for B) - or more if there are other users,
+    # but let's just check that A and B got THEIR OWN applications and not each other's.
+    
+    calls_for_a = [c for c in mock_tg.calls if c["chat_id"] == "CHAT_A_123"]
+    calls_for_b = [c for c in mock_tg.calls if c["chat_id"] == "CHAT_B_456"]
+    
+    assert len(calls_for_a) >= 1
+    assert len(calls_for_b) >= 1
+    
+    # User A should only see Company A
+    companies_a = []
+    for c in calls_for_a:
+        companies_a.extend(c["companies"])
+    assert "SchedulerCompany A" in companies_a
+    assert "SchedulerCompany B" not in companies_a
+    
+    # User B should only see Company B
+    companies_b = []
+    for c in calls_for_b:
+        companies_b.extend(c["companies"])
+    assert "SchedulerCompany B" in companies_b
+    assert "SchedulerCompany A" not in companies_b
+
