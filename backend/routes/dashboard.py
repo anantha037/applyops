@@ -9,30 +9,25 @@ from zoneinfo import ZoneInfo
 from fastapi import APIRouter, Request
 
 from backend.models import Application
-from backend.sheets_client import SheetsClient
+from backend import db_client
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 INDIA_TIMEZONE = ZoneInfo("Asia/Kolkata")
-
-
-def _sheets(request: Request) -> SheetsClient:
-    return request.app.state.sheets
 
 
 @router.get("/due-today", response_model=list[Application])
 def due_today(request: Request) -> list[Application]:
     """Return applications requiring a follow-up today in the local call window."""
     today = datetime.now(INDIA_TIMEZONE).date()
-    return _sheets(request).applications_due_on(today)
+    return db_client.applications_due_on(today)
 
 
 @router.get("/summary")
 def summary(request: Request) -> dict[str, object]:
-    sheets = _sheets(request)
     today = datetime.now(INDIA_TIMEZONE).date()
-    applications = sheets.list_applications()
-    settings = sheets.get_settings()
-    all_activities = sheets.list_activity(None)
+    applications = db_client.list_applications()
+    settings = db_client.get_settings()
+    all_activities = db_client.list_activity(None)
 
     today_count = sum(app.date_applied == today for app in applications)
 
@@ -68,10 +63,9 @@ def summary(request: Request) -> dict[str, object]:
 
 @router.get("/daily-report")
 def daily_report(request: Request) -> dict[str, object]:
-    sheets = _sheets(request)
     today = datetime.now(INDIA_TIMEZONE).date()
-    applications = sheets.list_applications()
-    activity = sheets.list_activity(today)
+    applications = db_client.list_applications()
+    activity = db_client.list_activity(today)
     today_apps = [app for app in applications if app.date_applied == today]
     return {
         "calls_dialed": sum(item.action_type == "Call Dialed" for item in activity),
