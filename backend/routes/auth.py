@@ -121,11 +121,13 @@ def register(body: RegisterRequest, response: Response, session: Session = Depen
 
 def _set_auth_cookies(response: Response, access: str, refresh: str):
     is_prod = os.environ.get("ENV", "").lower() == "production"
+    samesite_setting = "none" if is_prod else "lax"
+    
     response.set_cookie(
         key="applyops_access_token",
         value=access,
         httponly=True,
-        samesite="lax",
+        samesite=samesite_setting,
         secure=is_prod,
         max_age=900,
     )
@@ -133,7 +135,7 @@ def _set_auth_cookies(response: Response, access: str, refresh: str):
         key="applyops_refresh_token",
         value=refresh,
         httponly=True,
-        samesite="lax",
+        samesite=samesite_setting,
         secure=is_prod,
         max_age=7 * 24 * 3600,
     )
