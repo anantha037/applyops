@@ -132,9 +132,15 @@ def test_refresh_token_rotation(unique_email, valid_password):
     new_refresh = res_refresh.json()["refresh_token"]
     assert new_refresh != refresh_token
 
-    # Using old refresh token again should fail
-    res_refresh_again = client.post("/auth/refresh", json={"refresh_token": refresh_token})
-    assert res_refresh_again.status_code == 401
+    # Using old refresh token again should trigger family revocation
+    res_reuse = client.post("/auth/refresh", json={"refresh_token": refresh_token})
+    assert res_reuse.status_code == 401
+    assert "Token reuse detected" in res_reuse.json()["detail"]
+
+    # The new_refresh token should now also be revoked
+    res_try_new = client.post("/auth/refresh", json={"refresh_token": new_refresh})
+    assert res_try_new.status_code == 401
+    assert "Token reuse detected" in res_try_new.json()["detail"]
 
 
 def test_password_reset_flow(unique_email, valid_password):
