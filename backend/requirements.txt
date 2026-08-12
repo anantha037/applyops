@@ -2,8 +2,6 @@ fastapi
 uvicorn[standard]
 pydantic>=2.0
 pydantic-settings
-gspread
-google-auth
 apscheduler
 httpx
 python-dotenv
