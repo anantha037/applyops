@@ -16,13 +16,9 @@ from backend.models import (
     ApplicationUpdate,
     calculate_next_action_due,
 )
-from backend.sheets_client import SheetsClient
+from backend import db_client
 
 router = APIRouter(tags=["applications"])
-
-
-def _sheets(request: Request) -> SheetsClient:
-    return request.app.state.sheets
 
 
 @router.get("/applications", response_model=list[Application])
@@ -31,7 +27,7 @@ def list_applications(
     status: str | None = Query(default=None),
     stage: str | None = Query(default=None),
 ) -> list[Application]:
-    return _sheets(request).list_applications(status=status, stage=stage)
+    return db_client.list_applications(status=status, stage=stage)
 
 
 @router.post("/applications", response_model=Application, status_code=status.HTTP_201_CREATED)
@@ -42,18 +38,23 @@ def create_application(payload: ApplicationCreate, request: Request) -> Applicat
     application_data["next_action_due"] = calculate_next_action_due(
         ApplicationStage(payload.stage), last_touch_date, payload.status
     )
-    application = Application(
-        id=str(uuid4()),
-        **application_data,
+    application_data["id"] = str(uuid4())
+    
+    application = db_client.create_application(
+        application_data,
+        contact_name=payload.contact_name,
+        contact_email=payload.contact_email,
+        contact_phone=payload.contact_phone,
+        contact_role=payload.contact_role,
+        resume_id=payload.resume_id,
     )
-    sheets = _sheets(request)
-    sheets.create_application(application)
+    
     # Auto-sync calendar events
-    sheets.sync_followup_event(
+    db_client.sync_followup_event(
         application.id, application.company, application.next_action_due, lambda: str(uuid4())
     )
     if application.interview_date:
-        sheets.sync_interview_event(
+        db_client.sync_interview_event(
             application.id, application.company,
             application.interview_date, application.interview_round,
             lambda: str(uuid4()),
@@ -65,28 +66,46 @@ def create_application(payload: ApplicationCreate, request: Request) -> Applicat
 def update_application(
     application_id: str, payload: ApplicationUpdate, request: Request
 ) -> Application:
-    sheets = _sheets(request)
-    existing = sheets.get_application(application_id)
+    existing = db_client.get_application(application_id)
     if existing is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Application not found")
 
     changes = payload.model_dump(exclude_unset=True)
-    updated = existing.model_copy(update=changes)
+    
+    # We must calculate next_action_due if relevant fields changed
     if {"stage", "last_touch_date", "status"} & changes.keys():
-        updated.next_action_due = calculate_next_action_due(
-            ApplicationStage(updated.stage), updated.last_touch_date, updated.status
-        )
-    result = sheets.update_application(updated)
+        stage = ApplicationStage(changes.get("stage", existing.stage))
+        last_touch = changes.get("last_touch_date", existing.last_touch_date)
+        status_val = changes.get("status", existing.status)
+        changes["next_action_due"] = calculate_next_action_due(stage, last_touch, status_val)
+
+    # Extract contact/resume fields before passing to update
+    contact_name = changes.pop("contact_name", None)
+    contact_email = changes.pop("contact_email", None)
+    contact_phone = changes.pop("contact_phone", None)
+    contact_role = changes.pop("contact_role", None)
+    resume_id = changes.pop("resume_id", None)
+
+    result = db_client.update_application(
+        application_id, 
+        changes,
+        contact_name=contact_name,
+        contact_email=contact_email,
+        contact_phone=contact_phone,
+        contact_role=contact_role,
+        resume_id=resume_id,
+    )
     if result is None:
         _not_found()
+        
     # Auto-sync calendar events whenever relevant fields change
     if {"stage", "last_touch_date", "status", "next_action_due", "interview_date", "interview_round"} & changes.keys():
-        sheets.sync_followup_event(
-            updated.id, updated.company, updated.next_action_due, lambda: str(uuid4())
+        db_client.sync_followup_event(
+            result.id, result.company, result.next_action_due, lambda: str(uuid4())
         )
-        sheets.sync_interview_event(
-            updated.id, updated.company,
-            updated.interview_date, updated.interview_round or "",
+        db_client.sync_interview_event(
+            result.id, result.company,
+            result.interview_date, result.interview_round or "",
             lambda: str(uuid4()),
         )
     return result
@@ -94,13 +113,13 @@ def update_application(
 
 @router.delete("/applications/{application_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_application(application_id: str, request: Request) -> None:
-    if not _sheets(request).delete_application(application_id):
+    if not db_client.delete_application(application_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Application not found")
 
 
 @router.post("/activity", response_model=Activity, status_code=status.HTTP_201_CREATED)
 def create_activity(payload: ActivityCreate, request: Request) -> Activity:
-    return _sheets(request).create_activity(str(uuid4()), payload)
+    return db_client.create_activity(str(uuid4()), payload)
 
 
 @router.get("/activity", response_model=list[Activity])
@@ -117,7 +136,7 @@ def list_activity(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="date must be 'today' or an ISO date (YYYY-MM-DD)",
             ) from exc
-    return _sheets(request).list_activity(activity_date)
+    return db_client.list_activity(activity_date)
 
 
 def _not_found() -> None:
