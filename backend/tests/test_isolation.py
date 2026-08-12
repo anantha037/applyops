@@ -112,6 +112,18 @@ def test_application_list_isolation(test_users):
     assert len(apps_b) > 0
     assert all(app["company"] != "Company A" for app in apps_b)
 
+    # Verify GET /contacts is isolated (Contact created via apps)
+    client.post("/applications", json={"date_applied": str(date.today()), "company": "Company A", "job_title": "Engineer", "contact_email": "a@example.com"}, headers=headers_a)
+    client.post("/applications", json={"date_applied": str(date.today()), "company": "Company B", "job_title": "Engineer", "contact_email": "b@example.com"}, headers=headers_b)
+    
+    contacts_a = client.get("/contacts", headers=headers_a).json()
+    assert any(c["email"] == "a@example.com" for c in contacts_a)
+    assert all(c["email"] != "b@example.com" for c in contacts_a)
+    
+    contacts_b = client.get("/contacts", headers=headers_b).json()
+    assert any(c["email"] == "b@example.com" for c in contacts_b)
+    assert all(c["email"] != "a@example.com" for c in contacts_b)
+
 
 def test_cross_user_application_access(test_users):
     headers_a = test_users["a"]["headers"]
@@ -121,11 +133,11 @@ def test_cross_user_application_access(test_users):
     res_a = client.post("/applications", json={"date_applied": str(date.today()), "company": "Target Corp", "job_title": "Engineer"}, headers=headers_a)
     app_id = res_a.json()["id"]
     
-    # B attempts to patch
+    # B attempts to patch A's app directly by ID
     res_patch = client.patch(f"/applications/{app_id}", json={"company": "Hacked"}, headers=headers_b)
     assert res_patch.status_code == 404
     
-    # B attempts to delete
+    # B attempts to delete A's app directly by ID
     res_del = client.delete(f"/applications/{app_id}", headers=headers_b)
     assert res_del.status_code == 404
 
@@ -167,17 +179,43 @@ def test_cross_user_activity_calendar_settings(test_users):
     headers_a = test_users["a"]["headers"]
     headers_b = test_users["b"]["headers"]
     
-    # Verify B's activities don't include A's
-    client.post("/activity", json={"action_type": "Call Dialed"}, headers=headers_a)
-    acts_b = client.get("/activity", headers=headers_b).json()
-    assert len(acts_b) == 0
+    # A creates app and activity
+    res_app_a = client.post("/applications", json={"date_applied": str(date.today()), "company": "Target Corp", "job_title": "Eng"}, headers=headers_a)
+    app_id_a = res_app_a.json()["id"]
+    client.post(f"/activity", json={"action_type": "Call Dialed", "notes": "Test Activity"}, headers=headers_a)
     
-    # Verify B's calendar doesn't include A's
-    client.post("/calendar/events", json={"date": str(date.today()), "title": "A's Event", "event_type": "Personal"}, headers=headers_a)
-    events_b = client.get("/calendar/events", headers=headers_b).json()
-    assert len(events_b) == 0
+    # B attempts to access A's activity log -> returns empty
+    res_act_b = client.get(f"/activity", headers=headers_b)
+    assert len(res_act_b.json()) == 0
     
-    # Verify B's dashboard summary has zero data from A
+    # A creates calendar event
+    res_cal_a = client.post("/calendar/events", json={"date": str(date.today()), "title": "A's Event", "event_type": "Personal"}, headers=headers_a)
+    cal_id = res_cal_a.json()["id"]
+    
+    # B attempts to access A's calendar event by ID (PATCH and DELETE)
+    res_cal_patch = client.patch(f"/calendar/events/{cal_id}", json={"title": "Hacked"}, headers=headers_b)
+    assert res_cal_patch.status_code == 404
+    res_cal_del = client.delete(f"/calendar/events/{cal_id}", headers=headers_b)
+    assert res_cal_del.status_code == 404
+
+    # User A updates settings
+    client.patch("/settings", json={"daily_goal": 50}, headers=headers_a)
+    # User B updating settings does not affect A
+    client.patch("/settings", json={"daily_goal": 20}, headers=headers_b)
+    
+    settings_a = client.get("/settings", headers=headers_a).json()
+    assert settings_a["daily_goal"] == 50
+    settings_b = client.get("/settings", headers=headers_b).json()
+    assert settings_b["daily_goal"] == 20
+
+    # Analytics / Dashboard / Reports return 0 cross-user data
     summary_b = client.get("/dashboard/summary", headers=headers_b).json()
     assert summary_b["today_count"] == 0
     assert summary_b["funnel"] == {}
+    
+    analytics_b = client.get("/analytics/overview", headers=headers_b).json()
+    assert analytics_b["current"]["total_applications"] == 0
+    
+    reports_b = client.get("/reports/export?type=applications", headers=headers_b)
+    # The CSV should only have the header row
+    assert len(reports_b.text.strip().split("\n")) == 1
