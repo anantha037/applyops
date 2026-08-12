@@ -1,15 +1,27 @@
 export const baseUrl = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
 
 async function request(path, options = {}) {
-  const response = await fetch(`${baseUrl}${path}`, { 
-    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }, 
-    ...options 
-  })
-  if (!response.ok) {
-    const errorBody = await response.json().catch(() => ({}))
-    throw new Error(errorBody.detail ?? `Request failed with status ${response.status}`)
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 30_000)
+  try {
+    const response = await fetch(`${baseUrl}${path}`, {
+      headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+      ...options,
+      signal: controller.signal,
+    })
+    if (!response.ok) {
+      const errorBody = await response.json().catch(() => ({}))
+      throw new Error(errorBody.detail ?? `Request failed with status ${response.status}`)
+    }
+    return response.status === 204 ? null : await response.json()
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      throw new Error('Request timed out — backend may be starting up. Please try again.')
+    }
+    throw err
+  } finally {
+    clearTimeout(timeoutId)
   }
-  return response.status === 204 ? null : await response.json()
 }
 
 export const applicationsApi = {
