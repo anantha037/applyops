@@ -146,6 +146,7 @@ class ApplicationUpdate(BaseModel):
     interview_attended: bool | None = None
     latest_update: str | None = None
     remarks: str | None = None
+    next_action_due: date | None = None
     contact_name: str | None = None
     contact_email: str | None = None
     contact_phone: str | None = None
