@@ -1,21 +1,16 @@
 """SQLModel table definitions for ApplyOps — multi-user schema (SPEC §11).
 
-Eight tables (users added in Feature Phase F1):
+Nine tables (users + auth tables added across F1/F2):
     users, contacts, resumes, applications, activity_log,
-    calendar_events, daily_snapshots, settings
-
-Every user-owned table carries user_id (UUID FK → users.id, NOT NULL
-after the one-time owner-setup migration step).
+    calendar_events, daily_snapshots, settings,
+    refresh_tokens, password_reset_tokens, login_attempts
 
 Key structural decisions:
-- users.email has a case-insensitive unique index (citext or lower() index).
-- contacts and resumes are created first (no foreign deps beyond users).
-- applications.contact_id → contacts.id  (nullable)
-- applications.resume_id  → resumes.id   (nullable)
-- activity_log.contact_id → contacts.id  (nullable, denormalised)
+- users.email: unique index on lower(email) for case-insensitive matching.
+- settings.user_id is UNIQUE (one settings row per user).
+- daily_snapshots unique constraint is (user_id, snapshot_date).
 - applications does NOT contain hr_name / hr_phone / hr_email.
-- settings.user_id is UNIQUE — one settings row per user.
-- daily_snapshots unique constraint is now (user_id, snapshot_date).
+- R2 object keys are user-scoped: <user_id>/resumes/<resume_id>.pdf
 """
 
 from __future__ import annotations
@@ -275,3 +270,61 @@ class Settings(SQLModel, table=True):
     working_hours_end:    str           = Field(default="18:00")
     telegram_chat_id:     str           = Field(default="")
     dashboard_pin:        str           = Field(default="")
+
+
+# ---------------------------------------------------------------------------
+# refresh_tokens  (Feature Phase F2)
+# ---------------------------------------------------------------------------
+
+class RefreshToken(SQLModel, table=True):
+    """Server-side refresh token record.  Revoked on logout and rotated on use."""
+
+    __tablename__ = "refresh_tokens"
+
+    id:          str      = Field(default_factory=_new_uuid, primary_key=True)
+    user_id:     str      = Field(foreign_key="users.id", index=True)
+    token_hash:  str      = Field(index=True)  # SHA-256 of the raw token
+    expires_at:  datetime
+    created_at:  datetime = Field(default_factory=_utc_now)
+    revoked:     bool     = Field(default=False)
+
+
+# ---------------------------------------------------------------------------
+# password_reset_tokens  (Feature Phase F2)
+# ---------------------------------------------------------------------------
+
+class PasswordResetToken(SQLModel, table=True):
+    """Single-use, time-limited password reset token.
+
+    token_hash is SHA-256 of the raw token sent to the user.
+    used_at is set when the token is consumed — prevents reuse.
+    """
+
+    __tablename__ = "password_reset_tokens"
+
+    id:         str            = Field(default_factory=_new_uuid, primary_key=True)
+    user_id:    str            = Field(foreign_key="users.id", index=True)
+    token_hash: str            = Field(index=True)
+    expires_at: datetime
+    created_at: datetime       = Field(default_factory=_utc_now)
+    used_at:    Optional[datetime] = Field(default=None)
+
+
+# ---------------------------------------------------------------------------
+# login_attempts  (Feature Phase F2 — rate limiting)
+# ---------------------------------------------------------------------------
+
+class LoginAttempt(SQLModel, table=True):
+    """Per (email, IP) login attempt log used for rate limiting.
+
+    Failed attempts within the RATE_LIMIT_WINDOW are counted; if they reach
+    RATE_LIMIT_MAX_ATTEMPTS the login endpoint returns 429.
+    """
+
+    __tablename__ = "login_attempts"
+
+    id:           str      = Field(default_factory=_new_uuid, primary_key=True)
+    email:        str      = Field(index=True)   # already lowercased
+    ip_address:   str
+    attempted_at: datetime = Field(default_factory=_utc_now)
+    success:      bool     = Field(default=False)
