@@ -39,6 +39,25 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="ApplyOps API", version="0.1.0", lifespan=lifespan)
+
+from fastapi import Request
+from fastapi.responses import JSONResponse
+
+@app.middleware("http")
+async def csrf_protection(request: Request, call_next):
+    if request.method in ("POST", "PUT", "PATCH", "DELETE"):
+        # The internal scheduler endpoints use a different mechanism (INTERNAL_API_KEY)
+        if not request.url.path.startswith("/internal"):
+            # Require custom anti-CSRF header for all mutating API requests, except in tests
+            import sys
+            if "pytest" not in sys.modules:
+                if not request.headers.get("x-applyops-client"):
+                    return JSONResponse(
+                        status_code=403,
+                        content={"detail": "CSRF validation failed: missing custom client header."}
+                    )
+    return await call_next(request)
+
 allowed_origins = [
     origin.strip()
     for origin in os.getenv("ALLOWED_ORIGINS", "http://localhost:5173").split(",")

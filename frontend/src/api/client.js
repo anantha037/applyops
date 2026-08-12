@@ -8,7 +8,11 @@ async function request(path, options = {}, isRetry = false) {
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), 30_000)
   
-  const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) }
+  const headers = { 
+    'Content-Type': 'application/json', 
+    'X-ApplyOps-Client': '1',
+    ...(options.headers || {}) 
+  }
 
   try {
     let response = await fetch(`${baseUrl}${path}`, {
@@ -108,6 +112,10 @@ export const resumesApi = {
     formData.append('file', file)
     const response = await fetch(`${baseUrl}/resumes`, {
       method: 'POST',
+      credentials: 'include',
+      headers: {
+        'X-ApplyOps-Client': '1'
+      },
       body: formData
     })
     if (!response.ok) {
