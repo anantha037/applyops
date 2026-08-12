@@ -31,7 +31,7 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
@@ -76,7 +76,7 @@ class TokenResponse(BaseModel):
 
 
 class RefreshRequest(BaseModel):
-    refresh_token: str
+    pass  # Token is now in cookie
 
 
 class PasswordResetRequest(BaseModel):
@@ -93,7 +93,7 @@ class PasswordResetConfirm(BaseModel):
 # ---------------------------------------------------------------------------
 
 @router.post("/register", response_model=TokenResponse, status_code=201)
-def register(body: RegisterRequest, session: Session = Depends(get_session)):
+def register(body: RegisterRequest, response: Response, session: Session = Depends(get_session)):
     """Create a new user account and return a token pair."""
     email = body.email.strip().lower()
     if not email or "@" not in email:
@@ -116,11 +116,31 @@ def register(body: RegisterRequest, session: Session = Depends(get_session)):
 
     access = create_access_token(user.id, user.email)
     refresh = create_refresh_token(user.id, session)
+    
+    _set_auth_cookies(response, access, refresh)
     return TokenResponse(access_token=access, refresh_token=refresh)
+
+def _set_auth_cookies(response: Response, access: str, refresh: str):
+    response.set_cookie(
+        key="applyops_access_token",
+        value=access,
+        httponly=True,
+        samesite="lax",
+        secure=False, # Set to True in production with HTTPS
+        max_age=900,
+    )
+    response.set_cookie(
+        key="applyops_refresh_token",
+        value=refresh,
+        httponly=True,
+        samesite="lax",
+        secure=False,
+        max_age=7 * 24 * 3600,
+    )
 
 
 @router.post("/login", response_model=TokenResponse)
-def login(body: LoginRequest, request: Request, session: Session = Depends(get_session)):
+def login(body: LoginRequest, request: Request, response: Response, session: Session = Depends(get_session)):
     """Verify credentials and return a token pair.
 
     Rate-limited: 5 failed attempts per (email, IP) within 15 minutes → 429.
@@ -146,24 +166,36 @@ def login(body: LoginRequest, request: Request, session: Session = Depends(get_s
     record_login_attempt(email, ip, success=True, session=session)
     access = create_access_token(user.id, user.email)
     refresh = create_refresh_token(user.id, session)
+    
+    _set_auth_cookies(response, access, refresh)
     return TokenResponse(access_token=access, refresh_token=refresh)
 
 
 @router.post("/logout", status_code=204)
-def logout(body: RefreshRequest, session: Session = Depends(get_session)):
+def logout(request: Request, response: Response, session: Session = Depends(get_session)):
     """Revoke the refresh token server-side.
 
     The access token expires naturally within 15 minutes.
     See module docstring for logout strategy rationale.
     """
-    revoke_refresh_token(body.refresh_token, session)
+    refresh_token = request.cookies.get("applyops_refresh_token")
+    if refresh_token:
+        revoke_refresh_token(refresh_token, session)
+    
+    response.delete_cookie("applyops_access_token")
+    response.delete_cookie("applyops_refresh_token")
     return None
 
 
 @router.post("/refresh", response_model=TokenResponse)
-def refresh_token_endpoint(body: RefreshRequest, session: Session = Depends(get_session)):
+def refresh_token_endpoint(request: Request, response: Response, session: Session = Depends(get_session)):
     """Rotate the refresh token.  Old token is immediately revoked; new pair issued."""
-    new_refresh, access = rotate_refresh_token(body.refresh_token, session)
+    refresh_token = request.cookies.get("applyops_refresh_token")
+    if not refresh_token:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Missing refresh token")
+        
+    new_refresh, access = rotate_refresh_token(refresh_token, session)
+    _set_auth_cookies(response, access, new_refresh)
     return TokenResponse(access_token=access, refresh_token=new_refresh)
 
 

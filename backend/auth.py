@@ -32,7 +32,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import bcrypt as _bcrypt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from sqlalchemy import func
@@ -286,21 +286,28 @@ def consume_password_reset_token(
 # ---------------------------------------------------------------------------
 
 def get_current_user(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer),
+    request: Request,
     session: Session = Depends(get_session),
 ) -> User:
-    """Validate the Bearer JWT and return the authenticated User.
+    """Validate the Bearer JWT from cookies or header and return the authenticated User.
 
     Raises 401 for missing, malformed, or expired tokens.
     Applied to every route that accesses user-owned data.
     """
-    if credentials is None:
+    token = request.cookies.get("applyops_access_token")
+    if not token:
+        # Fallback to Authorization header
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header.split(" ")[1]
+            
+    if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Not authenticated",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    payload = decode_access_token(credentials.credentials)
+    payload = decode_access_token(token)
     user_id: Optional[str] = payload.get("sub")
     if not user_id:
         raise HTTPException(

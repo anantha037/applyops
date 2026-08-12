@@ -1,60 +1,79 @@
 export const baseUrl = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
 
-let accessToken = localStorage.getItem('applyops_access_token') || null
-let refreshToken = localStorage.getItem('applyops_refresh_token') || null
+const isBrowser = typeof window !== 'undefined' && typeof localStorage !== 'undefined';
+let accessToken = isBrowser ? localStorage.getItem('applyops_access_token') || null : null
+let refreshToken = isBrowser ? localStorage.getItem('applyops_refresh_token') || null : null
 
 export function setTokens(access, refresh) {
   accessToken = access
   refreshToken = refresh
-  if (access) {
-    localStorage.setItem('applyops_access_token', access)
-  } else {
-    localStorage.removeItem('applyops_access_token')
-  }
-  if (refresh) {
-    localStorage.setItem('applyops_refresh_token', refresh)
-  } else {
-    localStorage.removeItem('applyops_refresh_token')
+  if (isBrowser) {
+    if (access) {
+      localStorage.setItem('applyops_access_token', access)
+    } else {
+      localStorage.removeItem('applyops_access_token')
+    }
+    if (refresh) {
+      localStorage.setItem('applyops_refresh_token', refresh)
+    } else {
+      localStorage.removeItem('applyops_refresh_token')
+    }
   }
 }
+
+let refreshPromise = null
 
 async function request(path, options = {}, isRetry = false) {
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), 30_000)
   
   const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) }
-  if (accessToken) {
-    headers['Authorization'] = `Bearer ${accessToken}`
-  }
 
   try {
     let response = await fetch(`${baseUrl}${path}`, {
       ...options,
       headers,
+      credentials: 'include',
       signal: controller.signal,
     })
     
     // Auto-refresh logic on 401
     if (response.status === 401 && !isRetry && refreshToken && !path.startsWith('/auth/')) {
       try {
-        const refreshRes = await fetch(`${baseUrl}/auth/refresh`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ refresh_token: refreshToken })
-        })
-        if (refreshRes.ok) {
-          const data = await refreshRes.json()
-          setTokens(data.access_token, data.refresh_token)
-          // Retry original request with new token
-          headers['Authorization'] = `Bearer ${data.access_token}`
+        if (!refreshPromise) {
+          refreshPromise = fetch(`${baseUrl}/auth/refresh`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({})
+          }).then(async refreshRes => {
+            if (refreshRes.ok) {
+              const data = await refreshRes.json()
+              setTokens(data.access_token, data.refresh_token)
+              return true
+            } else {
+              setTokens(null, null)
+              window.dispatchEvent(new Event('auth:unauthorized'))
+              return false
+            }
+          }).catch(() => {
+            setTokens(null, null)
+            window.dispatchEvent(new Event('auth:unauthorized'))
+            return false
+          }).finally(() => {
+            refreshPromise = null
+          })
+        }
+
+        const success = await refreshPromise
+        if (success) {
+          // Retry original request
           response = await fetch(`${baseUrl}${path}`, {
             ...options,
             headers,
+            credentials: 'include',
             signal: controller.signal,
           })
-        } else {
-          setTokens(null, null)
-          window.dispatchEvent(new Event('auth:unauthorized'))
         }
       } catch (e) {
         setTokens(null, null)
@@ -162,7 +181,7 @@ export const authApi = {
   register: (email, password) => request('/auth/register', { method: 'POST', body: JSON.stringify({ email, password }) }),
   logout: () => {
     if (refreshToken) {
-      request('/auth/logout', { method: 'POST', body: JSON.stringify({ refresh_token: refreshToken }) }).catch(() => {})
+      request('/auth/logout', { method: 'POST', body: JSON.stringify({}) }).catch(() => {})
     }
     setTokens(null, null)
   },
