@@ -28,7 +28,7 @@ class TelegramBot:
                 "TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID must be configured in .env"
             )
 
-    def send_due_today_reminder(self, applications: list[Application]) -> None:
+    def send_due_today_reminder(self, applications: list[Application], chat_id: str | None = None) -> None:
         """Send a concise list of follow-ups due today."""
         if not applications:
             return
@@ -37,12 +37,16 @@ class TelegramBot:
             f"• {application.company} — {application.job_title} ({application.stage})"
             for application in applications
         )
-        self.send_message("\n".join(lines))
+        self.send_message("\n".join(lines), chat_id=chat_id)
 
-    def send_message(self, text: str) -> None:
+    def send_message(self, text: str, chat_id: str | None = None) -> None:
+        target_chat_id = chat_id or self._chat_id
+        if not target_chat_id:
+            return  # No chat ID configured, skip silently (user might not have enabled Telegram)
+        
         response = httpx.post(
             f"https://api.telegram.org/bot{self._token}/sendMessage",
-            json={"chat_id": self._chat_id, "text": text},
+            json={"chat_id": target_chat_id, "text": text},
             timeout=15.0,
         )
         response.raise_for_status()

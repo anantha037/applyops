@@ -8,6 +8,8 @@ import Contacts from './pages/Contacts'
 import Analytics from './pages/Analytics'
 import Updates from './pages/Updates'
 import Settings from './pages/Settings'
+import Auth from './pages/Auth'
+import { authApi } from './api/client'
 
 const views = { 
   dashboard: Dashboard, 
@@ -20,6 +22,8 @@ const views = {
 }
 
 export default function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(() => authApi.isAuthenticated())
+  
   const [view, setView] = useState(() => {
     const hash = window.location.hash.replace('#/', '')
     return views[hash] ? hash : 'dashboard'
@@ -38,8 +42,27 @@ export default function App() {
     }
     
     window.addEventListener('hashchange', handleHashChange)
-    return () => window.removeEventListener('hashchange', handleHashChange)
+    
+    const handleUnauthorized = () => {
+      setIsAuthenticated(false)
+    }
+    window.addEventListener('auth:unauthorized', handleUnauthorized)
+    
+    return () => {
+      window.removeEventListener('hashchange', handleHashChange)
+      window.removeEventListener('auth:unauthorized', handleUnauthorized)
+    }
   }, [])
+
+  const handleLoginSuccess = () => {
+    setIsAuthenticated(true)
+    window.location.hash = '#/dashboard'
+  }
+
+  const handleLogout = () => {
+    authApi.logout()
+    setIsAuthenticated(false)
+  }
 
   const handleViewChange = (newView) => {
     window.location.hash = `#/${newView}`
@@ -48,12 +71,16 @@ export default function App() {
 
   const View = views[view]
 
+  if (!isAuthenticated) {
+    return <Auth onLoginSuccess={handleLoginSuccess} />
+  }
+
   return (
     <GoalProvider>
       <DashboardLayout 
         currentView={view} 
         onViewChange={handleViewChange}
-        onLogout={() => alert('Logged out successfully.')}
+        onLogout={handleLogout}
       >
         <View />
       </DashboardLayout>

@@ -34,6 +34,7 @@ from backend.db.models import (
     DailySnapshot as DBDailySnapshot,
     Resume,
     Settings as DBSettings,
+    User,
 )
 from backend.db.session import engine
 from backend.models import (
@@ -60,6 +61,11 @@ from backend.r2_client import (
 # ---------------------------------------------------------------------------
 
 MAX_RESUME_BYTES = 10 * 1024 * 1024  # 10 MB
+
+def get_all_user_ids() -> list[str]:
+    """Return all active user IDs in the system."""
+    with Session(engine) as session:
+        return session.exec(select(User.id)).all()
 
 
 def _new_id() -> str:
@@ -114,6 +120,7 @@ def _calendar_to_pydantic(row: DBCalendarEvent) -> CalendarEvent:
 
 def find_or_create_contact(
     session: Session,
+    user_id: str,
     *,
     name: str | None = None,
     email: str | None = None,
@@ -148,16 +155,16 @@ def find_or_create_contact(
 
     existing: Contact | None = None
 
-    # --- Match step 1: email (case-insensitive) ---
     if norm_email:
         stmt = select(Contact).where(
+            Contact.user_id == user_id,
             col(Contact.email).ilike(norm_email)
         )
         existing = session.exec(stmt).first()
 
-    # --- Match step 2: name + phone fallback (only when no email given) ---
     if existing is None and norm_name and norm_phone and not norm_email:
         stmt = select(Contact).where(
+            Contact.user_id == user_id,
             col(Contact.name).ilike(norm_name),
             col(Contact.phone) == norm_phone,
         )
@@ -178,6 +185,7 @@ def find_or_create_contact(
     # --- No match → create a new contact ---
     contact = Contact(
         id=_new_id(),
+        user_id=user_id,
         name=norm_name or f"HR at {norm_company or 'unknown'}",
         email=norm_email,
         phone=norm_phone,
@@ -189,14 +197,19 @@ def find_or_create_contact(
     session.flush()   # flush so the ID is available before the caller commits
     return contact
 
-def list_contacts() -> list[ContactView]:
+def list_contacts(user_id: str) -> list[ContactView]:
     """Return all contacts, enriched with activity data for last_contacted/responded."""
     with Session(engine) as session:
         # Load all contacts
-        contacts = session.exec(select(Contact)).all()
+        contacts = session.exec(select(Contact).where(Contact.user_id == user_id)).all()
         
         # Load all activities to compute last_contacted and responded
-        activities = session.exec(select(ActivityLog).where(ActivityLog.contact_id.is_not(None))).all()
+        activities = session.exec(
+            select(ActivityLog).where(
+                ActivityLog.user_id == user_id,
+                ActivityLog.contact_id.is_not(None)
+            )
+        ).all()
         
         # Group activities by contact_id
         from collections import defaultdict
@@ -205,8 +218,12 @@ def list_contacts() -> list[ContactView]:
             act_by_contact[act.contact_id].append(act)
             
         # Also need application_id? A contact can have multiple applications. 
-        # We'll just grab the most recent application_id if any.
-        apps = session.exec(select(DBApplication).where(DBApplication.contact_id.is_not(None))).all()
+        apps = session.exec(
+            select(DBApplication).where(
+                DBApplication.user_id == user_id,
+                DBApplication.contact_id.is_not(None)
+            )
+        ).all()
         app_by_contact = {}
         for app in apps:
             app_by_contact[app.contact_id] = app.id
@@ -246,11 +263,12 @@ def list_contacts() -> list[ContactView]:
 # ---------------------------------------------------------------------------
 
 def list_applications(
+    user_id: str,
     status: str | None = None,
     stage:  str | None = None,
 ) -> list[Application]:
     with Session(engine) as session:
-        stmt = select(DBApplication)
+        stmt = select(DBApplication).where(DBApplication.user_id == user_id)
         if status:
             stmt = stmt.where(DBApplication.status == status)
         if stage:
@@ -259,13 +277,16 @@ def list_applications(
         return [_app_to_pydantic(r) for r in rows]
 
 
-def get_application(application_id: str) -> Application | None:
+def get_application(user_id: str, application_id: str) -> Application | None:
     with Session(engine) as session:
         row = session.get(DBApplication, application_id)
-        return _app_to_pydantic(row) if row else None
+        if not row or row.user_id != user_id:
+            return None
+        return _app_to_pydantic(row)
 
 
 def create_application(
+    user_id: str,
     payload: dict,
     *,
     contact_name:  str | None = None,
@@ -284,6 +305,7 @@ def create_application(
         if any([contact_name, contact_email, contact_phone]):
             contact = find_or_create_contact(
                 session,
+                user_id,
                 name=contact_name,
                 email=contact_email,
                 phone=contact_phone,
@@ -292,9 +314,15 @@ def create_application(
             )
             contact_id = contact.id if contact else None
 
+        if resume_id is not None:
+            resume_row = session.get(Resume, resume_id)
+            if not resume_row or resume_row.user_id != user_id:
+                raise ValueError("Invalid or unauthorized resume_id")
+
         app_id = payload.get("id") or _new_id()
         row = DBApplication(
             id=app_id,
+            user_id=user_id,
             date_applied=payload["date_applied"],
             company=payload["company"],
             job_title=payload["job_title"],
@@ -320,6 +348,7 @@ def create_application(
 
 
 def update_application(
+    user_id: str,
     application_id: str,
     changes: dict,
     *,
@@ -329,21 +358,17 @@ def update_application(
     contact_role:  str | None = None,
     resume_id:     str | None = None,
 ) -> Application | None:
-    """Patch an existing application.
-
-    If any inline contact fields are supplied, the same find-or-create logic
-    runs and contact_id is updated.  resume_id replaces the existing value
-    when explicitly passed.
-    """
+    """Patch an existing application."""
     with Session(engine) as session:
         row = session.get(DBApplication, application_id)
-        if row is None:
+        if row is None or row.user_id != user_id:
             return None
 
         # Handle contact linkage
         if any([contact_name, contact_email, contact_phone]):
             contact = find_or_create_contact(
                 session,
+                user_id,
                 name=contact_name,
                 email=contact_email,
                 phone=contact_phone,
@@ -354,6 +379,9 @@ def update_application(
 
         # Handle resume linkage
         if resume_id is not None:
+            resume_row = session.get(Resume, resume_id)
+            if not resume_row or resume_row.user_id != user_id:
+                raise ValueError("Invalid or unauthorized resume_id")
             row.resume_id = resume_id
 
         # Apply scalar field updates
@@ -373,19 +401,22 @@ def update_application(
         return _app_to_pydantic(row)
 
 
-def delete_application(application_id: str) -> bool:
+def delete_application(user_id: str, application_id: str) -> bool:
     with Session(engine) as session:
         row = session.get(DBApplication, application_id)
-        if row is None:
+        if row is None or row.user_id != user_id:
             return False
         session.delete(row)
         session.commit()
         return True
 
 
-def applications_due_on(target_date: date) -> list[Application]:
+def applications_due_on(user_id: str, target_date: date) -> list[Application]:
     with Session(engine) as session:
-        stmt = select(DBApplication).where(DBApplication.next_action_due == target_date)
+        stmt = select(DBApplication).where(
+            DBApplication.user_id == user_id,
+            DBApplication.next_action_due == target_date
+        )
         rows = session.exec(stmt).all()
         return [_app_to_pydantic(r) for r in rows]
 
@@ -394,23 +425,20 @@ def applications_due_on(target_date: date) -> list[Application]:
 # Activity log
 # ---------------------------------------------------------------------------
 
-def create_activity(activity_id: str, payload: ActivityCreate) -> Activity:
-    """Create an activity log entry.
-
-    contact_id is denormalised from the application's contact_id at write
-    time — never sourced from direct user input.
-    """
+def create_activity(user_id: str, activity_id: str, payload: ActivityCreate) -> Activity:
+    """Create an activity log entry."""
     with Session(engine) as session:
         # Look up the application's contact_id for denormalisation
         contact_id: str | None = None
         if payload.application_id:
             app_row = session.get(DBApplication, payload.application_id)
-            if app_row:
+            if app_row and app_row.user_id == user_id:
                 contact_id = app_row.contact_id
 
         now = utc_now()
         row = ActivityLog(
             id=activity_id,
+            user_id=user_id,
             timestamp=now,
             application_id=payload.application_id or None,
             company=payload.company or None,
@@ -432,9 +460,9 @@ def create_activity(activity_id: str, payload: ActivityCreate) -> Activity:
     )
 
 
-def list_activity(activity_date: date | None = None) -> list[Activity]:
+def list_activity(user_id: str, activity_date: date | None = None) -> list[Activity]:
     with Session(engine) as session:
-        stmt = select(ActivityLog).order_by(col(ActivityLog.timestamp).desc())
+        stmt = select(ActivityLog).where(ActivityLog.user_id == user_id).order_by(col(ActivityLog.timestamp).desc())
         rows = session.exec(stmt).all()
 
     result = []
@@ -460,9 +488,10 @@ def list_activity(activity_date: date | None = None) -> list[Activity]:
 # Settings
 # ---------------------------------------------------------------------------
 
-def get_settings() -> Settings:
+def get_settings(user_id: str) -> Settings:
     with Session(engine) as session:
-        row = session.get(DBSettings, 1)
+        stmt = select(DBSettings).where(DBSettings.user_id == user_id)
+        row = session.exec(stmt).first()
         if row is None:
             return Settings()
         return Settings(
@@ -474,15 +503,15 @@ def get_settings() -> Settings:
         )
 
 
-def get_daily_goal() -> int:
-    return get_settings().daily_goal
+def get_daily_goal(user_id: str) -> int:
+    return get_settings(user_id).daily_goal
 
 
-def update_settings(changes: SettingsUpdate) -> Settings:
+def update_settings(user_id: str, changes: SettingsUpdate) -> Settings:
     with Session(engine) as session:
-        row = session.get(DBSettings, 1)
+        row = session.exec(select(DBSettings).where(DBSettings.user_id == user_id)).first()
         if row is None:
-            row = DBSettings(id=1)
+            row = DBSettings(user_id=user_id)
             session.add(row)
 
         updates = changes.model_dump(exclude_unset=True)
@@ -507,11 +536,12 @@ def update_settings(changes: SettingsUpdate) -> Settings:
 # ---------------------------------------------------------------------------
 
 def list_calendar_events(
+    user_id: str,
     start: date | None = None,
     end:   date | None = None,
 ) -> list[CalendarEvent]:
     with Session(engine) as session:
-        stmt = select(DBCalendarEvent).order_by(DBCalendarEvent.event_date)
+        stmt = select(DBCalendarEvent).where(DBCalendarEvent.user_id == user_id).order_by(DBCalendarEvent.event_date)
         if start:
             stmt = stmt.where(DBCalendarEvent.event_date >= start)
         if end:
@@ -520,16 +550,19 @@ def list_calendar_events(
         return [_calendar_to_pydantic(r) for r in rows]
 
 
-def get_calendar_event(event_id: str) -> CalendarEvent | None:
+def get_calendar_event(user_id: str, event_id: str) -> CalendarEvent | None:
     with Session(engine) as session:
         row = session.get(DBCalendarEvent, event_id)
-        return _calendar_to_pydantic(row) if row else None
+        if row is None or row.user_id != user_id:
+            return None
+        return _calendar_to_pydantic(row)
 
 
-def create_calendar_event(event: CalendarEvent) -> CalendarEvent:
+def create_calendar_event(user_id: str, event: CalendarEvent) -> CalendarEvent:
     with Session(engine) as session:
         row = DBCalendarEvent(
             id=event.id,
+            user_id=user_id,
             title=event.title,
             event_type=event.event_type,
             event_date=event.date,
@@ -544,10 +577,10 @@ def create_calendar_event(event: CalendarEvent) -> CalendarEvent:
     return event
 
 
-def update_calendar_event(event: CalendarEvent) -> CalendarEvent | None:
+def update_calendar_event(user_id: str, event: CalendarEvent) -> CalendarEvent | None:
     with Session(engine) as session:
         row = session.get(DBCalendarEvent, event.id)
-        if row is None:
+        if row is None or row.user_id != user_id:
             return None
         row.title = event.title
         row.event_type = event.event_type
@@ -559,10 +592,10 @@ def update_calendar_event(event: CalendarEvent) -> CalendarEvent | None:
     return event
 
 
-def delete_calendar_event(event_id: str) -> bool:
+def delete_calendar_event(user_id: str, event_id: str) -> bool:
     with Session(engine) as session:
         row = session.get(DBCalendarEvent, event_id)
-        if row is None:
+        if row is None or row.user_id != user_id:
             return False
         session.delete(row)
         session.commit()
@@ -571,10 +604,12 @@ def delete_calendar_event(event_id: str) -> bool:
 
 def _find_auto_event(
     session: Session,
+    user_id: str,
     related_application_id: str,
     event_type: CalendarEventType,
 ) -> DBCalendarEvent | None:
     stmt = select(DBCalendarEvent).where(
+        DBCalendarEvent.user_id == user_id,
         DBCalendarEvent.related_application_id == related_application_id,
         DBCalendarEvent.event_type == event_type,
         DBCalendarEvent.source == CalendarEventSource.AUTO,
@@ -583,13 +618,14 @@ def _find_auto_event(
 
 
 def sync_followup_event(
+    user_id: str,
     application_id: str,
     company: str,
     next_action_due: date | None,
     event_id_factory=lambda: str(uuid.uuid4()),
 ) -> None:
     with Session(engine) as session:
-        existing = _find_auto_event(session, application_id, CalendarEventType.FOLLOW_UP)
+        existing = _find_auto_event(session, user_id, application_id, CalendarEventType.FOLLOW_UP)
         if next_action_due is None:
             if existing:
                 session.delete(existing)
@@ -604,6 +640,7 @@ def sync_followup_event(
         else:
             row = DBCalendarEvent(
                 id=event_id_factory(),
+                user_id=user_id,
                 title=title,
                 event_type=CalendarEventType.FOLLOW_UP,
                 event_date=next_action_due,
@@ -616,6 +653,7 @@ def sync_followup_event(
 
 
 def sync_interview_event(
+    user_id: str,
     application_id: str,
     company: str,
     interview_date: date | None,
@@ -623,7 +661,7 @@ def sync_interview_event(
     event_id_factory=lambda: str(uuid.uuid4()),
 ) -> None:
     with Session(engine) as session:
-        existing = _find_auto_event(session, application_id, CalendarEventType.INTERVIEW)
+        existing = _find_auto_event(session, user_id, application_id, CalendarEventType.INTERVIEW)
         if interview_date is None:
             if existing:
                 session.delete(existing)
@@ -638,6 +676,7 @@ def sync_interview_event(
         else:
             row = DBCalendarEvent(
                 id=event_id_factory(),
+                user_id=user_id,
                 title=title,
                 event_type=CalendarEventType.INTERVIEW,
                 event_date=interview_date,
@@ -653,12 +692,13 @@ def sync_interview_event(
 # Daily snapshots & Analytics
 # ---------------------------------------------------------------------------
 
-def get_current_pipeline_stats() -> dict:
+def get_current_pipeline_stats(user_id: str) -> dict:
     """Return lightweight aggregate queries for current pipeline stats."""
     with Session(engine) as session:
         # Applications counts
         app_counts = session.exec(
             select(DBApplication.status, func.count(DBApplication.id))
+            .where(DBApplication.user_id == user_id)
             .group_by(DBApplication.status)
         ).all()
         counts = {status: count for status, count in app_counts}
@@ -667,10 +707,14 @@ def get_current_pipeline_stats() -> dict:
         # Response rate
         total_contacted = session.exec(
             select(func.count(DBApplication.id))
-            .where(DBApplication.status != "Not Contacted")
+            .where(
+                DBApplication.user_id == user_id,
+                DBApplication.status != "Not Contacted"
+            )
         ).one()
         
         responded_subq = select(ActivityLog.application_id).where(
+            ActivityLog.user_id == user_id,
             col(ActivityLog.action_type).in_(["Call Connected", "Interview Completed"]),
             ActivityLog.application_id.is_not(None)
         ).distinct()
@@ -678,6 +722,7 @@ def get_current_pipeline_stats() -> dict:
         contacted_and_responded = session.exec(
             select(func.count(DBApplication.id))
             .where(
+                DBApplication.user_id == user_id,
                 DBApplication.status != "Not Contacted",
                 col(DBApplication.id).in_(responded_subq)
             )
@@ -688,6 +733,7 @@ def get_current_pipeline_stats() -> dict:
         # Activity counts
         act_counts = session.exec(
             select(ActivityLog.action_type, func.count(ActivityLog.id))
+            .where(ActivityLog.user_id == user_id)
             .group_by(ActivityLog.action_type)
         ).all()
         activities = {atype: count for atype, count in act_counts}
@@ -706,11 +752,12 @@ def get_current_pipeline_stats() -> dict:
         "interviews_attended": activities.get("Interview Completed", 0)
     }
 
-def get_application_sources() -> dict[str, int]:
+def get_application_sources(user_id: str) -> dict[str, int]:
     """Aggregate counts by application_method."""
     with Session(engine) as session:
         rows = session.exec(
             select(DBApplication.application_method, func.count(DBApplication.id))
+            .where(DBApplication.user_id == user_id)
             .group_by(DBApplication.application_method)
         ).all()
         sources = {}
@@ -719,10 +766,12 @@ def get_application_sources() -> dict[str, int]:
             sources[name] = sources.get(name, 0) + count
         return sources
 
-def list_daily_snapshots() -> list[DailySnapshot]:
+def list_daily_snapshots(user_id: str) -> list[DailySnapshot]:
     with Session(engine) as session:
         rows = session.exec(
-            select(DBDailySnapshot).order_by(DBDailySnapshot.snapshot_date)
+            select(DBDailySnapshot)
+            .where(DBDailySnapshot.user_id == user_id)
+            .order_by(DBDailySnapshot.snapshot_date)
         ).all()
         return [
             DailySnapshot(
@@ -743,11 +792,12 @@ def list_daily_snapshots() -> list[DailySnapshot]:
         ]
 
 
-def save_daily_snapshot(snapshot: DailySnapshot) -> None:
+def save_daily_snapshot(user_id: str, snapshot: DailySnapshot) -> None:
     """Upsert: update today's row if it exists, else insert."""
     with Session(engine) as session:
         existing = session.exec(
             select(DBDailySnapshot).where(
+                DBDailySnapshot.user_id == user_id,
                 DBDailySnapshot.snapshot_date == snapshot.date
             )
         ).first()
@@ -768,6 +818,7 @@ def save_daily_snapshot(snapshot: DailySnapshot) -> None:
         else:
             row = DBDailySnapshot(
                 id=_new_id(),
+                user_id=user_id,
                 snapshot_date=snapshot.date,
                 total_applications=snapshot.total_applications,
                 not_contacted=snapshot.not_contacted,
@@ -809,6 +860,7 @@ class ResumeMeta:
 
 
 def upload_resume(
+    user_id: str,
     file: IO[bytes],
     filename: str,
     *,
@@ -836,7 +888,7 @@ def upload_resume(
         )
 
     resume_id   = _new_id()
-    storage_key = f"resumes/{resume_id}/{filename}"
+    storage_key = f"{user_id}/resumes/{resume_id}.pdf"
 
     # Upload to R2
     client = get_r2_client()
@@ -851,6 +903,7 @@ def upload_resume(
     with Session(engine) as session:
         row = Resume(
             id=resume_id,
+            user_id=user_id,
             filename=filename,
             storage_key=storage_key,
             label=label or None,
@@ -869,11 +922,11 @@ def upload_resume(
     )
 
 
-def list_resumes() -> list[ResumeMeta]:
+def list_resumes(user_id: str) -> list[ResumeMeta]:
     """List all resume metadata rows, newest first."""
     with Session(engine) as session:
         rows = session.exec(
-            select(Resume).order_by(col(Resume.uploaded_at).desc())
+            select(Resume).where(Resume.user_id == user_id).order_by(col(Resume.uploaded_at).desc())
         ).all()
     return [
         ResumeMeta(
@@ -888,18 +941,14 @@ def list_resumes() -> list[ResumeMeta]:
 
 
 def get_resume_presigned_url(
+    user_id: str,
     resume_id: str,
     ttl_seconds: int = PRESIGNED_URL_TTL_SECONDS,
 ) -> str | None:
-    """Return a short-lived presigned download URL for a private R2 object.
-
-    Returns None when no resume with that ID exists.
-    The URL expires after ttl_seconds (default: 1 hour).
-    The bucket itself remains private — the URL embeds a time-limited signature.
-    """
+    """Return a short-lived presigned download URL for a private R2 object."""
     with Session(engine) as session:
         row = session.get(Resume, resume_id)
-        if row is None:
+        if row is None or row.user_id != user_id:
             return None
         storage_key = row.storage_key
 
@@ -912,15 +961,11 @@ def get_resume_presigned_url(
     return url
 
 
-def delete_resume(resume_id: str) -> bool:
-    """Delete a resume from R2 and remove its Postgres metadata row.
-
-    Used by tests and the future resume management UI — not exposed as a
-    route yet (Phase D).
-    """
+def delete_resume(user_id: str, resume_id: str) -> bool:
+    """Delete a resume from R2 and remove its Postgres metadata row."""
     with Session(engine) as session:
         row = session.get(Resume, resume_id)
-        if row is None:
+        if row is None or row.user_id != user_id:
             return False
         storage_key = row.storage_key
         session.delete(row)

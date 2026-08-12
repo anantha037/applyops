@@ -8,7 +8,10 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-from fastapi import APIRouter, Request, status
+from fastapi import APIRouter, Depends, Request, status
+
+from backend.auth import get_current_user
+from backend.db.models import User
 
 from backend.models import ContactCreate, ContactManual, ContactView
 from backend import db_client
@@ -19,13 +22,13 @@ router = APIRouter(prefix="/contacts", tags=["contacts"])
 
 
 @router.get("", response_model=list[ContactView])
-def list_contacts(request: Request) -> list[ContactView]:
+def list_contacts(request: Request, user: User = Depends(get_current_user)) -> list[ContactView]:
     """Return all contacts from Postgres, enriched with Activity Log data."""
-    return db_client.list_contacts()
+    return db_client.list_contacts(user.id)
 
 
 @router.post("", response_model=ContactManual, status_code=status.HTTP_201_CREATED)
-def create_contact(payload: ContactCreate, request: Request) -> ContactManual:
+def create_contact(payload: ContactCreate, request: Request, user: User = Depends(get_current_user)) -> ContactManual:
     """Add a manual contact directly to Postgres.
     
     Uses find_or_create_contact so it correctly deduplicates if the contact
@@ -34,6 +37,7 @@ def create_contact(payload: ContactCreate, request: Request) -> ContactManual:
     with Session(engine) as session:
         contact = db_client.find_or_create_contact(
             session,
+            user.id,
             name=payload.name,
             email=payload.email,
             phone=payload.phone,
@@ -41,14 +45,14 @@ def create_contact(payload: ContactCreate, request: Request) -> ContactManual:
             company=payload.company,
         )
         session.commit()
-        
-    return ContactManual(
-        id=contact.id,
-        name=contact.name or "",
-        company=contact.company or "",
-        role=contact.role or "",
-        email=contact.email or "",
-        phone=contact.phone or "",
-        tags="",
-        notes=""
-    )
+        session.refresh(contact)
+        return ContactManual(
+            id=contact.id,
+            name=contact.name or "",
+            company=contact.company or "",
+            role=contact.role or "",
+            email=contact.email or "",
+            phone=contact.phone or "",
+            tags="",
+            notes=""
+        )

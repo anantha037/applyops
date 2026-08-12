@@ -5,8 +5,10 @@ from __future__ import annotations
 from datetime import date
 from uuid import uuid4
 
-from fastapi import APIRouter, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
+from backend.auth import get_current_user
+from backend.db.models import User
 from backend.models import (
     Activity,
     ActivityCreate,
@@ -24,14 +26,15 @@ router = APIRouter(tags=["applications"])
 @router.get("/applications", response_model=list[Application])
 def list_applications(
     request: Request,
+    user: User = Depends(get_current_user),
     status: str | None = Query(default=None),
     stage: str | None = Query(default=None),
 ) -> list[Application]:
-    return db_client.list_applications(status=status, stage=stage)
+    return db_client.list_applications(user.id, status=status, stage=stage)
 
 
 @router.post("/applications", response_model=Application, status_code=status.HTTP_201_CREATED)
-def create_application(payload: ApplicationCreate, request: Request) -> Application:
+def create_application(payload: ApplicationCreate, request: Request, user: User = Depends(get_current_user)) -> Application:
     last_touch_date = payload.last_touch_date or payload.date_applied
     application_data = payload.model_dump()
     application_data["last_touch_date"] = last_touch_date
@@ -41,6 +44,7 @@ def create_application(payload: ApplicationCreate, request: Request) -> Applicat
     application_data["id"] = str(uuid4())
     
     application = db_client.create_application(
+        user.id,
         application_data,
         contact_name=payload.contact_name,
         contact_email=payload.contact_email,
@@ -51,11 +55,11 @@ def create_application(payload: ApplicationCreate, request: Request) -> Applicat
     
     # Auto-sync calendar events
     db_client.sync_followup_event(
-        application.id, application.company, application.next_action_due, lambda: str(uuid4())
+        user.id, application.id, application.company, application.next_action_due, lambda: str(uuid4())
     )
     if application.interview_date:
         db_client.sync_interview_event(
-            application.id, application.company,
+            user.id, application.id, application.company,
             application.interview_date, application.interview_round,
             lambda: str(uuid4()),
         )
@@ -64,9 +68,9 @@ def create_application(payload: ApplicationCreate, request: Request) -> Applicat
 
 @router.patch("/applications/{application_id}", response_model=Application)
 def update_application(
-    application_id: str, payload: ApplicationUpdate, request: Request
+    application_id: str, payload: ApplicationUpdate, request: Request, user: User = Depends(get_current_user)
 ) -> Application:
-    existing = db_client.get_application(application_id)
+    existing = db_client.get_application(user.id, application_id)
     if existing is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Application not found")
 
@@ -88,6 +92,7 @@ def update_application(
     resume_id = changes.pop("resume_id", None)
 
     result = db_client.update_application(
+        user.id,
         application_id, 
         changes,
         contact_name=contact_name,
@@ -102,10 +107,10 @@ def update_application(
     # Auto-sync calendar events whenever relevant fields change
     if {"stage", "last_touch_date", "status", "next_action_due", "interview_date", "interview_round"} & changes.keys():
         db_client.sync_followup_event(
-            result.id, result.company, result.next_action_due, lambda: str(uuid4())
+            user.id, result.id, result.company, result.next_action_due, lambda: str(uuid4())
         )
         db_client.sync_interview_event(
-            result.id, result.company,
+            user.id, result.id, result.company,
             result.interview_date, result.interview_round or "",
             lambda: str(uuid4()),
         )
@@ -113,19 +118,19 @@ def update_application(
 
 
 @router.delete("/applications/{application_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_application(application_id: str, request: Request) -> None:
-    if not db_client.delete_application(application_id):
+def delete_application(application_id: str, request: Request, user: User = Depends(get_current_user)) -> None:
+    if not db_client.delete_application(user.id, application_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Application not found")
 
 
 @router.post("/activity", response_model=Activity, status_code=status.HTTP_201_CREATED)
-def create_activity(payload: ActivityCreate, request: Request) -> Activity:
-    return db_client.create_activity(str(uuid4()), payload)
+def create_activity(payload: ActivityCreate, request: Request, user: User = Depends(get_current_user)) -> Activity:
+    return db_client.create_activity(user.id, str(uuid4()), payload)
 
 
 @router.get("/activity", response_model=list[Activity])
 def list_activity(
-    request: Request, date_filter: str = Query(default="today", alias="date")
+    request: Request, user: User = Depends(get_current_user), date_filter: str = Query(default="today", alias="date")
 ) -> list[Activity]:
     if date_filter == "today":
         activity_date = date.today()
@@ -137,7 +142,7 @@ def list_activity(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="date must be 'today' or an ISO date (YYYY-MM-DD)",
             ) from exc
-    return db_client.list_activity(activity_date)
+    return db_client.list_activity(user.id, activity_date)
 
 
 def _not_found() -> None:

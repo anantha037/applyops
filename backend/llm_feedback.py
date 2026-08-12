@@ -47,12 +47,13 @@ def build_coaching_prompt(stats: DailyCoachingInput) -> str:
 
 
 def build_daily_coaching_input(
+    user_id: str,
     report_date: date
 ) -> DailyCoachingInput:
     """Derive the daily coaching metrics from Postgres."""
-    applications = db_client.list_applications()
+    applications = db_client.list_applications(user_id)
     applications_today = [app for app in applications if app.date_applied == report_date]
-    activity = db_client.list_activity(report_date)
+    activity = db_client.list_activity(user_id, report_date)
     remarks = [
         text
         for app in applications_today
@@ -60,7 +61,7 @@ def build_daily_coaching_input(
         if text.strip()
     ]
     remarks.extend(event.notes for event in activity if event.notes and event.notes.strip())
-    goal = db_client.get_daily_goal()
+    goal = db_client.get_daily_goal(user_id)
     return DailyCoachingInput(
         date=report_date,
         goal=goal,
