@@ -1,15 +1,21 @@
-"""SQLModel table definitions for ApplyOps — corrected schema (SPEC §10).
+"""SQLModel table definitions for ApplyOps — multi-user schema (SPEC §11).
 
-Seven tables:
-    contacts, resumes, applications, activity_log,
+Eight tables (users added in Feature Phase F1):
+    users, contacts, resumes, applications, activity_log,
     calendar_events, daily_snapshots, settings
 
+Every user-owned table carries user_id (UUID FK → users.id, NOT NULL
+after the one-time owner-setup migration step).
+
 Key structural decisions:
-- contacts and resumes are created first (no foreign deps).
+- users.email has a case-insensitive unique index (citext or lower() index).
+- contacts and resumes are created first (no foreign deps beyond users).
 - applications.contact_id → contacts.id  (nullable)
 - applications.resume_id  → resumes.id   (nullable)
 - activity_log.contact_id → contacts.id  (nullable, denormalised)
 - applications does NOT contain hr_name / hr_phone / hr_email.
+- settings.user_id is UNIQUE — one settings row per user.
+- daily_snapshots unique constraint is now (user_id, snapshot_date).
 """
 
 from __future__ import annotations
@@ -19,7 +25,7 @@ from datetime import date, datetime, timezone
 from enum import StrEnum
 from typing import Optional
 
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field, SQLModel, UniqueConstraint
 
 
 # ---------------------------------------------------------------------------
@@ -35,7 +41,7 @@ def _utc_now() -> datetime:
 
 
 # ---------------------------------------------------------------------------
-# Enums (mirrored from backend/models.py so the DB layer is self-contained)
+# Enums
 # ---------------------------------------------------------------------------
 
 class ApplicationStatus(StrEnum):
@@ -89,10 +95,29 @@ class CalendarEventSource(StrEnum):
 
 
 class ContactTag(StrEnum):
-    RECRUITER    = "Recruiter"
-    HR_MANAGER   = "HR Manager"
-    REFERRER     = "Referrer"
-    OTHER        = "Other"
+    RECRUITER  = "Recruiter"
+    HR_MANAGER = "HR Manager"
+    REFERRER   = "Referrer"
+    OTHER      = "Other"
+
+
+# ---------------------------------------------------------------------------
+# users  (NEW — Feature Phase F1)
+# ---------------------------------------------------------------------------
+
+class User(SQLModel, table=True):
+    """Authenticated user account.
+
+    email is stored normalised (lowercase).  The unique index enforces
+    case-insensitive uniqueness at the database level.
+    """
+
+    __tablename__ = "users"
+
+    id:            str      = Field(default_factory=_new_uuid, primary_key=True)
+    email:         str      = Field(unique=True, index=True)   # stored lowercase
+    password_hash: str
+    created_at:    datetime = Field(default_factory=_utc_now)
 
 
 # ---------------------------------------------------------------------------
@@ -100,17 +125,21 @@ class ContactTag(StrEnum):
 # ---------------------------------------------------------------------------
 
 class Contact(SQLModel, table=True):
-    """HR / recruiter contact.  Single source of truth — never duplicated."""
+    """HR / recruiter contact.  Single source of truth — never duplicated
+    within a user's account.  Contacts are user-scoped: same email under
+    two different user accounts produces two separate Contact rows.
+    """
 
     __tablename__ = "contacts"
 
     id:         str           = Field(default_factory=_new_uuid, primary_key=True)
+    user_id:    Optional[str] = Field(default=None, foreign_key="users.id", index=True)
     name:       str
     company:    Optional[str] = Field(default=None)
     role:       Optional[str] = Field(default=None)
     email:      Optional[str] = Field(default=None)
     phone:      Optional[str] = Field(default=None)
-    tags:       Optional[str] = Field(default=None)   # ContactTag value
+    tags:       Optional[str] = Field(default=None)
     notes:      Optional[str] = Field(default=None)
     created_at: datetime      = Field(default_factory=_utc_now)
 
@@ -120,14 +149,17 @@ class Contact(SQLModel, table=True):
 # ---------------------------------------------------------------------------
 
 class Resume(SQLModel, table=True):
-    """Metadata for a resume PDF stored in Cloudflare R2."""
+    """Metadata for a resume PDF stored in Cloudflare R2.
+    R2 object key is user-scoped: <user_id>/resumes/<resume_id>.pdf
+    """
 
     __tablename__ = "resumes"
 
     id:          str           = Field(default_factory=_new_uuid, primary_key=True)
-    filename:    str                                            # original uploaded filename
-    storage_key: str                                            # object key in R2 — never a public URL
-    label:       Optional[str] = Field(default=None)           # e.g. "AI/ML Generalist v2"
+    user_id:     Optional[str] = Field(default=None, foreign_key="users.id", index=True)
+    filename:    str
+    storage_key: str                             # object key in R2 — never a public URL
+    label:       Optional[str] = Field(default=None)
     uploaded_at: datetime      = Field(default_factory=_utc_now)
 
 
@@ -136,36 +168,29 @@ class Resume(SQLModel, table=True):
 # ---------------------------------------------------------------------------
 
 class Application(SQLModel, table=True):
-    """One job application.
-
-    Structural changes vs the old Sheets design (SPEC §10):
-    - contact_id replaces hr_name / hr_phone / hr_email.
-    - resume_id  references the resumes table.
-    """
+    """One job application."""
 
     __tablename__ = "applications"
 
-    id:                  str                         = Field(default_factory=_new_uuid, primary_key=True)
-    date_applied:        date                        = Field(default_factory=date.today)
+    id:                  str           = Field(default_factory=_new_uuid, primary_key=True)
+    user_id:             Optional[str] = Field(default=None, foreign_key="users.id", index=True)
+    date_applied:        date          = Field(default_factory=date.today)
     company:             str
     job_title:           str
-    jd_summary:          Optional[str]               = Field(default=None)
-    application_method:  Optional[str]               = Field(default=None)  # ApplicationMethod value
-
-    # Foreign keys (both nullable — contact and resume are always optional)
-    contact_id:          Optional[str]               = Field(default=None, foreign_key="contacts.id")
-    resume_id:           Optional[str]               = Field(default=None, foreign_key="resumes.id")
-
-    ctc:                 Optional[str]               = Field(default=None)
-    status:              str                         = Field(default=ApplicationStatus.NOT_CONTACTED)
-    stage:               str                         = Field(default=ApplicationStage.APPLIED)
-    last_touch_date:     Optional[date]              = Field(default=None)
-    next_action_due:     Optional[date]              = Field(default=None)
-    interview_date:      Optional[date]              = Field(default=None)
-    interview_round:     Optional[str]               = Field(default=None)
-    interview_attended:  Optional[bool]              = Field(default=None)
-    latest_update:       Optional[str]               = Field(default=None)
-    remarks:             Optional[str]               = Field(default=None)
+    jd_summary:          Optional[str] = Field(default=None)
+    application_method:  Optional[str] = Field(default=None)
+    contact_id:          Optional[str] = Field(default=None, foreign_key="contacts.id")
+    resume_id:           Optional[str] = Field(default=None, foreign_key="resumes.id")
+    ctc:                 Optional[str] = Field(default=None)
+    status:              str           = Field(default=ApplicationStatus.NOT_CONTACTED)
+    stage:               str           = Field(default=ApplicationStage.APPLIED)
+    last_touch_date:     Optional[date] = Field(default=None)
+    next_action_due:     Optional[date] = Field(default=None)
+    interview_date:      Optional[date] = Field(default=None)
+    interview_round:     Optional[str]  = Field(default=None)
+    interview_attended:  Optional[bool] = Field(default=None)
+    latest_update:       Optional[str]  = Field(default=None)
+    remarks:             Optional[str]  = Field(default=None)
 
 
 # ---------------------------------------------------------------------------
@@ -173,19 +198,17 @@ class Application(SQLModel, table=True):
 # ---------------------------------------------------------------------------
 
 class ActivityLog(SQLModel, table=True):
-    """One action event (call, email, interview, …) linked to an application."""
+    """One action event (call, email, interview, …)."""
 
     __tablename__ = "activity_log"
 
     id:             str           = Field(default_factory=_new_uuid, primary_key=True)
+    user_id:        Optional[str] = Field(default=None, foreign_key="users.id", index=True)
     timestamp:      datetime      = Field(default_factory=_utc_now)
     application_id: Optional[str] = Field(default=None, foreign_key="applications.id")
-    company:        Optional[str] = Field(default=None)          # denormalised for easy reading
-    action_type:    str                                          # ActivityActionType value
-
-    # Denormalised from applications.contact_id — see SPEC §10 note
+    company:        Optional[str] = Field(default=None)
+    action_type:    str
     contact_id:     Optional[str] = Field(default=None, foreign_key="contacts.id")
-
     notes:          Optional[str] = Field(default=None)
 
 
@@ -194,16 +217,16 @@ class ActivityLog(SQLModel, table=True):
 # ---------------------------------------------------------------------------
 
 class CalendarEvent(SQLModel, table=True):
-    """A calendar event — auto-generated from next_action_due / interview_date,
-    or created manually."""
+    """A calendar event — auto-generated or manually created."""
 
     __tablename__ = "calendar_events"
 
     id:                     str           = Field(default_factory=_new_uuid, primary_key=True)
+    user_id:                Optional[str] = Field(default=None, foreign_key="users.id", index=True)
     title:                  str
-    event_type:             str                                   # CalendarEventType value
-    event_date:             date                                  # `date` is a reserved word in SQL
-    time:                   Optional[str] = Field(default=None)  # e.g. "10:30 AM"
+    event_type:             str
+    event_date:             date
+    time:                   Optional[str] = Field(default=None)
     related_application_id: Optional[str] = Field(default=None, foreign_key="applications.id")
     notes:                  Optional[str] = Field(default=None)
     source:                 str           = Field(default=CalendarEventSource.MANUAL)
@@ -214,38 +237,41 @@ class CalendarEvent(SQLModel, table=True):
 # ---------------------------------------------------------------------------
 
 class DailySnapshot(SQLModel, table=True):
-    """One row per calendar day — written by the nightly scheduler job.
-    Powers /analytics/overview trend comparisons without full-table scans."""
+    """One row per (user, calendar day) — written by the nightly scheduler."""
 
-    __tablename__ = "daily_snapshots"
+    __tablename__  = "daily_snapshots"
+    __table_args__ = (UniqueConstraint("user_id", "snapshot_date", name="uq_snapshot_user_date"),)
 
-    id:                  str      = Field(default_factory=_new_uuid, primary_key=True)
-    snapshot_date:       date     = Field(unique=True)           # one row per day, enforced
-    total_applications:  int      = Field(default=0)
-    not_contacted:       int      = Field(default=0)
-    in_progress:         int      = Field(default=0)
-    interviewing:        int      = Field(default=0)
-    offer_received:      int      = Field(default=0)
-    rejected:            int      = Field(default=0)
-    ghosted:             int      = Field(default=0)
-    response_rate:       float    = Field(default=0.0)
-    calls_dialed:        int      = Field(default=0)
-    calls_connected:     int      = Field(default=0)
-    interviews_attended: int      = Field(default=0)
+    id:                  str           = Field(default_factory=_new_uuid, primary_key=True)
+    user_id:             Optional[str] = Field(default=None, foreign_key="users.id", index=True)
+    snapshot_date:       date          = Field()          # uniqueness via __table_args__
+    total_applications:  int           = Field(default=0)
+    not_contacted:       int           = Field(default=0)
+    in_progress:         int           = Field(default=0)
+    interviewing:        int           = Field(default=0)
+    offer_received:      int           = Field(default=0)
+    rejected:            int           = Field(default=0)
+    ghosted:             int           = Field(default=0)
+    response_rate:       float         = Field(default=0.0)
+    calls_dialed:        int           = Field(default=0)
+    calls_connected:     int           = Field(default=0)
+    interviews_attended: int           = Field(default=0)
 
 
 # ---------------------------------------------------------------------------
-# settings
+# settings  (one row per user, enforced via UNIQUE on user_id)
 # ---------------------------------------------------------------------------
 
 class Settings(SQLModel, table=True):
-    """Single-row config table (single-user app — always id=1)."""
+    """Per-user configuration.  Exactly one row per user (unique user_id)."""
 
-    __tablename__ = "settings"
+    __tablename__  = "settings"
+    __table_args__ = (UniqueConstraint("user_id", name="uq_settings_user_id"),)
 
-    id:                   int     = Field(default=1, primary_key=True)
-    daily_goal:           int     = Field(default=0)
-    working_hours_start:  str     = Field(default="09:00")
-    working_hours_end:    str     = Field(default="18:00")
-    telegram_chat_id:     str     = Field(default="")
-    dashboard_pin:        str     = Field(default="")
+    id:                   Optional[int] = Field(default=None, primary_key=True)
+    user_id:              Optional[str] = Field(default=None, foreign_key="users.id", index=True)
+    daily_goal:           int           = Field(default=0)
+    working_hours_start:  str           = Field(default="09:00")
+    working_hours_end:    str           = Field(default="18:00")
+    telegram_chat_id:     str           = Field(default="")
+    dashboard_pin:        str           = Field(default="")
