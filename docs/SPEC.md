@@ -1,6 +1,12 @@
-# Project: "ApplyOps" - Full Build Spec
+# Project: ApplyOps - Full Build Spec
 
-Full-stack job application command center. Replaces manual spreadsheet tracking with a live dashboard, automated follow-up scheduling, phone-based reminders, and LLM-generated daily coaching, kept in sync with an existing Google Sheet.
+Full-stack job application command center. Automated follow-up scheduling, phone-based reminders, and LLM-generated daily coaching. Originally built on Google Sheets as the datastore; migrated to Postgres (Neon) — see section 10.
+
+---
+
+## 0. Build tooling
+
+Phases 1-15 built using Codex CLI (GPT-5.6 Terra/Luna). The v2 redesign (section 8) and the Postgres migration (section 10) moved to Antigravity once Codex's weekly quota ran low — see AGENTS.md for current tooling notes.
 
 ---
 
@@ -43,9 +49,9 @@ Backend and frontend as siblings, matching your established project structure fr
 
 ## 2. Data model
 
-**This connects to a new, dedicated blank Google Sheet — not your existing placement-cell tracker.** That sheet has a locked, formula-driven Dashboard tab and a column schema that doesn't match what this tool needs, and it's a shared institutional document not worth the risk of restructuring. ApplyOps gets its own sheet, shared with the same service account, with three tabs built fresh: Applications, Activity Log, and Settings. No separate database needed at this scale - a sheet handles thousands of rows fine.
+**Historical note:** this section originally described a dedicated Google Sheet as the datastore. That's now superseded — see section 10 for the Postgres migration. The table/column definitions below are unchanged in substance for most tables, translated 1:1 in section 10 — **except `applications`**, where `hr_name`/`hr_phone`/`hr_email` are replaced by a proper `contact_id` foreign key, and a new `resume_id` foreign key is added. Section 10 has the corrected definition; treat the `applications` table below as historical only.
 
-**Auth note:** this is a single-user personal tool, not multi-tenant. There's no "new user" sign-up - "login" here means a single PIN gate (one value in `.env`, checked on page load) so the dashboard isn't wide open if deployed on a public Cloud Run URL. If you ever want other people to use their own copy of this later, that's a separate v2 (per-user sheet linking, real auth) - out of scope for now, keep it single-user.
+**Auth note:** this is a single-user personal tool, not multi-tenant. There's no "new user" sign-up - "login" here means a single PIN gate (one value in `.env`, checked on page load) so the dashboard isn't wide open if deployed on a public URL. If you ever want other people to use their own copy of this later, that's a separate v2 (per-user data, real auth) - out of scope for now, keep it single-user.
 
 ### Tab 1: Applications (one row = one application)
 
@@ -267,18 +273,20 @@ DELETE /calendar/events/{id}
 
 **Frontend:** month/week/day toggle, mini calendar, filterable by event type, upcoming events list. Use an existing calendar component library (e.g. `react-big-calendar` or `FullCalendar`) rather than building a month-grid from scratch - this is a case where a library saves real build time without hurting the design goal.
 
-### 8.3 Contacts (computed view, not duplicated data)
-Contacts are derived primarily from Applications (hr_name/hr_phone/hr_email) plus Activity Log (for last-contacted and response detection), so HR info never has to be maintained in two places. A small manual tab covers contacts not tied to any application yet.
+### 8.3 Contacts — SUPERSEDED, see section 10
+The "merged view" approach originally described here (denormalized HR fields on Applications + a separate Contacts_Manual tab, glued together at query time) was a workaround for Sheets not supporting joins. It's been replaced by a proper `contacts` table with real foreign keys, defined in full in section 10 — read that instead. Keeping this note so the history of the decision isn't lost.
 
-New tab: **Contacts_Manual** - id, name, company, role, email, phone, tags, notes.
+~~Contacts are derived primarily from Applications (hr_name/hr_phone/hr_email) plus Activity Log (for last-contacted and response detection), so HR info never has to be maintained in two places. A small manual tab covers contacts not tied to any application yet.~~
 
-**API:**
+~~New tab: **Contacts_Manual** - id, name, company, role, email, phone, tags, notes.~~
+
+**API (superseded, see section 10 for the current contract):**
 ```
 GET  /contacts          -> merged view: derived-from-Applications contacts + Contacts_Manual, deduped by email
 POST /contacts          -> add a manual-only contact
 ```
 
-**Frontend:** stat cards (Total/Active/Responded/Response Rate/Companies Covered), tabs filtering by a `tags` field (Recruiter/HR Manager/Referrer/Other), searchable table.
+**Frontend:** stat cards (Total/Active/Responded/Response Rate/Companies Covered), tabs filtering by a `tags` field (Recruiter/HR Manager/Referrer/Other), searchable table. This part is unaffected by the section 10 change — same UI, just backed by a real table now instead of a merge view.
 
 ### 8.4 Analytics
 New tab: **Daily Snapshots** - written once a day by the existing scheduler (extend the 9 PM job or add a new one), one row per day: date, total_applications, not_contacted, in_progress, interviewing, offer_received, rejected, ghosted, response_rate, calls_dialed, calls_connected, interviews_attended.
@@ -306,6 +314,144 @@ GET /reports/export?type=applications|activity|full&start=&end=   -> returns a C
 
 ## 9. Resume framing (once shipped)
 
-A suggested framing once complete: built and deployed a full-stack job-search operations tool - FastAPI + React, with two-way Google Sheets sync, an automated follow-up scheduler, Telegram-based reminders, and an LLM-generated daily performance coaching layer (Groq) - used to run and track a live 10-15 company/day outreach campaign.
+A suggested framing once complete: built and deployed a full-stack job-search operations tool - FastAPI + React + Postgres, with an automated follow-up scheduler, Telegram-based reminders, and an LLM-generated daily performance coaching layer (Groq) - used to run and track a live 10-15 company/day outreach campaign.
 
 That is a genuinely distinct portfolio entry - it demonstrates full-stack ownership plus applied LLM usage in a non-RAG, non-chatbot context, which stands out next to LexShield and AlignForge rather than overlapping with them.
+
+---
+
+## 10. Database Migration (Google Sheets → Postgres)
+
+### Why this happened
+The Sheets-backed architecture hit a real ceiling, not just an annoyance: `/analytics/overview` was pulling entire Applications and Activity Log tabs into memory on every request just to compute counts, and normal multi-page navigation was enough to blow through Google's Sheets API read-request quota. A 15-second in-memory cache patched the symptom, but the actual problem is architectural — spreadsheets aren't built for concurrent, query-heavy, relational access, which is exactly the access pattern this app now has after the v2 redesign (Applications, Activity Log, Calendar Events, Contacts, Daily Snapshots, all cross-referencing each other).
+
+### Why Postgres, not NoSQL or Redis
+- **The data is inherently relational.** Every new table added in the v2 redesign references Applications by ID (Activity Log, Calendar Events, and the Contacts view all key off `application_id`). That's a foreign-key relationship, not a document-shaped one — a relational database models this directly; a document store (MongoDB, Firestore) would just mean re-implementing joins in application code for no benefit, since the schema is fixed and well-understood, not the kind of evolving/schemaless data NoSQL is actually good for.
+- **Redis is the wrong tool for the primary store.** Redis is an in-memory cache/store — excellent for exactly the kind of thing the existing 15-second TTL cache already does, wrong for durable primary storage of application history you can't afford to lose on a restart. Keep the in-process cache as-is; it's still useful on top of Postgres to avoid hammering the DB on rapid navigation, it just no longer has to work around a hard external rate limit.
+- **Postgres via a serverless provider matches the free-hosting plan already in place.** The backend runs on Render's free tier, which sleeps when idle — a database that also sleeps and wakes on demand (rather than staying billed/running 24/7) fits that shape naturally instead of fighting it.
+
+### Why Neon specifically (over Supabase, over Render's own Postgres)
+- **Render's own free Postgres expires** (Render deletes the free database automatically after a fixed window) — disqualifying for data you want to keep long-term, not just during the 14-day sprint.
+- **Supabase's free project pauses after a week of inactivity** and needs a manual unpause click in their dashboard to resume — that breaks the automated cron-job.org triggers hitting the backend on a schedule if nobody's used the app in a few days; you'd come back to a paused database and silently failed reminders.
+- **Neon's free tier auto-suspends and wakes automatically on the next query** — no manual intervention, no expiry, and it pairs cleanly with Render's own sleep/wake behavior. It also includes built-in connection pooling, which matters here since FastAPI request handlers and the APScheduler background jobs will open connections independently.
+- Neon's free tier (500 MB storage, generous compute hours) is comfortably more than this app will ever need — a personal application tracker's data is measured in thousands of rows of text, nowhere near that ceiling.
+
+### New stack additions
+- **Database:** PostgreSQL on Neon (free tier) — use the pooled connection string (`-pooler` hostname), not the direct one
+- **ORM:** SQLModel (built on SQLAlchemy + Pydantic — unifies the existing Pydantic request/response models with the database layer instead of maintaining two schemas)
+- **Migrations:** Alembic
+- **New env var:** `DATABASE_URL` (Neon gives you this directly from its dashboard)
+- **Sheets/gspread status:** removed from the live application entirely. `gspread` remains only as a dependency of the one-time migration script (section below), not of the running app
+
+### Two structural corrections before building anything (this is why we planned before running prompts)
+
+**1. Contacts becomes a real entity, not a merged view.** Section 8.3's original approach (HR fields duplicated on Applications, glued to a separate manual tab via a query-time merge) was a workaround for Sheets not supporting joins. Postgres supports joins — that workaround is no longer worth its complexity. Applications now optionally reference one Contact by ID; Contacts is the single place HR/recruiter info lives.
+
+**2. Resumes become their own table, referenced by Applications.** Not for version-history bells and whistles — because tailored resumes get reused across similar-role applications (one version for AI/ML roles, another for backend-leaning roles), so this needs to be a small reusable library, not a re-upload-every-time field.
+
+### Corrected schema
+
+#### `contacts`
+| Column | Type | Notes |
+|---|---|---|
+| id | UUID, PK | |
+| name | text | |
+| company | text, nullable | prefilled from the linked application at creation time; editable independently afterward |
+| role | text, nullable | e.g. "Senior Talent Partner" |
+| email | text, nullable | primary match key for find-or-create |
+| phone | text, nullable | |
+| tags | enum, nullable | Recruiter / HR Manager / Referrer / Other - powers the Contacts page tabs |
+| notes | text, nullable | |
+| created_at | timestamp | |
+
+#### `resumes`
+| Column | Type | Notes |
+|---|---|---|
+| id | UUID, PK | |
+| filename | text | original uploaded filename |
+| storage_key | text | object key in Cloudflare R2 - never a public URL |
+| label | text, nullable | optional nickname, e.g. "AI/ML Generalist v2" |
+| uploaded_at | timestamp | |
+
+#### `applications` (changes from section 2's original definition)
+- **Remove:** `hr_name`, `hr_phone`, `hr_email` - now lives in `contacts`
+- **Add:** `contact_id` (UUID, nullable FK → `contacts.id`) - nullable because not every application has contact details
+- **Add:** `resume_id` (UUID, nullable FK → `resumes.id`)
+- Everything else unchanged from section 2 (id, date_applied, company, job_title, jd_summary, application_method, ctc, status, stage, last_touch_date, next_action_due, interview_date, interview_round, interview_attended, latest_update, remarks)
+
+#### `activity_log` (one addition)
+- **Add:** `contact_id` (UUID, nullable FK → `contacts.id`) - auto-populated from `applications.contact_id` at write time, never user-input directly. Denormalized on purpose: cheap to add now, expensive to retrofit later if "last contacted" queries on the Contacts page need to avoid joining through Applications every time.
+
+### Contact linkage logic (the actual behavior)
+This is what makes contact info "optional, and folded into Contacts automatically":
+
+- `POST /applications` accepts optional inline fields: `contact_name`, `contact_email`, `contact_phone`, `contact_role`. None required.
+- None provided → `contact_id` stays null, nothing else happens.
+- Any provided → **find-or-create**: match an existing contact by `email` (case-insensitive) if given; if no email, fall back to `name` + `phone` together. Match found → link to it, filling any blank fields on the existing contact but never overwriting ones that already have a value. No match → create a new `contacts` row, prefilled `company` from the application, and link it.
+- `PATCH /applications/{id}` supports the same fields with the same logic, so editing HR details on an existing application behaves identically to adding them at creation.
+- This is the most important piece of business logic in the whole migration - it's what stops the same HR person turning into five duplicate contact rows because their name was typed slightly differently across five applications. Give it the same dedicated test coverage the `next_action_due` calculation got.
+
+### Resumes & file storage (Cloudflare R2, not the database)
+PDFs don't belong in Postgres directly - Neon's free tier caps storage at 500MB, and binary blobs bloat backups for no benefit. Store the file in **Cloudflare R2** (free tier: 10GB storage, zero egress fees, S3-compatible so the standard `boto3` client works), and store only `storage_key` in the `resumes` row.
+
+**Why R2 over Supabase Storage:** same reasoning as the database choice - Supabase's whole-project pause after a week of inactivity would take Storage down with it too, not just the database.
+
+**Privacy note:** a resume contains your name, contact info, and work history - don't make the bucket public. Keep it private; the backend generates short-lived **presigned URLs** on demand whenever the frontend needs to display or download one, rather than storing a permanently-accessible link.
+
+**API:**
+```
+POST /resumes            -> multipart PDF upload; validate content-type + 
+                             extension, max 10MB; returns {id, filename, label}
+GET  /resumes            -> list previously uploaded resumes (powers the 
+                             "reuse an existing resume" dropdown)
+GET  /resumes/{id}/url   -> returns a short-lived presigned download URL
+```
+
+`POST /applications` and `PATCH /applications/{id}` accept an optional `resume_id` - either from a fresh upload just before, or picked from `GET /resumes` to reuse one.
+
+### Manual setup: Cloudflare R2 (do this alongside the Neon setup)
+1. Sign up at cloudflare.com (free) → R2 → create a bucket (e.g. `applyops-resumes`) → **do not** enable public access.
+2. R2 → Manage API Tokens → create a token scoped to that bucket (Object Read & Write).
+3. Add to `.env`: `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`.
+
+### Table mapping (corrected - supersedes the earlier 1:1 mirror)
+- `applications` - as corrected above (contact_id + resume_id, no more inline hr_* fields)
+- `contacts` - new, replaces the old Contacts_Manual + merge-view design entirely
+- `resumes` - new
+- `activity_log` - as section 2, plus the denormalized `contact_id`
+- `calendar_events` - unchanged from section 8.2
+- `daily_snapshots` - unchanged from section 8.4; still the fix for `/analytics/overview`'s performance problem
+- `settings` - unchanged
+
+### Migration phases (revised to build the corrected schema directly - run in order, verify each)
+
+**Migration Phase A - Postgres setup + models:**
+Set up Neon and Cloudflare R2 per the manual setup steps above. Build SQLModel table definitions and Alembic migrations for the **corrected** schema in this section - `applications`, `contacts`, `resumes`, `activity_log`, `calendar_events`, `daily_snapshots`, `settings` - not a mirror of the old Sheets/Contacts_Manual design. Nothing wired into the live app yet.
+
+Commit each file separately. Tell me how to confirm the tables exist in Neon.
+
+**Migration Phase B - Repository layer + contact/resume logic:**
+Build `db_client.py`. Most functions mirror `sheets_client.py`'s names/signatures, but `create_application`/`update_application` need new behavior: implement the find-or-create contact logic described above, and accept an optional `resume_id`. Add `find_or_create_contact()`, `upload_resume()`, `list_resumes()`, `get_resume_presigned_url()`. Still not wired into routes yet.
+
+Write dedicated tests for find-or-create: same contact via matching email across two applications should produce exactly one contacts row; different email should produce a second one; no contact info should leave contact_id null.
+
+Commit each file separately. Tell me how you tested this against real Neon and R2, not mocks.
+
+**Migration Phase C - One-time data migration (with transformation, not just copying):**
+Read every row from the existing Google Sheet. For each Applications row with any hr_name/hr_phone/hr_email value, run it through the same find-or-create logic to produce proper contacts rows - dedupe across rows the same way live traffic will (if the same HR email appears on 3 old rows, they share ONE contact after migration). Migrate any existing Contacts_Manual rows the same way, deduped against anything already created from the applications pass. No historical resumes exist - every migrated application gets `resume_id = null`.
+
+Print a comparison after running: sheet row counts vs database row counts per table, plus the contact dedupe count (e.g. "12 HR references collapsed into 8 unique contacts").
+
+Commit each file separately. Do not modify the Google Sheet - it stays as a fallback until Phase D is confirmed.
+
+**Migration Phase D - Cutover:**
+Swap every route/service import from `sheets_client` to `db_client`. This is a real rewrite, not a mechanical swap, for two files specifically: `/applications` (add the inline contact fields + resume_id handling to create/update) and `/contacts` (query the real `contacts` table directly, no more merge-view logic). Fix `/analytics/overview` as previously planned - read `daily_snapshots` history for trends, lightweight aggregate queries for today's live numbers, never a full-table pull.
+
+Add the resume upload control to the "New Application" form (upload new PDF, or pick from existing resumes) and a contact-details section that's visibly optional. Remove `gspread`, `GOOGLE_SHEET_ID`, and the service-account env vars from the live app's required config.
+
+Commit each file separately. Tell me how to verify every page - including that adding an application with no contact info still works cleanly, and that adding two applications with the same HR email links both to one contact, not two.
+
+**Migration Phase E - Deployment update:**
+Add `DATABASE_URL` and the R2 env vars to Render. Update README with the new required env vars (Sheets-related ones removed). Confirm the deployed backend can actually reach both Neon and R2 from Render's network, not just locally.
+
+---

@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 from groq import Groq
 
 from backend.models import Application, DailyCoachingInput, DailyFeedback
-from backend.sheets_client import SheetsClient
+from backend import db_client
 
 load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
@@ -47,20 +47,21 @@ def build_coaching_prompt(stats: DailyCoachingInput) -> str:
 
 
 def build_daily_coaching_input(
-    sheets: SheetsClient, report_date: date
+    user_id: str,
+    report_date: date
 ) -> DailyCoachingInput:
-    """Derive the daily coaching metrics from the three Phase 1 worksheet tabs."""
-    applications = sheets.list_applications()
+    """Derive the daily coaching metrics from Postgres."""
+    applications = db_client.list_applications(user_id)
     applications_today = [app for app in applications if app.date_applied == report_date]
-    activity = sheets.list_activity(report_date)
+    activity = db_client.list_activity(user_id, report_date)
     remarks = [
         text
         for app in applications_today
         for text in (app.latest_update, app.remarks)
         if text.strip()
     ]
-    remarks.extend(event.notes for event in activity if event.notes.strip())
-    goal = sheets.get_daily_goal()
+    remarks.extend(event.notes for event in activity if event.notes and event.notes.strip())
+    goal = db_client.get_daily_goal(user_id)
     return DailyCoachingInput(
         date=report_date,
         goal=goal,

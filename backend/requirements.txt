@@ -2,12 +2,16 @@ fastapi
 uvicorn[standard]
 pydantic>=2.0
 pydantic-settings
-gspread
-google-auth
 apscheduler
 httpx
 python-dotenv
 groq
+bcrypt
+python-jose[cryptography]
 google-generativeai
 pytest
-
+# Phase A — Postgres + R2
+sqlmodel
+alembic
+psycopg2-binary
+boto3

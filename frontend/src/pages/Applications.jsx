@@ -540,7 +540,7 @@ function PostCreateBanner({ info, onDismiss, onEdit }) {
   )
 }
 
-function NewApplicationModal({ isOpen, onClose, onSubmit, form, setForm }) {
+function NewApplicationModal({ isOpen, onClose, onSubmit, form, setForm, resumes = [], onUploadResume }) {
   if (!isOpen) return null
 
   return (
@@ -601,6 +601,104 @@ function NewApplicationModal({ isOpen, onClose, onSubmit, form, setForm }) {
                 align="left"
                 triggerClassName="bg-surface-secondary text-foreground hover:bg-surface-tertiary border border-transparent"
               />
+            </div>
+          </div>
+
+          <div className="pt-2 border-t border-white/5 space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                <Briefcase className="w-3.5 h-3.5 text-primary" />
+                <span>Contact Details (Optional)</span>
+              </label>
+              <input
+                type="checkbox"
+                checked={form.has_contact}
+                onChange={e => setForm({ ...form, has_contact: e.target.checked })}
+                className="w-4 h-4 rounded text-primary focus:ring-primary/25 bg-surface-secondary border-transparent"
+              />
+            </div>
+
+            {form.has_contact && (
+              <div className="space-y-3 p-3.5 rounded-xl bg-surface-secondary/40 border border-transparent">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-foreground-secondary mb-1">Name</label>
+                    <input
+                      placeholder="e.g. Jane Doe"
+                      className="w-full rounded-lg border border-transparent bg-surface-secondary px-3 py-1.5 text-xs text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/25"
+                      value={form.contact_name}
+                      onChange={e => setForm({ ...form, contact_name: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-foreground-secondary mb-1">Role</label>
+                    <input
+                      placeholder="e.g. Recruiter"
+                      className="w-full rounded-lg border border-transparent bg-surface-secondary px-3 py-1.5 text-xs text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/25"
+                      value={form.contact_role}
+                      onChange={e => setForm({ ...form, contact_role: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-foreground-secondary mb-1">Email</label>
+                    <input
+                      type="email"
+                      placeholder="jane@example.com"
+                      className="w-full rounded-lg border border-transparent bg-surface-secondary px-3 py-1.5 text-xs text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/25"
+                      value={form.contact_email}
+                      onChange={e => setForm({ ...form, contact_email: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-foreground-secondary mb-1">Phone</label>
+                    <input
+                      placeholder="+1234567890"
+                      className="w-full rounded-lg border border-transparent bg-surface-secondary px-3 py-1.5 text-xs text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/25"
+                      value={form.contact_phone}
+                      onChange={e => setForm({ ...form, contact_phone: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="pt-2 border-t border-white/5 space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                <FileText className="w-3.5 h-3.5 text-primary" />
+                <span>Resume (Optional)</span>
+              </label>
+            </div>
+            
+            <div className="space-y-3 p-3.5 rounded-xl bg-surface-secondary/40 border border-transparent">
+              <div>
+                <label className="block text-[11px] font-semibold text-foreground-secondary mb-1">Select existing resume</label>
+                <Dropdown
+                  options={[{label: 'None', value: ''}, ...resumes.map(r => ({ label: r.filename, value: r.id }))]}
+                  value={form.resume_id}
+                  onChange={val => setForm({ ...form, resume_id: val })}
+                  className="w-full"
+                  triggerClassName="bg-surface-secondary text-foreground hover:bg-surface-tertiary border border-transparent"
+                />
+              </div>
+              
+              <div className="pt-1">
+                <label className="block text-[11px] font-semibold text-foreground-secondary mb-1">Or upload new resume PDF</label>
+                <input 
+                  type="file" 
+                  accept=".pdf"
+                  onChange={e => {
+                    if (e.target.files && e.target.files.length > 0) {
+                      onUploadResume(e.target.files[0])
+                      e.target.value = null
+                    }
+                  }}
+                  className="w-full text-xs text-foreground-secondary file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
+                />
+              </div>
             </div>
           </div>
 
@@ -704,6 +802,7 @@ const EMPTY_FORM = {
   contact_role: '',
   contact_email: '',
   contact_phone: '',
+  resume_id: '',
   enable_next_action: true,
   next_action_type: 'Follow Up',
   next_action_title: 'Follow up with recruiter',
@@ -727,6 +826,8 @@ export default function Applications() {
   const [filterStage, setFilterStage] = useState('All')
   const [search, setSearch] = useState('')
   const [isExpanded, setIsExpanded] = useState(false)
+  
+  const [resumes, setResumes] = useState([])
 
   const load = () => {
     setLoading(true)
@@ -734,8 +835,22 @@ export default function Applications() {
       .then(setApps)
       .catch(e => setError(e.message))
       .finally(() => setLoading(false))
+      
+    api.listResumes()
+      .then(setResumes)
+      .catch(e => console.error("Failed to load resumes", e))
   }
   useEffect(() => { load() }, [])
+
+  const handleUploadResume = async (file) => {
+    try {
+      const result = await api.uploadResume(file)
+      setResumes(prev => [...prev, result])
+      setForm(prev => ({ ...prev, resume_id: result.id }))
+    } catch (e) {
+      setError(e.message)
+    }
+  }
 
   const submit = e => {
     e.preventDefault()
@@ -760,7 +875,8 @@ export default function Applications() {
         contact_role: form.contact_role,
         contact_email: form.contact_email,
         contact_phone: form.contact_phone
-      } : {})
+      } : {}),
+      ...(form.resume_id ? { resume_id: form.resume_id } : {})
     }
 
     api.createApplication(payload)
@@ -959,6 +1075,8 @@ export default function Applications() {
         onSubmit={submit}
         form={form}
         setForm={setForm}
+        resumes={resumes}
+        onUploadResume={handleUploadResume}
       />
 
       {editActionApp && (

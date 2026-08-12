@@ -2,14 +2,32 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Security, status
+from fastapi.security import APIKeyHeader
+import os
 
 from backend.llm_feedback import GroqFeedbackService
 from backend.models import DailyCoachingInput, DailyFeedback
 from backend.scheduler import ApplyOpsScheduler
 from backend.telegram_bot import TelegramBot
 
-router = APIRouter(prefix="/internal", tags=["internal"])
+_internal_api_key_header = APIKeyHeader(name="X-Internal-API-Key", auto_error=True)
+
+def verify_internal_api_key(api_key_header: str = Security(_internal_api_key_header)) -> None:
+    expected = os.environ.get("INTERNAL_API_KEY")
+    if not expected:
+        # If not configured, we should reject everything to be safe
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="INTERNAL_API_KEY is not configured",
+        )
+    if api_key_header != expected:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid internal API key",
+        )
+
+router = APIRouter(prefix="/internal", tags=["internal"], dependencies=[Depends(verify_internal_api_key)])
 
 
 def _scheduler(request: Request) -> ApplyOpsScheduler:

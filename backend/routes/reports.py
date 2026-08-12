@@ -7,16 +7,15 @@ import io
 from datetime import date
 from typing import Literal
 
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import StreamingResponse
 
-from backend.sheets_client import SheetsClient
+from backend.auth import get_current_user
+from backend.db.models import User
+
+from backend import db_client
 
 router = APIRouter(prefix="/reports", tags=["reports"])
-
-
-def _sheets(request: Request) -> SheetsClient:
-    return request.app.state.sheets
 
 
 def _is_in_range(d_str: str | None, start: date | None, end: date | None) -> bool:
@@ -37,15 +36,14 @@ def _is_in_range(d_str: str | None, start: date | None, end: date | None) -> boo
 @router.get("/export")
 def export_report(
     request: Request,
+    user: User = Depends(get_current_user),
     type: Literal["applications", "activity", "full"] = Query(..., description="Report type"),
     start: date | None = Query(None, description="Start date (YYYY-MM-DD)"),
     end: date | None = Query(None, description="End date (YYYY-MM-DD)"),
 ) -> StreamingResponse:
     """Export a CSV report of the requested type, optionally filtered by date range."""
-    sheets = _sheets(request)
-    
-    apps = sheets.list_applications()
-    activities = sheets.list_activity()
+    apps = db_client.list_applications(user.id)
+    activities = db_client.list_activity(user.id)
     
     # Filter by date
     if start or end:

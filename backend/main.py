@@ -5,32 +5,31 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 import os
 
-from fastapi import FastAPI
+from backend.auth import get_current_user
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.llm_feedback import GroqFeedbackService
 from backend.routes.analytics import router as analytics_router
 from backend.routes.applications import router as applications_router
+from backend.routes.auth import router as auth_router
 from backend.routes.calendar import router as calendar_router
 from backend.routes.contacts import router as contacts_router
 from backend.routes.dashboard import router as dashboard_router
 from backend.routes.internal import router as internal_router
 from backend.routes.reports import router as reports_router
+from backend.routes.resumes import router as resumes_router
 from backend.routes.settings import router as settings_router
 from backend.scheduler import ApplyOpsScheduler
-from backend.sheets_client import SheetsClient
 from backend.telegram_bot import TelegramBot
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    sheets = SheetsClient()
-    sheets.ensure_structure()
-    app.state.sheets = sheets
     telegram = TelegramBot()
     app.state.telegram = telegram
     app.state.feedback_service = GroqFeedbackService()
-    scheduler = ApplyOpsScheduler(sheets, telegram, app.state.feedback_service)
+    scheduler = ApplyOpsScheduler(telegram, app.state.feedback_service)
     scheduler.start()
     app.state.scheduler = scheduler
     try:
@@ -52,11 +51,13 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
-app.include_router(analytics_router)
-app.include_router(applications_router)
-app.include_router(calendar_router)
-app.include_router(contacts_router)
-app.include_router(dashboard_router)
+app.include_router(auth_router)
+app.include_router(analytics_router, dependencies=[Depends(get_current_user)])
+app.include_router(applications_router, dependencies=[Depends(get_current_user)])
+app.include_router(calendar_router, dependencies=[Depends(get_current_user)])
+app.include_router(contacts_router, dependencies=[Depends(get_current_user)])
+app.include_router(dashboard_router, dependencies=[Depends(get_current_user)])
 app.include_router(internal_router)
-app.include_router(reports_router)
-app.include_router(settings_router)
+app.include_router(reports_router, dependencies=[Depends(get_current_user)])
+app.include_router(resumes_router, dependencies=[Depends(get_current_user)])
+app.include_router(settings_router, dependencies=[Depends(get_current_user)])

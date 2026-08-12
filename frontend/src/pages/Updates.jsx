@@ -182,11 +182,11 @@ export default function Updates() {
 
         <div className="p-3.5 rounded-2xl bg-surface shadow-xs flex items-center gap-3">
           <div className="w-8 h-8 rounded-xl bg-blue-500/15 text-blue-500 flex items-center justify-center flex-shrink-0">
-            <RefreshCw className="w-4 h-4" />
+            <FileText className="w-4 h-4" />
           </div>
           <div className="min-w-0">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted block">Sheets Sync</span>
-            <span className="text-xs font-bold text-foreground truncate block">Synced 4m ago</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted block">Storage</span>
+            <span className="text-xs font-bold text-foreground truncate block">Cloudflare R2</span>
           </div>
         </div>
 
@@ -407,7 +407,7 @@ export default function Updates() {
               </div>
               <div className="flex items-center justify-between p-2 rounded-xl bg-surface-secondary/40">
                 <span className="text-muted">Database Engine</span>
-                <span className="font-semibold text-foreground">SQLite / FastAPI</span>
+                <span className="font-semibold text-foreground">PostgreSQL (Neon)</span>
               </div>
               <div className="flex items-center justify-between p-2 rounded-xl bg-surface-secondary/40">
                 <span className="text-muted">Telegram Reminders</span>
