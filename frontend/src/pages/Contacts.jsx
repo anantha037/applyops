@@ -15,6 +15,13 @@ const APPLICATION_METHOD_OPTIONS = [
   { label: 'Other', value: 'Other' },
 ]
 
+/** Normalise the tags field — backend sends "" or a comma string; UI uses Array.some(). */
+function tagsArr(c) {
+  if (Array.isArray(c.tags)) return c.tags
+  if (!c.tags) return []
+  return c.tags.split(',').map(t => t.trim()).filter(Boolean)
+}
+
 function getInitials(name) {
   if (!name) return '?'
   return name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()
@@ -371,11 +378,11 @@ export default function Contacts() {
 
       if (activeTab === 'Recruiters') return c.role?.toLowerCase().includes('recruiter')
       if (activeTab === 'HR Managers') return c.role?.toLowerCase().includes('hr') || c.role?.toLowerCase().includes('people')
-      if (activeTab === 'Referrers') return c.tags?.some(t => t.toLowerCase() === 'referrer' || t.toLowerCase() === 'referral')
+      if (activeTab === 'Referrers') return tagsArr(c).some(t => t.toLowerCase() === 'referrer' || t.toLowerCase() === 'referral')
       if (activeTab === 'Others') {
         const isRec = c.role?.toLowerCase().includes('recruiter')
         const isHr = c.role?.toLowerCase().includes('hr') || c.role?.toLowerCase().includes('people')
-        const isRef = c.tags?.some(t => t.toLowerCase() === 'referrer' || t.toLowerCase() === 'referral')
+        const isRef = tagsArr(c).some(t => t.toLowerCase() === 'referrer' || t.toLowerCase() === 'referral')
         return !isRec && !isHr && !isRef
       }
 
@@ -396,7 +403,7 @@ export default function Contacts() {
       const role = c.role?.toLowerCase() || ''
       const isRec = role.includes('recruiter')
       const isHr = role.includes('hr') || role.includes('people')
-      const isRef = c.tags?.some(t => t.toLowerCase() === 'referrer' || t.toLowerCase() === 'referral')
+      const isRef = tagsArr(c).some(t => t.toLowerCase() === 'referrer' || t.toLowerCase() === 'referral')
       
       if (isRec) counts.Recruiters++
       if (isHr) counts['HR Managers']++
