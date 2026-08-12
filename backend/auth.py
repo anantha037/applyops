@@ -159,24 +159,40 @@ def rotate_refresh_token(raw_token: str, session: Session) -> tuple[str, str]:
 
     Returns (new_raw_refresh_token, new_access_token).
     Raises 401 if the token is invalid, expired, or already revoked.
+    If a revoked token is presented, this is a compromise signal (token reuse),
+    and the entire token family (all refresh tokens for that user) is revoked.
     """
     token_hash = _sha256(raw_token)
     rt = session.exec(
-        select(RefreshToken).where(
-            RefreshToken.token_hash == token_hash,
-            RefreshToken.revoked == False,  # noqa: E712
-        )
+        select(RefreshToken).where(RefreshToken.token_hash == token_hash)
     ).first()
+
     if not rt or _ensure_aware(rt.expires_at) < _utc_now():
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired refresh token",
         )
+
     user = session.get(User, rt.user_id)
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
 
-    # Revoke old token
+    if rt.revoked:
+        # Token Reuse Detected! Revoke the entire family for this user.
+        logger.warning("Token reuse detected for user %s! Revoking all refresh tokens.", user.id)
+        all_user_tokens = session.exec(
+            select(RefreshToken).where(RefreshToken.user_id == user.id)
+        ).all()
+        for t in all_user_tokens:
+            t.revoked = True
+            session.add(t)
+        session.commit()
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token reuse detected. All sessions revoked. Please log in again.",
+        )
+
+    # Valid rotation: revoke old token
     rt.revoked = True
     session.add(rt)
     session.commit()
