@@ -11,28 +11,44 @@ from uuid import uuid4
 from fastapi import APIRouter, Request, status
 
 from backend.models import ContactCreate, ContactManual, ContactView
-from backend.sheets_client import SheetsClient
+from backend import db_client
+from backend.db.session import engine
+from sqlmodel import Session
 
 router = APIRouter(prefix="/contacts", tags=["contacts"])
 
 
-def _sheets(request: Request) -> SheetsClient:
-    return request.app.state.sheets
-
-
 @router.get("", response_model=list[ContactView])
 def list_contacts(request: Request) -> list[ContactView]:
-    """Return the merged, deduplicated contact list enriched with Activity Log data."""
-    return _sheets(request).get_contacts_merged()
+    """Return all contacts from Postgres, enriched with Activity Log data."""
+    return db_client.list_contacts()
 
 
 @router.post("", response_model=ContactManual, status_code=status.HTTP_201_CREATED)
 def create_contact(payload: ContactCreate, request: Request) -> ContactManual:
-    """Add a manual-only contact to Contacts_Manual.
-
-    This endpoint is for contacts not yet tied to any application.
-    When the same person later becomes an HR contact on an application,
-    GET /contacts will merge and deduplicate them automatically by email.
+    """Add a manual contact directly to Postgres.
+    
+    Uses find_or_create_contact so it correctly deduplicates if the contact
+    already exists via an application.
     """
-    contact = ContactManual(id=str(uuid4()), **payload.model_dump())
-    return _sheets(request).create_contact_manual(contact)
+    with Session(engine) as session:
+        contact = db_client.find_or_create_contact(
+            session,
+            name=payload.name,
+            email=payload.email,
+            phone=payload.phone,
+            role=payload.role,
+            company=payload.company,
+        )
+        session.commit()
+        
+    return ContactManual(
+        id=contact.id,
+        name=contact.name or "",
+        company=contact.company or "",
+        role=contact.role or "",
+        email=contact.email or "",
+        phone=contact.phone or "",
+        tags="",
+        notes=""
+    )
