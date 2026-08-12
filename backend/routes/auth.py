@@ -120,7 +120,11 @@ def register(body: RegisterRequest, response: Response, session: Session = Depen
     return TokenResponse()
 
 def _set_auth_cookies(response: Response, access: str, refresh: str):
-    is_prod = os.environ.get("ENV", "").lower() == "production"
+    is_prod = (
+        os.environ.get("ENV", "").lower() == "production" or 
+        os.environ.get("ENVIRONMENT", "").lower() == "production" or
+        os.environ.get("RENDER", "").lower() == "true"
+    )
     samesite_setting = "none" if is_prod else "lax"
     
     response.set_cookie(
