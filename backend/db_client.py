@@ -314,6 +314,11 @@ def create_application(
             )
             contact_id = contact.id if contact else None
 
+        if resume_id is not None:
+            resume_row = session.get(Resume, resume_id)
+            if not resume_row or resume_row.user_id != user_id:
+                raise ValueError("Invalid or unauthorized resume_id")
+
         app_id = payload.get("id") or _new_id()
         row = DBApplication(
             id=app_id,
@@ -374,6 +379,9 @@ def update_application(
 
         # Handle resume linkage
         if resume_id is not None:
+            resume_row = session.get(Resume, resume_id)
+            if not resume_row or resume_row.user_id != user_id:
+                raise ValueError("Invalid or unauthorized resume_id")
             row.resume_id = resume_id
 
         # Apply scalar field updates
@@ -880,7 +888,7 @@ def upload_resume(
         )
 
     resume_id   = _new_id()
-    storage_key = f"resumes/{resume_id}/{filename}"
+    storage_key = f"{user_id}/resumes/{resume_id}.pdf"
 
     # Upload to R2
     client = get_r2_client()
