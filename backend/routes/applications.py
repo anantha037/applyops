@@ -71,6 +71,7 @@ def update_application(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Application not found")
 
     changes = payload.model_dump(exclude_unset=True)
+    print("PATCH changes:", changes)
     
     # We must calculate next_action_due if relevant fields changed
     if {"stage", "last_touch_date", "status"} & changes.keys():
