@@ -30,6 +30,24 @@ export const applicationsApi = {
   downloadResume: (id) => window.open(`${baseUrl}/applications/${id}/resume/download`, '_blank')
 }
 
+export const resumesApi = {
+  listResumes: () => request('/resumes'),
+  getResumeUrl: (id) => request(`/resumes/${id}/url`),
+  uploadResume: async (file) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    const response = await fetch(`${baseUrl}/resumes`, {
+      method: 'POST',
+      body: formData
+    })
+    if (!response.ok) {
+      const errorBody = await response.json().catch(() => ({}))
+      throw new Error(errorBody.detail ?? `Upload failed with status ${response.status}`)
+    }
+    return response.json()
+  }
+}
+
 export const contactsApi = {
   getContacts: () => request('/contacts'),
   getContact: (id) => request(`/contacts/${id}`),
@@ -97,5 +115,8 @@ export const api = {
   deleteCalendarEvent: calendarApi.deleteEvent,
   contacts: contactsApi.getContacts,
   createContact: contactsApi.createContact,
-  analyticsOverview: analyticsApi.getOverview
+  analyticsOverview: analyticsApi.getOverview,
+  listResumes: resumesApi.listResumes,
+  getResumeUrl: resumesApi.getResumeUrl,
+  uploadResume: resumesApi.uploadResume
 }
