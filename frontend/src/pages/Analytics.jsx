@@ -142,7 +142,7 @@ export default function Analytics() {
   const handleExport = (formatType) => {
     setExportFormat('')
     if (formatType === 'csv') {
-      const csvContent = "data:text/csv;charset=utf-8,Metric,Value\nTotal Applications,33\nResponse Rate,34%\nInterview Rate,24%\nOffer Rate,3%\nAvg Response Time,4.2 days\n"
+      const csvContent = `data:text/csv;charset=utf-8,Metric,Value\nTotal Applications,${totalApps}\nResponse Rate,${responseRate}%\nInterview Rate,${pct(interviewingCount)}%\nOffer Rate,${pct(offerCount)}%\n`
       const encodedUri = encodeURI(csvContent)
       const link = document.createElement('a')
       link.setAttribute('href', encodedUri)
@@ -178,46 +178,78 @@ export default function Analytics() {
     'Not Contacted': '#64748B',
   }
 
-  const lineChartData = [
-    { date: 'Jul 8', applications: 5, prevApplications: 4 },
-    { date: 'Jul 15', applications: 6, prevApplications: 5 },
-    { date: 'Jul 22', applications: 8, prevApplications: 6 },
-    { date: 'Jul 29', applications: 7, prevApplications: 5 },
-    { date: 'Aug 5', applications: 7, prevApplications: 6 },
-  ]
+  // ── Live data derived from /analytics/overview ──────────────────────────
+  const cur = data?.current ?? {}
+  const history = data?.history ?? []
+  const sources = data?.sources ?? {}
 
+  const totalApps = cur.total_applications ?? 0
+  const interviewingCount = cur.interviewing ?? 0
+  const offerCount = cur.offer_received ?? 0
+  const rejectedCount = cur.rejected ?? 0
+  const ghostedCount = cur.ghosted ?? 0
+  const notContactedCount = cur.not_contacted ?? 0
+  const inProgressCount = cur.in_progress ?? 0
+  const responseRate = Math.round(cur.response_rate ?? 0)
+
+  // Status donut data — straight from live snapshot
   const statusData = [
-    { name: 'In Progress', value: 14 },
-    { name: 'Interviewing', value: 4 },
-    { name: 'Offer Received', value: 1 },
-    { name: 'Rejected', value: 5 },
-    { name: 'Ghosted', value: 3 },
-    { name: 'Not Contacted', value: 6 },
+    { name: 'In Progress',    value: inProgressCount },
+    { name: 'Interviewing',   value: interviewingCount },
+    { name: 'Offer Received', value: offerCount },
+    { name: 'Rejected',       value: rejectedCount },
+    { name: 'Ghosted',        value: ghostedCount },
+    { name: 'Not Contacted',  value: notContactedCount },
   ]
 
+  // Funnel: count with interviews_attended from snapshot; responses = calls_connected + interviews
+  const responsesCount = (cur.calls_connected ?? 0) + interviewingCount + offerCount
+  const pct = (n) => totalApps > 0 ? Math.round((n / totalApps) * 100) : 0
   const funnelStages = [
-    { stage: 'Applications', count: 33, pct: 100, color: 'bg-primary/20 text-primary', note: '33 total applications submitted' },
-    { stage: 'Responses', count: 11, pct: 34, color: 'bg-blue-500/20 text-blue-400', note: '11 responses received (34% of applications)' },
-    { stage: 'Interviews', count: 8, pct: 24, color: 'bg-indigo-500/20 text-indigo-400', note: '8 interview invites (24% of applications)' },
-    { stage: 'Offers', count: 1, pct: 3, color: 'bg-emerald-500/20 text-emerald-400', note: '1 offer received (3% of applications)' },
+    { stage: 'Applications', count: totalApps,        pct: 100,                  color: 'bg-primary/20 text-primary',      note: `${totalApps} total applications submitted` },
+    { stage: 'Responses',    count: responsesCount,   pct: pct(responsesCount),  color: 'bg-blue-500/20 text-blue-400',    note: `${responsesCount} responses received (${pct(responsesCount)}% of applications)` },
+    { stage: 'Interviews',   count: interviewingCount,pct: pct(interviewingCount),color: 'bg-indigo-500/20 text-indigo-400',note: `${interviewingCount} interview invites (${pct(interviewingCount)}% of applications)` },
+    { stage: 'Offers',       count: offerCount,       pct: pct(offerCount),      color: 'bg-emerald-500/20 text-emerald-400',note: `${offerCount} offer(s) received (${pct(offerCount)}% of applications)` },
   ]
 
-  const methodPerformance = [
-    { method: 'Employee Referral', apps: 7, responses: 4, rate: 57, best: true },
-    { method: 'LinkedIn Easy Apply', apps: 18, responses: 5, rate: 28, best: false },
-    { method: 'Company Portal', apps: 6, responses: 2, rate: 33, best: false },
-    { method: 'Other', apps: 2, responses: 0, rate: 0, best: false },
-  ]
+  // Line chart — use daily_snapshots history; fall back to today-only series
+  const lineChartData = useMemo(() => {
+    if (history.length >= 2) {
+      return history.slice(-7).map(snap => ({
+        date: new Date(snap.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }),
+        applications: snap.total_applications ?? 0,
+        prevApplications: 0,
+      }))
+    }
+    return [{ date: 'Today', applications: totalApps, prevApplications: 0 }]
+  }, [history, totalApps])
 
-  const activeDaysData = [
-    { day: 'Mon', count: 2, active: true },
-    { day: 'Tue', count: 3, active: true },
-    { day: 'Wed', count: 3, active: true },
-    { day: 'Thu', count: 2, active: true },
-    { day: 'Fri', count: 2, active: true },
-    { day: 'Sat', count: 0, active: false },
-    { day: 'Sun', count: 0, active: false },
-  ]
+  // Method performance from sources (Postgres count by application_method)
+  const methodPerformance = useMemo(() => {
+    const entries = Object.entries(sources)
+    if (entries.length === 0) return []
+    const maxApps = Math.max(...entries.map(([, v]) => v), 1)
+    return entries
+      .sort((a, b) => b[1] - a[1])
+      .map(([method, apps]) => ({
+        method,
+        apps,
+        responses: 0,   // response breakdown per-method not stored in snapshot
+        rate: 0,
+        best: apps === maxApps,
+      }))
+  }, [sources])
+
+  // Active days — last 7 snapshot dates
+  const activeDaysData = useMemo(() => {
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    if (history.length === 0) return days.map(day => ({ day, count: 0, active: false }))
+    const recent = history.slice(-7)
+    return recent.map(snap => {
+      const d = new Date(snap.date)
+      return { day: days[d.getDay()], count: snap.total_applications ?? 0, active: (snap.total_applications ?? 0) > 0 }
+    })
+  }, [history])
 
   const totalStatusApplications = statusData.reduce((acc, item) => acc + item.value, 0)
 
@@ -273,41 +305,40 @@ export default function Analytics() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5 lg:gap-4">
         <KpiCard
           title="Total Applications"
-          value="33"
-          comparison="↑ 18% vs previous period"
-          isPositive={true}
-          context="12 this week"
+          value={totalApps}
+          comparison={data?.deltas?.total_applications != null ? `${data.deltas.total_applications > 0 ? '↑' : '↓'} ${Math.abs(data.deltas.total_applications)}% vs previous period` : null}
+          isPositive={data?.deltas?.total_applications > 0}
+          context={`All time · ${cur.not_contacted ?? 0} not yet contacted`}
           icon={Send}
         />
         <KpiCard
           title="Response Rate"
-          value="34%"
-          comparison="↑ 6% vs previous period"
-          isPositive={true}
-          context="11 responses"
+          value={`${responseRate}%`}
+          comparison={data?.deltas?.response_rate != null ? `${data.deltas.response_rate > 0 ? '↑' : '↓'} ${Math.abs(data.deltas.response_rate)}% vs previous period` : null}
+          isPositive={data?.deltas?.response_rate > 0}
+          context={`${(cur.calls_connected ?? 0)} connected calls`}
           icon={TrendingUp}
         />
         <KpiCard
           title="Interview Rate"
-          value="24%"
-          comparison="8 interviews"
-          context="8 / 33 applications"
+          value={`${pct(interviewingCount)}%`}
+          comparison={`${interviewingCount} interview${interviewingCount !== 1 ? 's' : ''}`}
+          context={`${interviewingCount} / ${totalApps} applications`}
           icon={CalendarCheck}
         />
         <KpiCard
           title="Offer Rate"
-          value="3%"
-          comparison="↑ 100% vs previous period"
-          isPositive={true}
-          context="1 offer"
+          value={`${pct(offerCount)}%`}
+          comparison={data?.deltas?.offer_received != null ? `${data.deltas.offer_received > 0 ? '↑' : '↓'} ${Math.abs(data.deltas.offer_received)}% vs previous period` : null}
+          isPositive={data?.deltas?.offer_received > 0}
+          context={`${offerCount} offer${offerCount !== 1 ? 's' : ''}`}
           icon={Trophy}
         />
         <KpiCard
-          title="Avg Response Time"
-          value="4.2 days"
-          comparison="1.2d faster vs prev"
-          isPositive={true}
-          context="Average time to first response"
+          title="Ghosted"
+          value={ghostedCount}
+          comparison={ghostedCount > 0 ? `${pct(ghostedCount)}% of applications` : null}
+          context="No response after follow-up"
           icon={Clock}
         />
       </div>
@@ -462,11 +493,11 @@ export default function Analytics() {
             <div className="flex items-center justify-between mb-3">
               <div>
                 <h4 className="text-xs font-bold text-foreground">Application Consistency</h4>
-                <p className="text-[11px] text-foreground-secondary font-medium">12 applications this week · 5 active days</p>
+                <p className="text-[11px] text-foreground-secondary font-medium">{totalApps} total applications · {activeDaysData.filter(d => d.active).length} active days tracked</p>
               </div>
               <div className="flex items-center gap-1 text-[11px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-md">
                 <Flame className="w-3 h-3 text-primary" />
-                <span>5 Day Streak</span>
+                <span>{activeDaysData.filter(d => d.active).length} Day Streak</span>
               </div>
             </div>
 
@@ -661,7 +692,7 @@ export default function Analytics() {
           </div>
 
           <div className="mt-4 pt-3 flex items-center justify-between text-[11px] text-muted">
-            <span>Based on 33 total application records</span>
+            <span>Based on {totalApps} total application records</span>
             <span className="font-semibold text-primary">Updated today</span>
           </div>
         </div>
