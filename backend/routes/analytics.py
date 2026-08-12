@@ -8,13 +8,9 @@ from fastapi import APIRouter, Request, Query
 
 from backend.models import DailySnapshot
 from backend.scheduler import take_daily_snapshot
-from backend.sheets_client import SheetsClient
+from backend import db_client
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
-
-
-def _sheets(request: Request) -> SheetsClient:
-    return request.app.state.sheets
 
 
 def _compute_delta(current: float | int, previous: float | int) -> float | None:
@@ -29,17 +25,12 @@ def get_analytics_overview(
     range: str = Query("7d", description="Time range: 7d, 30d, or custom")
 ) -> dict:
     """Return current pipeline totals plus trend deltas from historical snapshots."""
-    sheets = _sheets(request)
-    
     # Generate today's snapshot on the fly so totals are perfectly fresh,
     # without needing to wait for the 9 PM cron job.
-    # Note: We don't save this to the sheet here, we just compute it.
-    # We could save it, but we'll just build it in memory for the response.
-    # Actually, let's just trigger take_daily_snapshot so it saves and we have the latest.
-    current_snapshot = take_daily_snapshot(sheets)
+    current_snapshot = take_daily_snapshot()
     
     # Get history
-    history = sheets.list_daily_snapshots()
+    history = db_client.list_daily_snapshots()
     
     days_back = 7
     if range == "30d":
@@ -64,10 +55,7 @@ def get_analytics_overview(
             "response_rate": _compute_delta(current_snapshot.response_rate, past_snapshot.response_rate),
         }
         
-    # Calculate source breakdown from all applications
-    applications = sheets.list_applications()
-    from collections import Counter
-    sources = dict(Counter(app.application_method or "Others" for app in applications))
+    sources = db_client.get_application_sources()
 
     return {
         "current": current_snapshot.model_dump(),
@@ -81,4 +69,4 @@ def get_analytics_overview(
 @router.post("/snapshot")
 def trigger_snapshot(request: Request) -> DailySnapshot:
     """Manually trigger a daily snapshot write (for testing/verification)."""
-    return take_daily_snapshot(_sheets(request))
+    return take_daily_snapshot()
