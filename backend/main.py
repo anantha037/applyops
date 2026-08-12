@@ -16,21 +16,18 @@ from backend.routes.contacts import router as contacts_router
 from backend.routes.dashboard import router as dashboard_router
 from backend.routes.internal import router as internal_router
 from backend.routes.reports import router as reports_router
+from backend.routes.resumes import router as resumes_router
 from backend.routes.settings import router as settings_router
 from backend.scheduler import ApplyOpsScheduler
-from backend.sheets_client import SheetsClient
 from backend.telegram_bot import TelegramBot
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    sheets = SheetsClient()
-    sheets.ensure_structure()
-    app.state.sheets = sheets
     telegram = TelegramBot()
     app.state.telegram = telegram
     app.state.feedback_service = GroqFeedbackService()
-    scheduler = ApplyOpsScheduler(sheets, telegram, app.state.feedback_service)
+    scheduler = ApplyOpsScheduler(telegram, app.state.feedback_service)
     scheduler.start()
     app.state.scheduler = scheduler
     try:
@@ -59,4 +56,5 @@ app.include_router(contacts_router)
 app.include_router(dashboard_router)
 app.include_router(internal_router)
 app.include_router(reports_router)
+app.include_router(resumes_router)
 app.include_router(settings_router)
