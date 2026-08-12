@@ -13,13 +13,9 @@ from backend.models import (
     CalendarEventSource,
     CalendarEventUpdate,
 )
-from backend.sheets_client import SheetsClient
+from backend import db_client
 
 router = APIRouter(prefix="/calendar", tags=["calendar"])
-
-
-def _sheets(request: Request) -> SheetsClient:
-    return request.app.state.sheets
 
 
 @router.get("/events", response_model=list[CalendarEvent])
@@ -29,7 +25,7 @@ def list_events(
     end:   date | None = Query(default=None),
 ) -> list[CalendarEvent]:
     """Return all calendar events, optionally filtered to a date range."""
-    return _sheets(request).list_calendar_events(start=start, end=end)
+    return db_client.list_calendar_events(start=start, end=end)
 
 
 @router.post("/events", response_model=CalendarEvent, status_code=status.HTTP_201_CREATED)
@@ -43,15 +39,14 @@ def create_event(payload: CalendarEventCreate, request: Request) -> CalendarEven
     )
     # Override source to MANUAL — this endpoint is only for manual events.
     event = event.model_copy(update={"source": CalendarEventSource.MANUAL})
-    return _sheets(request).create_calendar_event(event)
+    return db_client.create_calendar_event(event)
 
 
 @router.patch("/events/{event_id}", response_model=CalendarEvent)
 def update_event(
     event_id: str, payload: CalendarEventUpdate, request: Request
 ) -> CalendarEvent:
-    sheets = _sheets(request)
-    existing = sheets.get_calendar_event(event_id)
+    existing = db_client.get_calendar_event(event_id)
     if existing is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Calendar event not found")
 
@@ -60,7 +55,7 @@ def update_event(
     if "event_date" in changes:
         changes["date"] = changes.pop("event_date")
     updated = existing.model_copy(update=changes)
-    result = sheets.update_calendar_event(updated)
+    result = db_client.update_calendar_event(updated)
     if result is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Calendar event not found")
     return result
@@ -68,5 +63,5 @@ def update_event(
 
 @router.delete("/events/{event_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_event(event_id: str, request: Request) -> None:
-    if not _sheets(request).delete_calendar_event(event_id):
+    if not db_client.delete_calendar_event(event_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Calendar event not found")
