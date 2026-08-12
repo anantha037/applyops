@@ -65,28 +65,34 @@ def test_login_success_and_returns_tokens(unique_email, valid_password):
     """Test #4: login with correct password succeeds."""
     res = client.post("/auth/login", json={"email": unique_email, "password": valid_password})
     assert res.status_code == 200
-    data = res.json()
-    assert "access_token" in data
-    assert "refresh_token" in data
-    assert data["token_type"] == "bearer"
+    assert "applyops_access_token" in res.cookies
+    assert "applyops_refresh_token" in res.cookies
+    client.cookies.clear()
 
 
 def test_protected_route_without_token():
     """Test #5: protected route without token -> 401."""
-    # /settings is protected via get_current_user in main.py
+    client.cookies.clear()
     res = client.get("/settings")
     assert res.status_code == 401
 
 
 def test_protected_route_with_valid_token(unique_email, valid_password):
     """Test #6: protected route with valid token -> succeeds."""
+    client.cookies.clear()
     res = client.post("/auth/login", json={"email": unique_email, "password": valid_password})
-    access_token = res.json()["access_token"]
+    access_token = res.cookies.get("applyops_access_token")
     
-    # Needs to be a valid Bearer token
+    # Needs to be a valid Bearer token if we pass via header (testing the fallback)
+    client.cookies.clear()
     res_protected = client.get("/settings", headers={"Authorization": f"Bearer {access_token}"})
-    # Might be 404 if settings for user doesn't exist yet, but won't be 401
     assert res_protected.status_code != 401
+    
+    # Also test via cookie
+    client.cookies.set("applyops_access_token", access_token)
+    res_protected_cookie = client.get("/settings")
+    assert res_protected_cookie.status_code != 401
+    client.cookies.clear()
 
 
 def test_malformed_or_expired_token():
@@ -104,6 +110,7 @@ def test_malformed_or_expired_token():
     expired_token = jwt.encode(expired_payload, SECRET_KEY, algorithm=ALGORITHM)
     res_expired = client.get("/settings", headers={"Authorization": f"Bearer {expired_token}"})
     assert res_expired.status_code == 401
+    client.cookies.clear()
 
 
 def test_login_rate_limiting():
@@ -123,24 +130,30 @@ def test_login_rate_limiting():
 
 def test_refresh_token_rotation(unique_email, valid_password):
     """Test refresh token rotation issues new pair and revokes old."""
+    client.cookies.clear()
     res = client.post("/auth/login", json={"email": unique_email, "password": valid_password})
-    refresh_token = res.json()["refresh_token"]
+    refresh_token = res.cookies.get("applyops_refresh_token")
 
-    # Rotate
-    res_refresh = client.post("/auth/refresh", json={"refresh_token": refresh_token})
+    # Rotate (using the cookie that TestClient holds)
+    res_refresh = client.post("/auth/refresh", json={})
     assert res_refresh.status_code == 200
-    new_refresh = res_refresh.json()["refresh_token"]
+    new_refresh = res.cookies.get("applyops_refresh_token")
+    # Actually wait, TestClient updates res.cookies but let's grab it directly
+    new_refresh = res_refresh.cookies.get("applyops_refresh_token")
     assert new_refresh != refresh_token
 
     # Using old refresh token again should trigger family revocation
-    res_reuse = client.post("/auth/refresh", json={"refresh_token": refresh_token})
+    client.cookies.set("applyops_refresh_token", refresh_token)
+    res_reuse = client.post("/auth/refresh", json={})
     assert res_reuse.status_code == 401
     assert "Token reuse detected" in res_reuse.json()["detail"]
 
     # The new_refresh token should now also be revoked
-    res_try_new = client.post("/auth/refresh", json={"refresh_token": new_refresh})
+    client.cookies.set("applyops_refresh_token", new_refresh)
+    res_try_new = client.post("/auth/refresh", json={})
     assert res_try_new.status_code == 401
     assert "Token reuse detected" in res_try_new.json()["detail"]
+    client.cookies.clear()
 
 
 def test_password_reset_flow(unique_email, valid_password):

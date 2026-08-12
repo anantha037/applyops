@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { authApi, setTokens } from '../api/client'
+import { authApi } from '../api/client'
 import { TrendingUp, Send, Loader2 } from 'lucide-react'
 
 export default function Auth({ onLoginSuccess }) {
@@ -22,7 +22,6 @@ export default function Auth({ onLoginSuccess }) {
         data = await authApi.register(email, password)
       }
       
-      setTokens(data.access_token, data.refresh_token)
       onLoginSuccess()
     } catch (err) {
       setError(err.message || 'Authentication failed. Please try again.')

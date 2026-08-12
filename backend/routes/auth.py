@@ -29,6 +29,7 @@ the logger.warning call with a real email send.  The endpoint contract
 from __future__ import annotations
 
 import logging
+import os
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
@@ -41,6 +42,7 @@ from backend.auth import (
     create_access_token,
     create_password_reset_token,
     create_refresh_token,
+    get_current_user,
     hash_password,
     record_login_attempt,
     revoke_refresh_token,
@@ -69,10 +71,7 @@ class LoginRequest(BaseModel):
 
 
 class TokenResponse(BaseModel):
-    access_token: str
-    refresh_token: str
-    token_type: str = "bearer"
-    expires_in: int = 900  # seconds (15 min access token)
+    message: str = "Success"
 
 
 class RefreshRequest(BaseModel):
@@ -118,15 +117,16 @@ def register(body: RegisterRequest, response: Response, session: Session = Depen
     refresh = create_refresh_token(user.id, session)
     
     _set_auth_cookies(response, access, refresh)
-    return TokenResponse(access_token=access, refresh_token=refresh)
+    return TokenResponse()
 
 def _set_auth_cookies(response: Response, access: str, refresh: str):
+    is_prod = os.environ.get("ENV", "").lower() == "production"
     response.set_cookie(
         key="applyops_access_token",
         value=access,
         httponly=True,
         samesite="lax",
-        secure=False, # Set to True in production with HTTPS
+        secure=is_prod,
         max_age=900,
     )
     response.set_cookie(
@@ -134,10 +134,15 @@ def _set_auth_cookies(response: Response, access: str, refresh: str):
         value=refresh,
         httponly=True,
         samesite="lax",
-        secure=False,
+        secure=is_prod,
         max_age=7 * 24 * 3600,
     )
 
+
+@router.get("/me", status_code=200)
+def get_me(user: User = Depends(get_current_user)):
+    """Return current user info. Acts as auth check for the frontend."""
+    return {"id": user.id, "email": user.email}
 
 @router.post("/login", response_model=TokenResponse)
 def login(body: LoginRequest, request: Request, response: Response, session: Session = Depends(get_session)):
@@ -168,7 +173,7 @@ def login(body: LoginRequest, request: Request, response: Response, session: Ses
     refresh = create_refresh_token(user.id, session)
     
     _set_auth_cookies(response, access, refresh)
-    return TokenResponse(access_token=access, refresh_token=refresh)
+    return TokenResponse()
 
 
 @router.post("/logout", status_code=204)
@@ -196,7 +201,7 @@ def refresh_token_endpoint(request: Request, response: Response, session: Sessio
         
     new_refresh, access = rotate_refresh_token(refresh_token, session)
     _set_auth_cookies(response, access, new_refresh)
-    return TokenResponse(access_token=access, refresh_token=new_refresh)
+    return TokenResponse()
 
 
 @router.post("/request-password-reset", status_code=200)

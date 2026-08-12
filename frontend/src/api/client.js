@@ -1,25 +1,6 @@
 export const baseUrl = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
 
 const isBrowser = typeof window !== 'undefined' && typeof localStorage !== 'undefined';
-let accessToken = isBrowser ? localStorage.getItem('applyops_access_token') || null : null
-let refreshToken = isBrowser ? localStorage.getItem('applyops_refresh_token') || null : null
-
-export function setTokens(access, refresh) {
-  accessToken = access
-  refreshToken = refresh
-  if (isBrowser) {
-    if (access) {
-      localStorage.setItem('applyops_access_token', access)
-    } else {
-      localStorage.removeItem('applyops_access_token')
-    }
-    if (refresh) {
-      localStorage.setItem('applyops_refresh_token', refresh)
-    } else {
-      localStorage.removeItem('applyops_refresh_token')
-    }
-  }
-}
 
 let refreshPromise = null
 
@@ -38,7 +19,8 @@ async function request(path, options = {}, isRetry = false) {
     })
     
     // Auto-refresh logic on 401
-    if (response.status === 401 && !isRetry && refreshToken && !path.startsWith('/auth/')) {
+    const isLoggedIn = isBrowser && localStorage.getItem('applyops_is_logged_in') === '1';
+    if (response.status === 401 && !isRetry && isLoggedIn && !path.startsWith('/auth/')) {
       try {
         if (!refreshPromise) {
           refreshPromise = fetch(`${baseUrl}/auth/refresh`, {
@@ -49,15 +31,15 @@ async function request(path, options = {}, isRetry = false) {
           }).then(async refreshRes => {
             if (refreshRes.ok) {
               const data = await refreshRes.json()
-              setTokens(data.access_token, data.refresh_token)
+              if (isBrowser) localStorage.setItem('applyops_is_logged_in', '1')
               return true
             } else {
-              setTokens(null, null)
+              if (isBrowser) localStorage.removeItem('applyops_is_logged_in')
               window.dispatchEvent(new Event('auth:unauthorized'))
               return false
             }
           }).catch(() => {
-            setTokens(null, null)
+            if (isBrowser) localStorage.removeItem('applyops_is_logged_in')
             window.dispatchEvent(new Event('auth:unauthorized'))
             return false
           }).finally(() => {
@@ -76,7 +58,7 @@ async function request(path, options = {}, isRetry = false) {
           })
         }
       } catch (e) {
-        setTokens(null, null)
+        if (isBrowser) localStorage.removeItem('applyops_is_logged_in')
         window.dispatchEvent(new Event('auth:unauthorized'))
       }
     }
@@ -84,7 +66,7 @@ async function request(path, options = {}, isRetry = false) {
     if (!response.ok) {
       const errorBody = await response.json().catch(() => ({}))
       if (response.status === 401) {
-        setTokens(null, null)
+        if (isBrowser) localStorage.removeItem('applyops_is_logged_in')
         window.dispatchEvent(new Event('auth:unauthorized'))
       }
       throw new Error(errorBody.detail ?? `Request failed with status ${response.status}`)
@@ -177,15 +159,22 @@ export const activityApi = {
 }
 
 export const authApi = {
-  login: (email, password) => request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
-  register: (email, password) => request('/auth/register', { method: 'POST', body: JSON.stringify({ email, password }) }),
-  logout: () => {
-    if (refreshToken) {
-      request('/auth/logout', { method: 'POST', body: JSON.stringify({}) }).catch(() => {})
-    }
-    setTokens(null, null)
+  login: async (email, password) => {
+    const res = await request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) })
+    if (isBrowser) localStorage.setItem('applyops_is_logged_in', '1')
+    return res
   },
-  isAuthenticated: () => !!accessToken
+  register: async (email, password) => {
+    const res = await request('/auth/register', { method: 'POST', body: JSON.stringify({ email, password }) })
+    if (isBrowser) localStorage.setItem('applyops_is_logged_in', '1')
+    return res
+  },
+  logout: () => {
+    request('/auth/logout', { method: 'POST', body: JSON.stringify({}) }).catch(() => {})
+    if (isBrowser) localStorage.removeItem('applyops_is_logged_in')
+  },
+  isAuthenticated: () => isBrowser && localStorage.getItem('applyops_is_logged_in') === '1',
+  me: () => request('/auth/me')
 }
 
 export const updatesApi = {
