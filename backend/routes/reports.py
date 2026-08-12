@@ -10,13 +10,9 @@ from typing import Literal
 from fastapi import APIRouter, Query, Request
 from fastapi.responses import StreamingResponse
 
-from backend.sheets_client import SheetsClient
+from backend import db_client
 
 router = APIRouter(prefix="/reports", tags=["reports"])
-
-
-def _sheets(request: Request) -> SheetsClient:
-    return request.app.state.sheets
 
 
 def _is_in_range(d_str: str | None, start: date | None, end: date | None) -> bool:
@@ -42,10 +38,8 @@ def export_report(
     end: date | None = Query(None, description="End date (YYYY-MM-DD)"),
 ) -> StreamingResponse:
     """Export a CSV report of the requested type, optionally filtered by date range."""
-    sheets = _sheets(request)
-    
-    apps = sheets.list_applications()
-    activities = sheets.list_activity()
+    apps = db_client.list_applications()
+    activities = db_client.list_activity()
     
     # Filter by date
     if start or end:
