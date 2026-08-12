@@ -45,14 +45,14 @@ def create_contact(payload: ContactCreate, request: Request, user: User = Depend
             company=payload.company,
         )
         session.commit()
-        
-    return ContactManual(
-        id=contact.id,
-        name=contact.name or "",
-        company=contact.company or "",
-        role=contact.role or "",
-        email=contact.email or "",
-        phone=contact.phone or "",
-        tags="",
-        notes=""
-    )
+        session.refresh(contact)
+        return ContactManual(
+            id=contact.id,
+            name=contact.name or "",
+            company=contact.company or "",
+            role=contact.role or "",
+            email=contact.email or "",
+            phone=contact.phone or "",
+            tags="",
+            notes=""
+        )
