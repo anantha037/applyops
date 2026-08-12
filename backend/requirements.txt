@@ -6,6 +6,8 @@ apscheduler
 httpx
 python-dotenv
 groq
+bcrypt
+python-jose[cryptography]
 google-generativeai
 pytest
 # Phase A — Postgres + R2
