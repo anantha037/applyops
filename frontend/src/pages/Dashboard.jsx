@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api } from '../api/client'
+import { api, baseUrl, activityApi } from '../api/client'
 import ApplicationFunnel from '../components/ApplicationFunnel'
 import ApplicationsByStatus from '../components/ApplicationsByStatus'
 import PriorityTasksCard from '../components/PriorityTasksCard'
@@ -13,11 +13,19 @@ export default function Dashboard() {
   const [data, setData] = useState({})
   const [error, setError] = useState('')
 
-  const load = () => Promise.all([api.summary(), api.dueToday(), api.report()])
-    .then(([summary, due, report]) => setData({ summary, due, report }))
+  const load = () => Promise.all([api.summary(), api.dueToday(), api.report(), activityApi.getStreak()])
+    .then(([summary, due, report, streak]) => setData({ summary, due, report, streak }))
     .catch(e => setError(e.message))
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { 
+    load() 
+    
+    const onRefresh = (e) => {
+      if (e.detail === 'dashboard') load()
+    }
+    window.addEventListener('app:refresh_view', onRefresh)
+    return () => window.removeEventListener('app:refresh_view', onRefresh)
+  }, [])
 
   const summary = data.summary || {}
 
@@ -100,25 +108,37 @@ export default function Dashboard() {
           <div className="panel rounded-2xl p-5 border border-border bg-surface shadow-xs flex flex-col justify-between">
             <h3 className="text-sm font-bold text-foreground mb-4">Quick Actions</h3>
             <div className="grid grid-cols-2 gap-3 flex-1">
-              <button className="flex flex-col items-center justify-center gap-2.5 rounded-xl bg-surface-secondary/40 border border-transparent hover:border-primary/40 hover:bg-surface-secondary p-4 transition-all group focus:outline-none focus:ring-2 focus:ring-primary/40">
+              <button 
+                onClick={() => window.location.hash = '#/applications'} 
+                className="flex flex-col items-center justify-center gap-2.5 rounded-xl bg-surface-secondary/40 border border-transparent hover:border-primary/40 hover:bg-surface-secondary p-4 transition-all group focus:outline-none focus:ring-2 focus:ring-primary/40"
+              >
                 <span className="text-2xl text-primary group-hover:scale-110 transition-transform">+</span>
                 <span className="text-[11px] font-semibold text-foreground-secondary group-hover:text-foreground">Add Application</span>
               </button>
-              <button className="flex flex-col items-center justify-center gap-2.5 rounded-xl bg-surface-secondary/40 border border-transparent hover:border-emerald-500/40 hover:bg-surface-secondary p-4 transition-all group focus:outline-none focus:ring-2 focus:ring-primary/40">
+              <button 
+                onClick={() => window.location.hash = '#/calendar'} 
+                className="flex flex-col items-center justify-center gap-2.5 rounded-xl bg-surface-secondary/40 border border-transparent hover:border-emerald-500/40 hover:bg-surface-secondary p-4 transition-all group focus:outline-none focus:ring-2 focus:ring-primary/40"
+              >
                 <span className="text-2xl text-emerald-400 group-hover:scale-110 transition-transform">📅</span>
                 <span className="text-[11px] font-semibold text-foreground-secondary group-hover:text-foreground">Schedule</span>
               </button>
-              <button className="flex flex-col items-center justify-center gap-2.5 rounded-xl bg-surface-secondary/40 border border-transparent hover:border-blue-500/40 hover:bg-surface-secondary p-4 transition-all group focus:outline-none focus:ring-2 focus:ring-primary/40">
+              <button 
+                onClick={() => window.location.hash = '#/analytics'} 
+                className="flex flex-col items-center justify-center gap-2.5 rounded-xl bg-surface-secondary/40 border border-transparent hover:border-blue-500/40 hover:bg-surface-secondary p-4 transition-all group focus:outline-none focus:ring-2 focus:ring-primary/40"
+              >
                 <span className="text-2xl text-blue-400 group-hover:scale-110 transition-transform">📊</span>
                 <span className="text-[11px] font-semibold text-foreground-secondary group-hover:text-foreground">View Analytics</span>
               </button>
-              <button className="flex flex-col items-center justify-center gap-2.5 rounded-xl bg-surface-secondary/40 border border-transparent hover:border-amber-500/40 hover:bg-surface-secondary p-4 transition-all group focus:outline-none focus:ring-2 focus:ring-primary/40">
+              <button 
+                onClick={() => window.open(`${baseUrl}/reports/export?type=full`, '_blank')} 
+                className="flex flex-col items-center justify-center gap-2.5 rounded-xl bg-surface-secondary/40 border border-transparent hover:border-amber-500/40 hover:bg-surface-secondary p-4 transition-all group focus:outline-none focus:ring-2 focus:ring-primary/40"
+              >
                 <span className="text-2xl text-amber-400 group-hover:scale-110 transition-transform">📥</span>
                 <span className="text-[11px] font-semibold text-foreground-secondary group-hover:text-foreground">Export Report</span>
               </button>
             </div>
           </div>
-          <ApplicationStreakCard />
+          <ApplicationStreakCard data={data.streak} />
           <MiniCalendarCard onViewFullCalendar={() => window.location.hash = '#/calendar'} />
         </div>
       </div>
