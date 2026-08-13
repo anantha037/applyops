@@ -1,8 +1,14 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { authApi } from '../api/client'
 import { TrendingUp, Send, Loader2 } from 'lucide-react'
 
 export default function Auth({ onLoginSuccess }) {
+  const [theme] = useState(() => localStorage.getItem('applyops-theme') || 'light')
+  
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+  }, [theme])
+
   const [isLogin, setIsLogin] = useState(true)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -72,7 +78,7 @@ export default function Auth({ onLoginSuccess }) {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 disabled={loading}
-                className="w-full bg-surface-secondary/50 border border-border rounded-xl px-4 py-2.5 text-sm font-medium text-foreground placeholder:text-foreground-secondary/50 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all disabled:opacity-50"
+                className="w-full bg-surface-secondary border border-border rounded-xl px-4 py-2.5 text-sm font-medium text-foreground placeholder:text-foreground-secondary/50 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all disabled:opacity-50"
                 placeholder="aman@example.com"
               />
             </div>
@@ -90,7 +96,7 @@ export default function Auth({ onLoginSuccess }) {
                 required
                 disabled={loading}
                 minLength={8}
-                className="w-full bg-surface-secondary/50 border border-border rounded-xl px-4 py-2.5 text-sm font-medium text-foreground placeholder:text-foreground-secondary/50 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all disabled:opacity-50"
+                className="w-full bg-surface-secondary border border-border rounded-xl px-4 py-2.5 text-sm font-medium text-foreground placeholder:text-foreground-secondary/50 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all disabled:opacity-50"
                 placeholder="••••••••"
               />
             </div>
