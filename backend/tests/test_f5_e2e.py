@@ -31,7 +31,7 @@ def anon_client():
 def user_a(client_a):
     email = f"user_a_{uuid.uuid4().hex[:8]}@example.com"
     password = "password123"
-    client_a.post("/auth/register", json={"email": email, "password": password})
+    client_a.post("/auth/register", json={"name": "Alice", "email": email, "password": password})
     client_a.post("/auth/login", json={"email": email, "password": password})
     return {"email": email, "password": password}
 
@@ -39,7 +39,7 @@ def user_a(client_a):
 def user_b(client_b):
     email = f"user_b_{uuid.uuid4().hex[:8]}@example.com"
     password = "password123"
-    client_b.post("/auth/register", json={"email": email, "password": password})
+    client_b.post("/auth/register", json={"name": "Bob", "email": email, "password": password})
     client_b.post("/auth/login", json={"email": email, "password": password})
     return {"email": email, "password": password}
 

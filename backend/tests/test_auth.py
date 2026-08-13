@@ -36,7 +36,7 @@ def valid_password():
 def test_password_hashing(unique_email, valid_password):
     """Test #8: Password is stored as a hash, never plaintext."""
     # Register the user
-    res = client.post("/auth/register", json={"email": unique_email, "password": valid_password})
+    res = client.post("/auth/register", json={"name": "Test User", "email": unique_email, "password": valid_password})
     assert res.status_code == 201
 
     with Session(engine) as session:
@@ -49,7 +49,7 @@ def test_password_hashing(unique_email, valid_password):
 def test_register_duplicate_email(unique_email, valid_password):
     """Test #2: duplicate email with different casing fails."""
     # Attempt to register with uppercase email
-    res = client.post("/auth/register", json={"email": unique_email.upper(), "password": valid_password})
+    res = client.post("/auth/register", json={"name": "Test User", "email": unique_email.upper(), "password": valid_password})
     assert res.status_code == 400
     assert "already exists" in res.json()["detail"]
 
@@ -170,3 +170,24 @@ def test_password_reset_flow(unique_email, valid_password):
     # For now, we verified it returns 200 without leaking existence
     res_bad = client.post("/auth/request-password-reset", json={"email": "nobody@example.com"})
     assert res_bad.status_code == 200
+
+def test_update_me(unique_email, valid_password):
+    """Test updating user profile."""
+    client.cookies.clear()
+    client.post("/auth/login", json={"email": unique_email, "password": valid_password})
+    
+    # Check original name
+    res = client.get("/auth/me")
+    assert res.status_code == 200
+    assert res.json()["name"] == "Test User"
+    
+    # Update name
+    res = client.patch("/auth/me", json={"name": "New Name"})
+    assert res.status_code == 200
+    assert res.json()["name"] == "New Name"
+    
+    # Empty name fails
+    res = client.patch("/auth/me", json={"name": "   "})
+    assert res.status_code == 400
+    
+    client.cookies.clear()

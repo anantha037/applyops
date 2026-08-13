@@ -15,7 +15,7 @@ for _ in range(10):
 try:
     import uuid
     email = f"test_{uuid.uuid4().hex[:8]}@example.com"
-    r = requests.post('http://127.0.0.1:8005/auth/register', json={'email':email, 'password':'password123'}, headers={'X-ApplyOps-Client': '1'})
+    r = requests.post('http://127.0.0.1:8005/auth/register', json={'name': 'Test User', 'email':email, 'password':'password123'}, headers={'X-ApplyOps-Client': '1'})
     print("STATUS:", r.status_code)
     print("SET-COOKIE HEADER:")
     for header, value in r.headers.items():
