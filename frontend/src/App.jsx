@@ -65,6 +65,9 @@ export default function App() {
   }
 
   const handleViewChange = (newView) => {
+    if (view === newView) {
+      window.dispatchEvent(new CustomEvent('app:refresh_view', { detail: newView }))
+    }
     window.location.hash = `#/${newView}`
     setView(newView)
   }
