@@ -500,6 +500,11 @@ def get_settings(user_id: str) -> Settings:
             working_hours_end=row.working_hours_end,
             telegram_chat_id=row.telegram_chat_id,
             dashboard_pin=row.dashboard_pin,
+            app_reminders=row.app_reminders,
+            followup_reminders=row.followup_reminders,
+            interview_reminders=row.interview_reminders,
+            daily_progress=row.daily_progress,
+            streak_alerts=row.streak_alerts,
         )
 
 
@@ -528,6 +533,11 @@ def update_settings(user_id: str, changes: SettingsUpdate) -> Settings:
         working_hours_end=row.working_hours_end,
         telegram_chat_id=row.telegram_chat_id,
         dashboard_pin=row.dashboard_pin,
+        app_reminders=row.app_reminders,
+        followup_reminders=row.followup_reminders,
+        interview_reminders=row.interview_reminders,
+        daily_progress=row.daily_progress,
+        streak_alerts=row.streak_alerts,
     )
 
 
