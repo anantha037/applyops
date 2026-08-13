@@ -270,6 +270,11 @@ class Settings(SQLModel, table=True):
     working_hours_end:    str           = Field(default="18:00")
     telegram_chat_id:     str           = Field(default="")
     dashboard_pin:        str           = Field(default="")
+    app_reminders:        bool          = Field(default=True)
+    followup_reminders:   bool          = Field(default=True)
+    interview_reminders:  bool          = Field(default=True)
+    daily_progress:       bool          = Field(default=True)
+    streak_alerts:        bool          = Field(default=True)
 
 
 # ---------------------------------------------------------------------------
