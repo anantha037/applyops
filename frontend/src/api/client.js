@@ -214,6 +214,7 @@ export const api = {
   deleteCalendarEvent: calendarApi.deleteEvent,
   contacts: contactsApi.getContacts,
   createContact: contactsApi.createContact,
+  updateContact: contactsApi.updateContact,
   analyticsOverview: analyticsApi.getOverview,
   listResumes: resumesApi.listResumes,
   getResumeUrl: resumesApi.getResumeUrl,
