@@ -51,10 +51,18 @@ def summary(request: Request, user: User = Depends(get_current_user)) -> dict[st
     response_rate = (contacted_and_responded / total_contacted * 100) if total_contacted > 0 else 0
     response_rate = round(response_rate)
 
+    calls_today = sum(
+        1 for act in all_activities 
+        if act.timestamp.replace(tzinfo=ZoneInfo("UTC")).astimezone(INDIA_TIMEZONE).date() == today 
+        and act.action_type in ("Call Dialed", "Call Connected", "Recruiter Call")
+    )
+
     return {
         "today_count": today_count,
         "applications_today": today_count,
         "goal": settings.daily_goal,
+        "calls_goal": settings.daily_calls_goal,
+        "calls_today": calls_today,
         "streak": 0,
         "funnel": dict(Counter(app.status for app in applications)),
         "response_rate": response_rate,
