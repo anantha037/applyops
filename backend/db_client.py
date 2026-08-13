@@ -247,15 +247,73 @@ def list_contacts(user_id: str) -> list[ContactView]:
                 role=c.role or "",
                 email=c.email or "",
                 phone=c.phone or "",
-                tags="",
-                notes="",
+                tags=c.tags or "",
+                notes=c.notes or "",
+                linkedin_url=c.linkedin_url or "",
                 source="postgres",
                 application_id=app_by_contact.get(c.id),
                 last_contacted=last_contact,
                 responded=responded,
+                last_action_status=c.last_action_status,
+                last_action_date=c.last_action_date.isoformat() if c.last_action_date else None,
             ))
             
         return results
+
+
+def update_contact(user_id: str, contact_id: str, changes: dict) -> ContactView | None:
+    """Update a contact directly."""
+    with Session(engine) as session:
+        row = session.get(Contact, contact_id)
+        if row is None or row.user_id != user_id:
+            return None
+            
+        scalar_fields = (
+            "name", "company", "role", "email", "phone", "tags", "notes",
+            "linkedin_url", "last_action_status", "last_action_date"
+        )
+        for field in scalar_fields:
+            if field in changes:
+                setattr(row, field, changes[field] if changes[field] != "" else None)
+                
+        # If the user manually updated the status, bump the date to today
+        if "last_action_status" in changes and "last_action_date" not in changes:
+            row.last_action_date = utc_now().date()
+                
+        session.add(row)
+        session.commit()
+        session.refresh(row)
+        
+        # Enumerate activities to construct the proper ContactView response
+        activities = session.exec(
+            select(ActivityLog).where(ActivityLog.contact_id == row.id)
+        ).all()
+        last_contact = None
+        if activities:
+            last_contact = max(a.timestamp for a in activities).date().isoformat()
+        responded = any(
+            a.action_type in ("Call Connected", "Interview Completed", "Email Reply Received")
+            for a in activities
+        )
+        app = session.exec(select(DBApplication).where(DBApplication.contact_id == row.id)).first()
+        
+        return ContactView(
+            id=row.id,
+            name=row.name or "",
+            company=row.company or "",
+            role=row.role or "",
+            email=row.email or "",
+            phone=row.phone or "",
+            tags=row.tags or "",
+            notes=row.notes or "",
+            linkedin_url=row.linkedin_url or "",
+            source="postgres",
+            application_id=app.id if app else None,
+            last_contacted=last_contact,
+            responded=responded,
+            last_action_status=row.last_action_status,
+            last_action_date=row.last_action_date.isoformat() if row.last_action_date else None,
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -447,6 +505,22 @@ def create_activity(user_id: str, activity_id: str, payload: ActivityCreate) -> 
             notes=payload.notes or None,
         )
         session.add(row)
+        
+        # Auto-bump contact last_action_status if appropriate
+        if contact_id:
+            contact = session.get(Contact, contact_id)
+            if contact:
+                contact.last_action_date = now.date()
+                if payload.action_type in ("Email Sent", "LinkedIn Message", "Call Dialed") and contact.last_action_status == "Not Contacted":
+                    contact.last_action_status = "Outreach Sent"
+                elif payload.action_type == "Email Reply Received" and contact.last_action_status in ("Not Contacted", "Outreach Sent"):
+                    contact.last_action_status = "In Conversation"
+                elif payload.action_type == "Call Connected" and contact.last_action_status in ("Not Contacted", "Outreach Sent"):
+                    contact.last_action_status = "In Conversation"
+                elif payload.action_type == "Interview Completed" and contact.last_action_status not in ("Closed", "Ghosted", "Not Interested"):
+                    contact.last_action_status = "Interviewing"
+                session.add(contact)
+                
         session.commit()
         session.refresh(row)
 
