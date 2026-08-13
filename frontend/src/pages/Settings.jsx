@@ -21,6 +21,7 @@ export default function Settings() {
 
   const [initialSettings, setInitialSettings] = useState({
     weekly_goal: 25,
+    daily_calls_goal: 0,
     working_hours_start: '09:00',
     working_hours_end: '21:00',
     name: ''
@@ -28,6 +29,7 @@ export default function Settings() {
   
   const [settings, setSettings] = useState({
     weekly_goal: 25,
+    daily_calls_goal: 0,
     working_hours_start: '09:00',
     working_hours_end: '21:00',
     name: ''
@@ -55,6 +57,7 @@ export default function Settings() {
           const loadedGoal = res.weekly_goal ?? (res.daily_goal ? res.daily_goal * 5 : 25)
           const loaded = {
             weekly_goal: loadedGoal,
+            daily_calls_goal: res.daily_calls_goal || 0,
             working_hours_start: res.working_hours_start || '09:00',
             working_hours_end: res.working_hours_end || '21:00',
             name: meRes.name || ''
@@ -77,6 +80,7 @@ export default function Settings() {
 
   const hasChanges = 
     settings.weekly_goal !== initialSettings.weekly_goal ||
+    settings.daily_calls_goal !== initialSettings.daily_calls_goal ||
     settings.working_hours_start !== initialSettings.working_hours_start ||
     settings.working_hours_end !== initialSettings.working_hours_end ||
     settings.name !== initialSettings.name
@@ -90,6 +94,13 @@ export default function Settings() {
     setSettings(prev => ({
       ...prev,
       weekly_goal: Math.max(1, (prev.weekly_goal || 0) + delta)
+    }))
+  }
+
+  const handleCallsGoalChange = (delta) => {
+    setSettings(prev => ({
+      ...prev,
+      daily_calls_goal: Math.max(0, (prev.daily_calls_goal || 0) + delta)
     }))
   }
 
@@ -112,6 +123,7 @@ export default function Settings() {
     Promise.all([
       api.updateSettings({
         weekly_goal: settings.weekly_goal,
+        daily_calls_goal: settings.daily_calls_goal,
         working_hours_start: settings.working_hours_start,
         working_hours_end: settings.working_hours_end
       }),
@@ -121,6 +133,7 @@ export default function Settings() {
         const updatedGoal = s.weekly_goal ?? settings.weekly_goal
         const updated = {
           weekly_goal: updatedGoal,
+          daily_calls_goal: s.daily_calls_goal ?? settings.daily_calls_goal,
           working_hours_start: s.working_hours_start || settings.working_hours_start,
           working_hours_end: s.working_hours_end || settings.working_hours_end,
           name: meRes ? meRes.name : settings.name
@@ -251,6 +264,45 @@ export default function Settings() {
                   </div>
                   <p className="text-[10px] text-foreground-secondary/80 font-medium pt-0.5">
                     This goal powers your weekly progress, dashboard goal pace, and application streak insights.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-xl bg-surface-secondary/40 space-y-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-foreground">Daily calls goal</label>
+                      <p className="text-[11px] text-foreground-secondary font-medium mt-0.5">
+                        Set the number of phone or recruiter calls you aim for each day.
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2 bg-surface p-1 rounded-xl shadow-xs self-start sm:self-auto">
+                      <button
+                        type="button"
+                        onClick={() => handleCallsGoalChange(-1)}
+                        className="w-8 h-8 rounded-lg bg-surface-secondary hover:bg-surface-tertiary text-foreground flex items-center justify-center transition-colors cursor-pointer"
+                      >
+                        <Minus className="w-3.5 h-3.5" />
+                      </button>
+                      <input
+                        type="number"
+                        min="0"
+                        max="50"
+                        value={settings.daily_calls_goal}
+                        onChange={e => setSettings({ ...settings, daily_calls_goal: Math.max(0, parseInt(e.target.value) || 0) })}
+                        className="w-12 text-center text-xs font-bold text-foreground bg-transparent outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleCallsGoalChange(1)}
+                        className="w-8 h-8 rounded-lg bg-surface-secondary hover:bg-surface-tertiary text-foreground flex items-center justify-center transition-colors cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-foreground-secondary/80 font-medium pt-0.5">
+                    Tracks direct communication efforts alongside your applications. Set to 0 to disable.
                   </p>
                 </div>
 
