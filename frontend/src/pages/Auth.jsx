@@ -10,6 +10,7 @@ export default function Auth({ onLoginSuccess }) {
   }, [theme])
 
   const [isLogin, setIsLogin] = useState(true)
+  const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -25,7 +26,7 @@ export default function Auth({ onLoginSuccess }) {
       if (isLogin) {
         data = await authApi.login(email, password)
       } else {
-        data = await authApi.register(email, password)
+        data = await authApi.register(name, email, password)
       }
       
       onLoginSuccess()
@@ -68,6 +69,23 @@ export default function Auth({ onLoginSuccess }) {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {!isLogin && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-foreground-secondary uppercase tracking-wider">
+                  Name
+                </label>
+                <input 
+                  type="text" 
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                  disabled={loading}
+                  className="w-full bg-surface-secondary border border-border rounded-xl px-4 py-2.5 text-sm font-medium text-foreground placeholder:text-foreground-secondary/50 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all disabled:opacity-50"
+                  placeholder="Aman Gupta"
+                />
+              </div>
+            )}
+
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-foreground-secondary uppercase tracking-wider">
                 Email Address

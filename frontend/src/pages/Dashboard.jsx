@@ -13,8 +13,8 @@ export default function Dashboard() {
   const [data, setData] = useState({})
   const [error, setError] = useState('')
 
-  const load = () => Promise.all([api.summary(), api.dueToday(), api.report(), activityApi.getStreak()])
-    .then(([summary, due, report, streak]) => setData({ summary, due, report, streak }))
+  const load = () => Promise.all([api.summary(), api.dueToday(), api.report(), activityApi.getStreak(), api.me()])
+    .then(([summary, due, report, streak, me]) => setData({ summary, due, report, streak, me }))
     .catch(e => setError(e.message))
 
   useEffect(() => { 
@@ -34,7 +34,7 @@ export default function Dashboard() {
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
-            Good morning, Aman! <span className="text-lg animate-bounce">👋</span>
+            Good morning, {data.me?.name?.split(' ')[0] || 'there'}! <span className="text-lg animate-bounce">👋</span>
           </h2>
           <p className="mt-0.5 text-xs font-medium text-foreground-secondary">
             Here is your job search ops overview for today.

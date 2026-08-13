@@ -173,8 +173,8 @@ export const authApi = {
     if (isBrowser) localStorage.setItem('applyops_is_logged_in', '1')
     return res
   },
-  register: async (email, password) => {
-    const res = await request('/auth/register', { method: 'POST', body: JSON.stringify({ email, password }) })
+  register: async (name, email, password) => {
+    const res = await request('/auth/register', { method: 'POST', body: JSON.stringify({ name, email, password }) })
     if (isBrowser) localStorage.setItem('applyops_is_logged_in', '1')
     return res
   },
@@ -183,7 +183,8 @@ export const authApi = {
     if (isBrowser) localStorage.removeItem('applyops_is_logged_in')
   },
   isAuthenticated: () => isBrowser && localStorage.getItem('applyops_is_logged_in') === '1',
-  me: () => request('/auth/me')
+  me: () => request('/auth/me'),
+  updateMe: (body) => request('/auth/me', { method: 'PATCH', body: JSON.stringify(body) })
 }
 
 export const updatesApi = {
@@ -216,5 +217,7 @@ export const api = {
   analyticsOverview: analyticsApi.getOverview,
   listResumes: resumesApi.listResumes,
   getResumeUrl: resumesApi.getResumeUrl,
-  uploadResume: resumesApi.uploadResume
+  uploadResume: resumesApi.uploadResume,
+  updateMe: authApi.updateMe,
+  me: authApi.me
 }

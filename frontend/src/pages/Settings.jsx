@@ -12,7 +12,8 @@ import {
   Plus, 
   CheckCircle2, 
   ShieldCheck, 
-  SlidersHorizontal 
+  SlidersHorizontal,
+  User
 } from 'lucide-react'
 
 export default function Settings() {
@@ -22,12 +23,14 @@ export default function Settings() {
     weekly_goal: 25,
     working_hours_start: '09:00',
     working_hours_end: '21:00',
+    name: ''
   })
   
   const [settings, setSettings] = useState({
     weekly_goal: 25,
     working_hours_start: '09:00',
     working_hours_end: '21:00',
+    name: ''
   })
 
   const [notifications, setNotifications] = useState({
@@ -46,14 +49,15 @@ export default function Settings() {
 
   useEffect(() => {
     let active = true
-    api.settings()
-      .then(res => {
-        if (active && res) {
+    Promise.all([api.settings(), api.me()])
+      .then(([res, meRes]) => {
+        if (active && res && meRes) {
           const loadedGoal = res.weekly_goal ?? (res.daily_goal ? res.daily_goal * 5 : 25)
           const loaded = {
             weekly_goal: loadedGoal,
             working_hours_start: res.working_hours_start || '09:00',
             working_hours_end: res.working_hours_end || '21:00',
+            name: meRes.name || ''
           }
           setSettings(loaded)
           setInitialSettings(loaded)
@@ -74,7 +78,8 @@ export default function Settings() {
   const hasChanges = 
     settings.weekly_goal !== initialSettings.weekly_goal ||
     settings.working_hours_start !== initialSettings.working_hours_start ||
-    settings.working_hours_end !== initialSettings.working_hours_end
+    settings.working_hours_end !== initialSettings.working_hours_end ||
+    settings.name !== initialSettings.name
 
   const isTimeInvalid = 
     settings.working_hours_start && 
@@ -104,13 +109,21 @@ export default function Settings() {
 
     setSaving(true)
     setMessage('')
-    api.updateSettings(settings)
-      .then(s => {
+    Promise.all([
+      api.updateSettings({
+        weekly_goal: settings.weekly_goal,
+        working_hours_start: settings.working_hours_start,
+        working_hours_end: settings.working_hours_end
+      }),
+      settings.name !== initialSettings.name ? api.updateMe({ name: settings.name }) : Promise.resolve(null)
+    ])
+      .then(([s, meRes]) => {
         const updatedGoal = s.weekly_goal ?? settings.weekly_goal
         const updated = {
           weekly_goal: updatedGoal,
           working_hours_start: s.working_hours_start || settings.working_hours_start,
           working_hours_end: s.working_hours_end || settings.working_hours_end,
+          name: meRes ? meRes.name : settings.name
         }
         setSettings(updated)
         setInitialSettings(updated)
@@ -444,7 +457,28 @@ export default function Settings() {
                 </div>
               </div>
 
-              <div className="space-y-2 pt-1">
+              <div className="space-y-4 pt-1">
+                <div className="p-4 rounded-xl bg-surface-secondary/40 space-y-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-foreground">Your Name</label>
+                      <p className="text-[11px] text-foreground-secondary font-medium mt-0.5">
+                        Used for personalizing your dashboard and AI coaching.
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2 self-start sm:self-auto w-full sm:w-64">
+                      <input
+                        type="text"
+                        value={settings.name}
+                        onChange={e => setSettings({ ...settings, name: e.target.value })}
+                        placeholder="Your name"
+                        className="w-full bg-surface border border-border rounded-xl px-4 py-2.5 text-sm font-medium text-foreground placeholder:text-foreground-secondary/50 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all"
+                      />
+                    </div>
+                  </div>
+                </div>
+
                 <div className="p-3.5 rounded-xl bg-surface-secondary/40 flex items-center justify-between gap-4">
                   <div>
                     <h4 className="text-xs font-bold text-foreground">AI Coaching Engine</h4>
