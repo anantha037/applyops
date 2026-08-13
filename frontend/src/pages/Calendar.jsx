@@ -8,7 +8,7 @@ import {
 } from 'date-fns'
 import { enUS } from 'date-fns/locale'
 import 'react-big-calendar/lib/css/react-big-calendar.css'
-import { api } from '../api/client'
+import { api, activityApi } from '../api/client'
 import ActivityHeatmap from '../components/ActivityHeatmap'
 import Dropdown from '../components/ui/Dropdown'
 import {
@@ -124,7 +124,7 @@ function MiniCalendar({ selected, onSelect, eventDates = [] }) {
 }
 
 // ── Upcoming Events List ─────────────────────────────────────────────────────
-function UpcomingEvents({ events = [], loading = false }) {
+function UpcomingEvents({ events = [], loading = false, selectedDate }) {
   if (loading) {
     return (
       <div className="space-y-3 select-none">
@@ -141,16 +141,24 @@ function UpcomingEvents({ events = [], loading = false }) {
     )
   }
 
-  const upcoming = [...events]
-    .filter(ev => {
+  let upcoming = [...events]
+  if (selectedDate) {
+    upcoming = upcoming.filter(ev => {
       const d = safeParseDate(ev.date)
-      if (!d) return false
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      return d >= today
-    })
-    .sort((a, b) => (a.date || '').localeCompare(b.date || ''))
-    .slice(0, 5)
+      return d && isSameDay(d, selectedDate)
+    }).sort((a, b) => (a.time || '').localeCompare(b.time || ''))
+  } else {
+    upcoming = upcoming
+      .filter(ev => {
+        const d = safeParseDate(ev.date)
+        if (!d) return false
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        return d >= today
+      })
+      .sort((a, b) => (a.date || '').localeCompare(b.date || ''))
+      .slice(0, 5)
+  }
 
   const groups = {}
   upcoming.forEach(ev => {
@@ -344,17 +352,22 @@ export default function Calendar() {
   const [events, setEvents]             = useState([])
   const [view, setView]                 = useState('month')
   const [date, setDate]                 = useState(new Date())
-  const [selectedDate, setSelectedDate] = useState(new Date())
+  const [selectedDate, setSelectedDate] = useState(null)
   const [selectedCategory, setSelectedCategory] = useState('All Events')
   const [showModal, setShowModal]       = useState(false)
   const [modalDate, setModalDate]       = useState(null)
   const [error, setError]               = useState('')
   const [loading, setLoading]           = useState(false)
+  const [streakData, setStreakData]     = useState(null)
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const data = await api.calendarEvents()
+      const [data, sData] = await Promise.all([
+        api.calendarEvents(),
+        activityApi.getStreak()
+      ])
+      setStreakData(sData)
       const normalized = (data || []).map(ev => {
         const dStr = ev.date || (ev.start ? String(ev.start).split('T')[0] : null) || fmtDate(new Date())
         const tStr = ev.event_type || ev.type || 'Reminder'
@@ -398,7 +411,7 @@ export default function Calendar() {
 
   const eventDates = events.map(ev => ev.date)
 
-  const goToToday  = () => { setDate(new Date()); setSelectedDate(new Date()) }
+  const goToToday  = () => { setDate(new Date()); setSelectedDate(null) }
   const goPrev     = () => {
     if (view === 'month')  setDate(subMonths(date, 1))
     else if (view === 'week') setDate(addDays(date, -7))
@@ -580,8 +593,22 @@ export default function Calendar() {
                     date={date}
                     onView={setView}
                     onNavigate={setDate}
-                    onSelectSlot={({ start }) => { setModalDate(start); setShowModal(true) }}
-                    onSelectEvent={ev => { setSelectedDate(ev.start); setDate(ev.start) }}
+                    onSelectSlot={({ start }) => {
+                      if (selectedDate && isSameDay(start, selectedDate)) {
+                        setSelectedDate(null)
+                      } else {
+                        setSelectedDate(start)
+                        setDate(start)
+                      }
+                    }}
+                    onSelectEvent={ev => {
+                      if (selectedDate && isSameDay(ev.start, selectedDate)) {
+                        setSelectedDate(null)
+                      } else {
+                        setSelectedDate(ev.start)
+                        setDate(ev.start)
+                      }
+                    }}
                     selectable
                     popup
                     eventPropGetter={eventStyleGetter}
@@ -602,29 +629,45 @@ export default function Calendar() {
               <div className="panel rounded-2xl border border-transparent bg-surface p-4 shadow-2xs">
                 <MiniCalendar
                   selected={selectedDate}
-                  onSelect={d => { setSelectedDate(d); setDate(d) }}
+                  onSelect={d => {
+                    if (selectedDate && isSameDay(d, selectedDate)) {
+                      setSelectedDate(null)
+                    } else {
+                      setSelectedDate(d)
+                      setDate(d)
+                    }
+                  }}
                   eventDates={eventDates}
                 />
               </div>
 
               <div className="panel rounded-2xl border border-transparent bg-surface p-4 shadow-2xs flex-1">
                 <div className="flex items-center justify-between mb-3">
-                  <p className="text-[10px] font-bold text-foreground-secondary/80 uppercase tracking-wider">Upcoming Events</p>
-                  <button
-                    onClick={() => { setModalDate(new Date()); setShowModal(true) }}
-                    className="text-[10px] text-primary hover:underline font-bold"
-                  >
-                    + Add
-                  </button>
+                  <p className="text-[10px] font-bold text-foreground-secondary/80 uppercase tracking-wider">
+                    {selectedDate ? `Events on ${format(selectedDate, 'MMM d')}` : 'Upcoming Events'}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    {selectedDate && (
+                      <button onClick={() => setSelectedDate(null)} className="text-[10px] text-muted hover:text-foreground font-bold focus:outline-none">
+                        Clear
+                      </button>
+                    )}
+                    <button
+                      onClick={() => { setModalDate(selectedDate || new Date()); setShowModal(true) }}
+                      className="text-[10px] text-primary hover:underline font-bold"
+                    >
+                      + Add
+                    </button>
+                  </div>
                 </div>
-                <UpcomingEvents events={filteredEvents} />
+                <UpcomingEvents events={filteredEvents} selectedDate={selectedDate} />
               </div>
             </div>
           </div>
 
           {/* ── Streak Activity Heatmap (Bottom) ───────────────────────────── */}
           <div className="mt-6">
-            <ActivityHeatmap />
+            <ActivityHeatmap data={streakData} />
           </div>
         </>
       )}
