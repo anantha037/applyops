@@ -2,16 +2,16 @@
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime, timedelta
 from uuid import uuid4
+from collections import defaultdict
+from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status, Query
 
 from backend.auth import get_current_user
 from backend.db.models import User
 from backend.models import (
-    Activity,
-    ActivityCreate,
     Application,
     ApplicationCreate,
     ApplicationStage,
@@ -123,26 +123,7 @@ def delete_application(application_id: str, request: Request, user: User = Depen
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Application not found")
 
 
-@router.post("/activity", response_model=Activity, status_code=status.HTTP_201_CREATED)
-def create_activity(payload: ActivityCreate, request: Request, user: User = Depends(get_current_user)) -> Activity:
-    return db_client.create_activity(user.id, str(uuid4()), payload)
 
-
-@router.get("/activity", response_model=list[Activity])
-def list_activity(
-    request: Request, user: User = Depends(get_current_user), date_filter: str = Query(default="today", alias="date")
-) -> list[Activity]:
-    if date_filter == "today":
-        activity_date = date.today()
-    else:
-        try:
-            activity_date = date.fromisoformat(date_filter)
-        except ValueError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="date must be 'today' or an ISO date (YYYY-MM-DD)",
-            ) from exc
-    return db_client.list_activity(user.id, activity_date)
 
 
 def _not_found() -> None:
