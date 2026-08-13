@@ -204,6 +204,11 @@ class Settings(BaseModel):
     working_hours_end: str = ""
     telegram_chat_id: str = ""
     dashboard_pin: str = ""
+    app_reminders: bool = True
+    followup_reminders: bool = True
+    interview_reminders: bool = True
+    daily_progress: bool = True
+    streak_alerts: bool = True
 
 
 class SettingsUpdate(BaseModel):
@@ -212,6 +217,11 @@ class SettingsUpdate(BaseModel):
     working_hours_end: str | None = None
     telegram_chat_id: str | None = None
     dashboard_pin: str | None = None
+    app_reminders: bool | None = None
+    followup_reminders: bool | None = None
+    interview_reminders: bool | None = None
+    daily_progress: bool | None = None
+    streak_alerts: bool | None = None
 
 
 def utc_now() -> datetime:
