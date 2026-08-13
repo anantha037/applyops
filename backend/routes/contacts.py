@@ -54,5 +54,22 @@ def create_contact(payload: ContactCreate, request: Request, user: User = Depend
             email=contact.email or "",
             phone=contact.phone or "",
             tags="",
-            notes=""
+            notes="",
+            last_action_status="Not Contacted",
+            last_action_date=None,
         )
+
+
+@router.patch("/{contact_id}", response_model=ContactView)
+def update_contact(
+    contact_id: str,
+    payload: dict,
+    request: Request,
+    user: User = Depends(get_current_user)
+) -> ContactView:
+    """Update a contact's fields."""
+    updated = db_client.update_contact(user.id, contact_id, payload)
+    if not updated:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Contact not found")
+    return updated
