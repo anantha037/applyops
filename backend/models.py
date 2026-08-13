@@ -66,6 +66,18 @@ class ApplicationStage(StrEnum):
     CLOSED = "Closed"
 
 
+class ContactStatus(StrEnum):
+    NOT_CONTACTED = "Not Contacted"
+    OUTREACH_SENT = "Outreach Sent"
+    IN_CONVERSATION = "In Conversation"
+    MEETING_SCHEDULED = "Meeting Scheduled"
+    REFERRAL_SECURED = "Referral Secured"
+    INTERVIEWING = "Interviewing"
+    GHOSTED = "Ghosted"
+    NOT_INTERESTED = "Not Interested"
+    CLOSED = "Closed"
+
+
 FOLLOW_UP_DELAYS: dict[ApplicationStage, int] = {
     ApplicationStage.APPLIED: 2,
     ApplicationStage.CALLED: 3,
@@ -200,6 +212,7 @@ class DailyFeedback(BaseModel):
 
 class Settings(BaseModel):
     daily_goal: int = Field(default=0, ge=0)
+    daily_calls_goal: int = Field(default=0, ge=0)
     working_hours_start: str = ""
     working_hours_end: str = ""
     telegram_chat_id: str = ""
@@ -213,6 +226,7 @@ class Settings(BaseModel):
 
 class SettingsUpdate(BaseModel):
     daily_goal: int | None = Field(default=None, ge=0)
+    daily_calls_goal: int | None = Field(default=None, ge=0)
     working_hours_start: str | None = None
     working_hours_end: str | None = None
     telegram_chat_id: str | None = None
@@ -239,6 +253,7 @@ class ContactCreate(BaseModel):
     phone:   str = ""
     tags:    str = ""   # comma-separated: Recruiter, HR Manager, Referrer, Other
     notes:   str = ""
+    linkedin_url: str = ""
 
 
 class ContactManual(ContactCreate):
@@ -261,10 +276,27 @@ class ContactView(BaseModel):
     phone:                 str = ""
     tags:                  str = ""
     notes:                 str = ""
+    linkedin_url:          str = ""
     source:                str          # "application" | "manual" | "both"
     application_id:        str | None = None
     last_contacted:        str | None = None  # ISO date string or None
     responded:             bool = False
+    last_action_status:    str = "Not Contacted"
+    last_action_date:      str | None = None  # ISO date string or None
+
+
+class ContactUpdate(BaseModel):
+    """Payload for updating an existing contact."""
+    name:               str | None = Field(default=None, min_length=1)
+    company:            str | None = None
+    role:               str | None = None
+    email:              str | None = None
+    phone:              str | None = None
+    tags:               str | None = None
+    notes:              str | None = None
+    linkedin_url:       str | None = None
+    last_action_status: str | None = None
+    last_action_date:   date | None = None
 
 
 # ── Analytics ────────────────────────────────────────────────────────────────
