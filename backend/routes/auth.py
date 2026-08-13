@@ -61,6 +61,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 # ---------------------------------------------------------------------------
 
 class RegisterRequest(BaseModel):
+    name: str
     email: str
     password: str
 
@@ -82,6 +83,10 @@ class PasswordResetRequest(BaseModel):
     email: str
 
 
+class UserUpdate(BaseModel):
+    name: str | None = None
+
+
 class PasswordResetConfirm(BaseModel):
     token: str
     new_password: str
@@ -95,6 +100,9 @@ class PasswordResetConfirm(BaseModel):
 def register(body: RegisterRequest, response: Response, session: Session = Depends(get_session)):
     """Create a new user account and return a token pair."""
     email = body.email.strip().lower()
+    name = body.name.strip()
+    if not name:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Name is required")
     if not email or "@" not in email:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid email address")
     if len(body.password) < 8:
@@ -108,7 +116,7 @@ def register(body: RegisterRequest, response: Response, session: Session = Depen
             "An account with this email already exists",
         )
 
-    user = User(email=email, password_hash=hash_password(body.password))
+    user = User(name=name, email=email, password_hash=hash_password(body.password))
     session.add(user)
     session.commit()
     session.refresh(user)
@@ -148,7 +156,20 @@ def _set_auth_cookies(response: Response, access: str, refresh: str):
 @router.get("/me", status_code=200)
 def get_me(user: User = Depends(get_current_user)):
     """Return current user info. Acts as auth check for the frontend."""
-    return {"id": user.id, "email": user.email}
+    return {"id": user.id, "name": user.name, "email": user.email}
+
+@router.patch("/me", status_code=200)
+def update_me(body: UserUpdate, session: Session = Depends(get_session), user: User = Depends(get_current_user)):
+    """Update current user profile info."""
+    if body.name is not None:
+        name = body.name.strip()
+        if not name:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Name cannot be empty")
+        user.name = name
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    return {"id": user.id, "name": user.name, "email": user.email}
 
 @router.post("/login", response_model=TokenResponse)
 def login(body: LoginRequest, request: Request, response: Response, session: Session = Depends(get_session)):
