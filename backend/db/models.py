@@ -128,16 +128,20 @@ class Contact(SQLModel, table=True):
 
     __tablename__ = "contacts"
 
-    id:         str           = Field(default_factory=_new_uuid, primary_key=True)
-    user_id:    Optional[str] = Field(default=None, foreign_key="users.id", index=True)
-    name:       str
-    company:    Optional[str] = Field(default=None)
-    role:       Optional[str] = Field(default=None)
-    email:      Optional[str] = Field(default=None)
-    phone:      Optional[str] = Field(default=None)
-    tags:       Optional[str] = Field(default=None)
-    notes:      Optional[str] = Field(default=None)
-    created_at: datetime      = Field(default_factory=_utc_now)
+    id:                 str           = Field(default_factory=_new_uuid, primary_key=True)
+    user_id:            Optional[str] = Field(default=None, foreign_key="users.id", index=True)
+    name:               str
+    company:            Optional[str] = Field(default=None)
+    role:               Optional[str] = Field(default=None)
+    email:              Optional[str] = Field(default=None)
+    phone:              Optional[str] = Field(default=None)
+    tags:               Optional[str] = Field(default=None)
+    notes:              Optional[str] = Field(default=None)
+    linkedin_url:       Optional[str] = Field(default=None)
+    last_action_status: str           = Field(default="Not Contacted")
+    last_action_date:   Optional[date] = Field(default=None)
+    created_at:         datetime      = Field(default_factory=_utc_now)
+
 
 
 # ---------------------------------------------------------------------------
@@ -267,6 +271,7 @@ class Settings(SQLModel, table=True):
     id:                   Optional[int] = Field(default=None, primary_key=True)
     user_id:              Optional[str] = Field(default=None, foreign_key="users.id", index=True)
     daily_goal:           int           = Field(default=0)
+    daily_calls_goal:     int           = Field(default=0)
     working_hours_start:  str           = Field(default="09:00")
     working_hours_end:    str           = Field(default="18:00")
     telegram_chat_id:     str           = Field(default="")
