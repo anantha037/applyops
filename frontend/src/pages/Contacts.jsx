@@ -15,6 +15,18 @@ const APPLICATION_METHOD_OPTIONS = [
   { label: 'Other', value: 'Other' },
 ]
 
+const ACTION_STATUS_OPTIONS = [
+  { label: 'Not Contacted', value: 'Not Contacted' },
+  { label: 'Outreach Sent', value: 'Outreach Sent' },
+  { label: 'In Conversation', value: 'In Conversation' },
+  { label: 'Meeting Scheduled', value: 'Meeting Scheduled' },
+  { label: 'Referral Secured', value: 'Referral Secured' },
+  { label: 'Interviewing', value: 'Interviewing' },
+  { label: 'Ghosted', value: 'Ghosted' },
+  { label: 'Not Interested', value: 'Not Interested' },
+  { label: 'Closed', value: 'Closed' }
+]
+
 /** Normalise the tags field — backend sends "" or a comma string; UI uses Array.some(). */
 function tagsArr(c) {
   if (Array.isArray(c.tags)) return c.tags
@@ -136,7 +148,8 @@ function AddContactModal({ onClose, onSave }) {
     mark_applied: false,
     application_method: 'LinkedIn Easy Apply',
     tags: '',
-    notes: ''
+    notes: '',
+    linkedin_url: ''
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -288,6 +301,17 @@ function AddContactModal({ onClose, onSave }) {
           </div>
 
           <div>
+            <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">LinkedIn Profile URL</label>
+            <input
+              type="url"
+              placeholder="https://linkedin.com/in/..."
+              className="w-full rounded-xl border border-transparent bg-surface-secondary/60 hover:bg-surface-secondary/80 px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted/60 focus:bg-surface focus:outline-none focus:ring-2 focus:ring-primary/25 transition-all"
+              value={form.linkedin_url}
+              onChange={e => setForm({ ...form, linkedin_url: e.target.value })}
+            />
+          </div>
+
+          <div>
             <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">Notes</label>
             <textarea
               rows={2}
@@ -316,6 +340,60 @@ function AddContactModal({ onClose, onSave }) {
           </div>
         </form>
       </div>
+    </div>
+  )
+}
+
+function InlineLinkedinEdit({ contact, onSave }) {
+  const [editing, setEditing] = useState(false)
+  const [val, setVal] = useState(contact.linkedin_url || '')
+
+  const handleSave = () => {
+    setEditing(false)
+    if (val !== contact.linkedin_url) {
+      onSave(contact.id, val)
+    }
+  }
+
+  if (editing) {
+    return (
+      <input
+        autoFocus
+        type="url"
+        className="w-24 sm:w-32 rounded bg-surface border border-primary/50 px-2 py-1 text-[10px] text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+        value={val}
+        onChange={e => setVal(e.target.value)}
+        onBlur={handleSave}
+        onKeyDown={e => {
+          if (e.key === 'Enter') handleSave()
+          if (e.key === 'Escape') { setVal(contact.linkedin_url || ''); setEditing(false) }
+        }}
+      />
+    )
+  }
+
+  return (
+    <div className="group flex items-center gap-1.5 min-w-[80px]">
+      {contact.linkedin_url ? (
+        <a 
+          href={contact.linkedin_url.startsWith('http') ? contact.linkedin_url : `https://${contact.linkedin_url}`} 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          className="text-primary hover:underline truncate max-w-[100px]"
+          title={contact.linkedin_url}
+        >
+          LinkedIn
+        </a>
+      ) : (
+        <span className="text-muted/50 text-[10px] italic">No URL</span>
+      )}
+      <button 
+        onClick={(e) => { e.stopPropagation(); setVal(contact.linkedin_url || ''); setEditing(true) }} 
+        className="opacity-0 group-hover:opacity-100 p-0.5 rounded text-foreground-secondary hover:text-primary hover:bg-surface-secondary transition-all"
+        title="Edit LinkedIn URL"
+      >
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      </button>
     </div>
   )
 }
@@ -364,6 +442,15 @@ export default function Contacts() {
       throw e
     }
     await load()
+  }
+
+  const handleUpdateLinkedin = async (contactId, newUrl) => {
+    setContacts(prev => prev.map(c => c.id === contactId ? { ...c, linkedin_url: newUrl } : c))
+    try {
+      await api.updateContact(contactId, { linkedin_url: newUrl })
+    } catch (e) {
+      console.error('Failed to update linkedin', e)
+    }
   }
 
   const filtered = useMemo(() => {
@@ -505,7 +592,9 @@ export default function Contacts() {
                 <th className="py-2.5 px-3.5 font-bold">Role</th>
                 <th className="py-2.5 px-3.5 font-bold">Email</th>
                 <th className="py-2.5 px-3.5 font-bold">Phone</th>
+                <th className="py-2.5 px-3.5 font-bold">LinkedIn</th>
                 <th className="py-2.5 px-3.5 font-bold">Application</th>
+                <th className="py-2.5 px-3.5 font-bold">Last Action</th>
                 <th className="py-2.5 px-3.5 font-bold">Last Contact</th>
                 <th className="py-2.5 px-3.5 font-bold text-right">Actions</th>
               </tr>
@@ -533,6 +622,9 @@ export default function Contacts() {
                     <td className="py-3.5 px-3.5 text-foreground-secondary font-medium">{c.role || '—'}</td>
                     <td className="py-3.5 px-3.5 text-foreground-secondary font-medium">{c.email || '—'}</td>
                     <td className="py-3.5 px-3.5 text-foreground-secondary font-medium">{c.phone || '—'}</td>
+                    <td className="py-3.5 px-3.5 text-foreground-secondary font-medium">
+                      <InlineLinkedinEdit contact={c} onSave={handleUpdateLinkedin} />
+                    </td>
                     <td className="py-3.5 px-3.5">
                       {isApplied ? (
                         <div className="flex flex-col">
@@ -555,6 +647,30 @@ export default function Contacts() {
                           </button>
                         </div>
                       )}
+                    </td>
+                    <td className="py-3.5 px-3.5">
+                      <div className="flex flex-col gap-1 w-[160px]">
+                        <Dropdown
+                          size="sm"
+                          options={ACTION_STATUS_OPTIONS}
+                          value={c.last_action_status || 'Not Contacted'}
+                          triggerClassName="bg-surface-secondary/60 text-foreground-secondary hover:text-foreground hover:bg-surface-secondary w-full"
+                          onChange={val => {
+                            const newStatus = val
+                            setContacts(prev => prev.map(contact => contact.id === c.id ? { ...contact, last_action_status: newStatus } : contact))
+                            api.updateContact(c.id, { last_action_status: newStatus }).catch(err => {
+                              console.error(err)
+                              // optionally show an error somewhere
+                            })
+                          }}
+                          align="left"
+                        />
+                        {c.last_action_date && (
+                          <span className="text-[10px] text-muted pl-1">
+                            Updated {formatDate(c.last_action_date)}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="py-3.5 px-3.5">
                       <div className="flex flex-col">
