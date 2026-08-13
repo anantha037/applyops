@@ -110,6 +110,7 @@ class User(SQLModel, table=True):
     __tablename__ = "users"
 
     id:            str      = Field(default_factory=_new_uuid, primary_key=True)
+    name:          str
     email:         str      = Field(unique=True, index=True)   # stored lowercase
     password_hash: str
     created_at:    datetime = Field(default_factory=_utc_now)
