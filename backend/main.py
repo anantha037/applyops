@@ -10,6 +10,7 @@ from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.llm_feedback import GroqFeedbackService
+from backend.routes.activity import router as activity_router
 from backend.routes.analytics import router as analytics_router
 from backend.routes.applications import router as applications_router
 from backend.routes.auth import router as auth_router
@@ -71,6 +72,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(auth_router)
+app.include_router(activity_router, dependencies=[Depends(get_current_user)])
 app.include_router(analytics_router, dependencies=[Depends(get_current_user)])
 app.include_router(applications_router, dependencies=[Depends(get_current_user)])
 app.include_router(calendar_router, dependencies=[Depends(get_current_user)])
