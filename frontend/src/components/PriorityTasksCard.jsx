@@ -5,6 +5,13 @@ import Dropdown from './ui/Dropdown'
 export default function PriorityTasksCard({ tasks: initialPropTasks, onViewAll }) {
   const [tasks, setTasks] = useState(initialPropTasks || [])
   const [filterPriority, setFilterPriority] = useState('all')
+  const [expandedId, setExpandedId] = useState(null)
+
+  React.useEffect(() => {
+    if (initialPropTasks) {
+      setTasks(initialPropTasks)
+    }
+  }, [initialPropTasks])
 
   const toggleComplete = (id, e) => {
     e.stopPropagation()
@@ -63,67 +70,102 @@ export default function PriorityTasksCard({ tasks: initialPropTasks, onViewAll }
       {/* Task List / Empty State */}
       <div className="flex-1 flex flex-col gap-2.5 overflow-y-auto scrollbar-none min-h-[220px]">
         {filteredTasks.length > 0 ? (
-          filteredTasks.map((task) => (
+          filteredTasks.map((task) => {
+            const isExpanded = expandedId === task.id
+            return (
             <div
               key={task.id}
-              className="group relative flex items-center justify-between p-3 rounded-xl bg-surface-secondary/40 hover:bg-surface-secondary/90 dark:hover:bg-surface-tertiary/60 border border-transparent hover:border-border/30 hover:translate-x-1.5 transition-all duration-200 ease-out cursor-pointer shadow-2xs hover:shadow-md overflow-hidden"
+              onClick={() => setExpandedId(isExpanded ? null : task.id)}
+              className="group relative flex flex-col p-3 rounded-xl bg-surface-secondary/40 hover:bg-surface-secondary/90 dark:hover:bg-surface-tertiary/60 border border-transparent hover:border-border/30 hover:translate-x-1.5 transition-all duration-200 ease-out cursor-pointer shadow-2xs hover:shadow-md overflow-hidden"
             >
               {/* Left Hover Indicator Bar */}
               <div className="absolute left-0 top-2 bottom-2 w-1 bg-primary rounded-r-full opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
 
-              {/* Left: Company Icon + Details */}
-              <div className="flex items-center gap-3 min-w-0 flex-1 mr-2 pl-1">
-                {/* Company Logo Badge */}
-                <div className="w-8 h-8 rounded-lg bg-surface flex items-center justify-center flex-shrink-0 overflow-hidden text-xs font-bold text-foreground shadow-2xs group-hover:scale-110 transition-transform duration-200">
-                  <img
-                    src={`https://logo.clearbit.com/${task.domain}`}
-                    alt={task.company}
-                    className="w-full h-full object-contain p-1"
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none'
-                      e.currentTarget.nextSibling.style.display = 'flex'
-                    }}
-                  />
-                  <span className="hidden w-full h-full items-center justify-center bg-primary/10 text-primary font-bold text-xs">
-                    {task.company.charAt(0)}
+              <div className="flex items-center justify-between">
+                {/* Left: Company Icon + Details */}
+                <div className="flex items-center gap-3 min-w-0 flex-1 mr-2 pl-1">
+                  {/* Company Logo Badge */}
+                  <div className="w-8 h-8 rounded-lg bg-surface flex items-center justify-center flex-shrink-0 overflow-hidden text-xs font-bold text-foreground shadow-2xs group-hover:scale-110 transition-transform duration-200">
+                    <img
+                      src={`https://logo.clearbit.com/${task.domain}`}
+                      alt={task.company}
+                      className="w-full h-full object-contain p-1"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none'
+                        e.currentTarget.nextSibling.style.display = 'flex'
+                      }}
+                    />
+                    <span className="hidden w-full h-full items-center justify-center bg-primary/10 text-primary font-bold text-xs">
+                      {task.company.charAt(0)}
+                    </span>
+                  </div>
+
+                  {/* Company Name & Task Title */}
+                  <div className="flex flex-col min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-foreground group-hover:text-primary transition-colors truncate">
+                        {task.company}
+                      </span>
+                      <span className="text-[10px] font-medium text-foreground-secondary truncate">
+                        • {task.taskTitle}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-[10px] font-semibold text-foreground-secondary">
+                        Due {task.dueDate}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right: Priority Badge + Quick Action Checkmark */}
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <span className={`text-[10px] px-2 py-0.5 rounded-md ${getPriorityBadgeClass(task.priority)}`}>
+                    {task.priority}
                   </span>
-                </div>
 
-                {/* Company Name & Task Title */}
-                <div className="flex flex-col min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-foreground group-hover:text-primary transition-colors truncate">
-                      {task.company}
-                    </span>
-                    <span className="text-[10px] font-medium text-foreground-secondary truncate">
-                      • {task.taskTitle}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-[10px] font-semibold text-foreground-secondary">
-                      Due {task.dueDate}
-                    </span>
-                  </div>
+                  <button
+                    onClick={(e) => toggleComplete(task.id, e)}
+                    className="w-7 h-7 rounded-lg bg-surface-secondary/80 hover:bg-emerald-500/20 text-foreground-secondary hover:text-emerald-400 flex items-center justify-center transition-all focus:outline-none shadow-2xs active:scale-95 group-hover:bg-emerald-500/10"
+                    title="Mark as completed"
+                    aria-label="Mark task completed"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </div>
-
-              {/* Right: Priority Badge + Quick Action Checkmark */}
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <span className={`text-[10px] px-2 py-0.5 rounded-md ${getPriorityBadgeClass(task.priority)}`}>
-                  {task.priority}
-                </span>
-
-                <button
-                  onClick={(e) => toggleComplete(task.id, e)}
-                  className="w-7 h-7 rounded-lg bg-surface-secondary/80 hover:bg-emerald-500/20 text-foreground-secondary hover:text-emerald-400 flex items-center justify-center transition-all focus:outline-none shadow-2xs active:scale-95 group-hover:bg-emerald-500/10"
-                  title="Mark as completed"
-                  aria-label="Mark task completed"
-                >
-                  <Check className="w-3.5 h-3.5" />
-                </button>
-              </div>
+              
+              {isExpanded && task.appDetails && (
+                <div className="mt-3 pt-3 border-t border-border/40 text-[11px] text-foreground-secondary space-y-1.5 animate-in slide-in-from-top-2 fade-in duration-200 pl-1">
+                  <div className="flex gap-2">
+                    <span className="font-semibold text-foreground">Status:</span>
+                    <span>{task.appDetails.status}</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="font-semibold text-foreground">Stage:</span>
+                    <span>{task.appDetails.stage}</span>
+                  </div>
+                  {task.appDetails.remarks && (
+                    <div className="flex gap-2 flex-col mt-1 bg-surface/50 p-2 rounded-lg border border-border/50">
+                      <span className="font-semibold text-foreground">Remarks</span>
+                      <span className="whitespace-pre-wrap">{task.appDetails.remarks}</span>
+                    </div>
+                  )}
+                  <div className="mt-2 pt-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        window.location.hash = `#/applications`
+                      }}
+                      className="text-primary hover:underline font-semibold"
+                    >
+                      View application &rarr;
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
-          ))
+          )})
         ) : (
           /* Clean Minimal Empty State */
           <div className="flex-1 flex flex-col items-center justify-center text-center p-6 my-auto">
