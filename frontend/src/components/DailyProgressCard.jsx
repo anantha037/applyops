@@ -4,22 +4,43 @@ import Dropdown from './ui/Dropdown'
 import { useGoalContext } from '../context/GoalContext'
 
 export default function DailyProgressCard({ data: propData }) {
-  const { weeklyGoal, weeklyApplications, weeklyProgress } = useGoalContext()
+  const { weeklyGoal, weeklyApplications, weeklyProgress, applications } = useGoalContext()
   const [timeframe, setTimeframe] = useState('7d')
   const [hoveredIndex, setHoveredIndex] = useState(null)
 
-  const dataset = propData || []
-  
   const timeframeOptions = [
     { value: '7d', label: 'Last 7 Days' },
     { value: '14d', label: 'Last 14 Days' },
   ]
 
+  // Generate dataset from context applications if propData is missing
+  const days = timeframe === '14d' ? 14 : 7
+  const dataset = React.useMemo(() => {
+    if (propData && propData.length > 0) return propData
+    if (!applications) return []
+    
+    const res = []
+    const today = new Date()
+    today.setHours(0,0,0,0)
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(today)
+      d.setDate(d.getDate() - i)
+      const dateStr = d.toISOString().split('T')[0]
+      const count = applications.filter(a => a.date_applied === dateStr).length
+      res.push({
+        date: dateStr,
+        day: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()],
+        count
+      })
+    }
+    return res
+  }, [propData, applications, days])
+  
   const maxVal = Math.max(...dataset.map(d => d.count), 7)
   const todayCount = dataset[dataset.length - 1]?.count || 0
   const yesterdayCount = dataset[dataset.length - 2]?.count || 0
   const totalApps = dataset.reduce((acc, curr) => acc + curr.count, 0)
-  const dailyAvg = (totalApps / dataset.length).toFixed(1)
+  const dailyAvg = dataset.length > 0 ? (totalApps / dataset.length).toFixed(1) : "0.0"
   
   const dayChangePct = yesterdayCount > 0 
     ? Math.round(((todayCount - yesterdayCount) / yesterdayCount) * 100)
@@ -192,12 +213,16 @@ export default function DailyProgressCard({ data: propData }) {
 
         <div className="flex flex-col gap-0.5">
           <span className="text-[10px] font-semibold text-foreground-secondary uppercase tracking-wider">Weekly Goal</span>
-          <div className="flex items-center gap-2">
-            <span className="text-base font-extrabold text-foreground">{weeklyApplications} / {weeklyGoal}</span>
-            <div className="flex-1 h-1.5 bg-surface-tertiary rounded-full overflow-hidden" title={`${weeklyProgress}% complete`}>
-              <div className="h-full bg-primary rounded-full transition-all duration-500" style={{ width: `${Math.min(100, weeklyProgress)}%` }} />
+          {weeklyGoal > 0 ? (
+            <div className="flex items-center gap-2">
+              <span className="text-base font-extrabold text-foreground">{weeklyApplications} / {weeklyGoal}</span>
+              <div className="flex-1 h-1.5 bg-surface-tertiary rounded-full overflow-hidden" title={`${weeklyProgress}% complete`}>
+                <div className="h-full bg-primary rounded-full transition-all duration-500" style={{ width: `${Math.min(100, weeklyProgress)}%` }} />
+              </div>
             </div>
-          </div>
+          ) : (
+            <span className="text-xs font-semibold text-foreground mt-1">No goal set</span>
+          )}
         </div>
 
         {/* Metric 3: Daily Average */}
