@@ -41,6 +41,7 @@ const STATUS_TRIGGER_CLASSES = {
 }
 
 const STATUS_DROPDOWN_OPTIONS = [
+  { label: 'Not Contacted', value: 'Not Contacted', dotColor: 'bg-slate-400' },
   { label: 'In Progress',   value: 'In Progress',   dotColor: 'bg-info' },
   { label: 'Interviewing',  value: 'Interviewing',  dotColor: 'bg-primary' },
   { label: 'Offer Received',value: 'Offer Received',dotColor: 'bg-emerald-400' },
@@ -49,12 +50,13 @@ const STATUS_DROPDOWN_OPTIONS = [
 ]
 
 const STAGE_DROPDOWN_OPTIONS = [
-  { label: 'Recruiter Screen', value: 'Recruiter Screen' },
-  { label: 'Technical Interview', value: 'Technical Interview' },
-  { label: 'Portfolio Review', value: 'Portfolio Review' },
-  { label: 'Managerial Interview', value: 'Managerial Interview' },
-  { label: 'Offer Received', value: 'Offer Received' },
-  { label: 'Rejected', value: 'Rejected' }
+  { label: 'Applied', value: 'Applied' },
+  { label: 'Called', value: 'Called' },
+  { label: 'Emailed', value: 'Emailed' },
+  { label: 'Follow-up 1', value: 'Follow-up 1' },
+  { label: 'Follow-up 2', value: 'Follow-up 2' },
+  { label: 'Follow-up 3', value: 'Follow-up 3' },
+  { label: 'Closed', value: 'Closed' }
 ]
 
 function getFutureDateStr(daysAhead) {
@@ -927,12 +929,12 @@ export default function Applications() {
 
     const updates = { status: newStatus }
     if (newStatus === 'Offer Received') {
-      updates.stage = 'Offer Received'
+      updates.stage = 'Closed'
       if (targetApp.next_action) {
         updates.next_action = { ...targetApp.next_action, time: null, completed: true }
       }
     } else if (newStatus === 'Rejected') {
-      updates.stage = 'Rejected'
+      updates.stage = 'Closed'
       if (targetApp.next_action) {
         updates.next_action = { ...targetApp.next_action, time: null, completed: true }
       }
