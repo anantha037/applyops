@@ -168,22 +168,8 @@ function NextActionCell({ action, onClick }) {
   )
 }
 
-function ViewResumeModal({ resume, onClose }) {
+function ViewResumeModal({ resume, onClose, onDownload }) {
   if (!resume) return null
-
-  const handleDownload = () => {
-    if (resume.url) {
-      window.open(resume.url, '_blank')
-      return
-    }
-    const element = document.createElement('a')
-    const file = new Blob([`Resume document for ${resume.fileName || 'application'}`], { type: 'text/plain' })
-    element.href = URL.createObjectURL(file)
-    element.download = resume.fileName || 'Resume.pdf'
-    document.body.appendChild(element)
-    element.click()
-    document.body.removeChild(element)
-  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in-80 duration-150" onClick={e => e.target === e.currentTarget && onClose()}>
@@ -237,7 +223,7 @@ function ViewResumeModal({ resume, onClose }) {
           </button>
           <button
             type="button"
-            onClick={handleDownload}
+            onClick={onDownload}
             className="flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-white hover:bg-primary-hover transition-all shadow-2xs active:scale-95"
           >
             <Download className="w-3.5 h-3.5" />
@@ -831,14 +817,32 @@ export default function Applications() {
 
   const load = () => {
     setLoading(true)
-    api.applications()
-      .then(setApps)
-      .catch(e => setError(e.message))
-      .finally(() => setLoading(false))
-      
-    api.listResumes()
-      .then(setResumes)
-      .catch(e => console.error("Failed to load resumes", e))
+    Promise.all([
+      api.applications(),
+      api.listResumes().catch(e => {
+        console.error("Failed to load resumes", e)
+        return []
+      })
+    ])
+    .then(([fetchedApps, fetchedResumes]) => {
+      setResumes(fetchedResumes)
+      const appsWithResumes = fetchedApps.map(app => {
+        if (app.resume_id) {
+          const resObj = fetchedResumes.find(r => r.id === app.resume_id)
+          if (resObj) {
+            app.resume = {
+              id: resObj.id,
+              fileName: resObj.filename,
+              fileSize: '—'
+            }
+          }
+        }
+        return app
+      })
+      setApps(appsWithResumes)
+    })
+    .catch(e => setError(e.message))
+    .finally(() => setLoading(false))
   }
   useEffect(() => { load() }, [])
 
@@ -980,24 +984,27 @@ export default function Applications() {
     }
   }
 
+  const updateAppRemarks = (appId, newRemarks) => {
+    setApps(prev => prev.map(a => a.id === appId ? { ...a, remarks: newRemarks } : a))
+    api.updateApplication(appId, { remarks: newRemarks }).catch(e => setError(e.message))
+  }
+
   const updateAppStage = (appId, newStage) => {
     const updates = { stage: newStage }
     setApps(prev => prev.map(a => a.id === appId ? { ...a, ...updates } : a))
     api.updateApplication(appId, updates).catch(e => setError(e.message))
   }
 
-  const handleDownloadResume = (res) => {
-    if (res?.url) {
-      window.open(res.url, '_blank')
-      return
+  const handleDownloadResume = async (res) => {
+    try {
+      const data = await api.getResumeUrl(res.id)
+      if (data && data.url) {
+        window.open(data.url, '_blank')
+      }
+    } catch (e) {
+      console.error(e)
+      setError("Failed to open resume URL")
     }
-    const element = document.createElement('a')
-    const file = new Blob([`Resume document for ${res?.fileName || 'application'}`], { type: 'text/plain' })
-    element.href = URL.createObjectURL(file)
-    element.download = res?.fileName || 'Resume.pdf'
-    document.body.appendChild(element)
-    element.click()
-    document.body.removeChild(element)
   }
 
   const statuses = ['All', ...Array.from(new Set(apps.map(a => a.status)))]
@@ -1201,6 +1208,7 @@ export default function Applications() {
                 <th className="px-5 py-3.5 font-extrabold">Stage</th>
                 <th className="px-5 py-3.5 font-extrabold">Applied On</th>
                 <th className="px-5 py-3.5 font-extrabold">Next Action</th>
+                <th className="px-5 py-3.5 font-extrabold">Remarks</th>
                 <th className="px-5 py-3.5 font-extrabold">Resume</th>
               </tr>
             </thead>
@@ -1236,7 +1244,7 @@ export default function Applications() {
                 ))
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-16 text-center text-xs text-muted">
+                  <td colSpan={8} className="py-16 text-center text-xs text-muted">
                     No applications match the current filter parameters.
                   </td>
                 </tr>
@@ -1289,6 +1297,19 @@ export default function Applications() {
                         <NextActionCell
                           action={app.next_action || (app.next_action_due ? { date: app.next_action_due, title: 'Follow up' } : null)}
                           onClick={() => setEditActionApp(app)}
+                        />
+                      </td>
+
+                      <td className="px-5 py-4">
+                        <input
+                          className="bg-transparent text-xs font-medium text-foreground placeholder:text-muted/50 focus:outline-none focus:ring-1 focus:ring-primary/40 rounded px-2 py-1 w-full max-w-[150px] transition-all hover:bg-surface-secondary/40"
+                          placeholder="Add remarks..."
+                          defaultValue={app.remarks || ''}
+                          onBlur={e => {
+                            if (e.target.value !== (app.remarks || '')) {
+                              updateAppRemarks(app.id, e.target.value)
+                            }
+                          }}
                         />
                       </td>
 
@@ -1355,7 +1376,7 @@ export default function Applications() {
       </div>
 
       {previewResume && (
-        <ViewResumeModal resume={previewResume} onClose={() => setPreviewResume(null)} />
+        <ViewResumeModal resume={previewResume} onClose={() => setPreviewResume(null)} onDownload={() => handleDownloadResume(previewResume)} />
       )}
     </section>
   )
