@@ -123,8 +123,9 @@ function MiniCalendar({ selected, onSelect, eventDates = [] }) {
   )
 }
 
-// ── Upcoming Events List ─────────────────────────────────────────────────────
 function UpcomingEvents({ events = [], loading = false, selectedDate }) {
+  const [expandedId, setExpandedId] = useState(null)
+
   if (loading) {
     return (
       <div className="space-y-3 select-none">
@@ -186,15 +187,57 @@ function UpcomingEvents({ events = [], loading = false, selectedDate }) {
               {evs.map(ev => {
                 const cfg = TYPE_CONFIG[ev.event_type] || TYPE_CONFIG['Personal']
                 const TypeIcon = cfg.Icon
+                const isExpanded = expandedId === ev.id
                 return (
-                  <div key={ev.id} className="flex items-center gap-2.5 p-2.5 rounded-xl bg-surface-secondary/40 hover:bg-surface-secondary/80 transition-colors group">
-                    <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: cfg.bg, color: cfg.color }}>
-                      <TypeIcon className="w-3.5 h-3.5" />
+                  <div key={ev.id} className="flex flex-col rounded-xl bg-surface-secondary/40 hover:bg-surface-secondary/80 transition-colors group overflow-hidden">
+                    <div 
+                      className="flex items-center gap-2.5 p-2.5 cursor-pointer"
+                      onClick={() => setExpandedId(isExpanded ? null : ev.id)}
+                    >
+                      <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: cfg.bg, color: cfg.color }}>
+                        <TypeIcon className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold text-foreground truncate">{ev.title}</p>
+                        <p className="text-[10px] text-foreground-secondary font-medium">{ev.event_type} {ev.time ? `• ${ev.time}` : ''}</p>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold text-foreground truncate">{ev.title}</p>
-                      <p className="text-[10px] text-foreground-secondary font-medium">{ev.event_type} {ev.time ? `• ${ev.time}` : ''}</p>
-                    </div>
+                    
+                    {isExpanded && (
+                      <div className="px-10 pb-3 text-[11px] text-foreground-secondary space-y-1.5 animate-in slide-in-from-top-2 fade-in duration-200">
+                        {ev.time && (
+                          <div className="flex gap-2">
+                            <span className="font-semibold text-foreground">Time:</span>
+                            <span>{ev.time}</span>
+                          </div>
+                        )}
+                        {ev.event_type && (
+                          <div className="flex gap-2">
+                            <span className="font-semibold text-foreground">Type:</span>
+                            <span>{ev.event_type}</span>
+                          </div>
+                        )}
+                        {ev.notes && (
+                          <div className="flex gap-2 flex-col mt-1 bg-surface/50 p-2 rounded-lg border border-border/50">
+                            <span className="font-semibold text-foreground">Notes</span>
+                            <span className="whitespace-pre-wrap">{ev.notes}</span>
+                          </div>
+                        )}
+                        {ev.related_application_id && (
+                          <div className="mt-2 pt-2 border-t border-border/50">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                window.location.hash = `#/applications`
+                              }}
+                              className="text-primary hover:underline font-semibold"
+                            >
+                              View related application &rarr;
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )
               })}
