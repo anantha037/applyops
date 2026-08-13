@@ -308,12 +308,12 @@ export default function Settings() {
                     type="button"
                     onClick={() => toggleNotification('app_reminders')}
                     className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out focus:outline-none ${
-                      notifications.app_reminders ? 'bg-primary' : 'bg-surface-tertiary'
+                      settings.app_reminders ? 'bg-primary' : 'bg-surface-tertiary'
                     }`}
                   >
                     <span
                       className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-xs transition duration-200 ease-in-out my-0.5 ${
-                        notifications.app_reminders ? 'translate-x-5.5' : 'translate-x-0.5'
+                        settings.app_reminders ? 'translate-x-5.5' : 'translate-x-0.5'
                       }`}
                     />
                   </button>
@@ -331,12 +331,12 @@ export default function Settings() {
                     type="button"
                     onClick={() => toggleNotification('followup_reminders')}
                     className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out focus:outline-none ${
-                      notifications.followup_reminders ? 'bg-primary' : 'bg-surface-tertiary'
+                      settings.followup_reminders ? 'bg-primary' : 'bg-surface-tertiary'
                     }`}
                   >
                     <span
                       className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-xs transition duration-200 ease-in-out my-0.5 ${
-                        notifications.followup_reminders ? 'translate-x-5.5' : 'translate-x-0.5'
+                        settings.followup_reminders ? 'translate-x-5.5' : 'translate-x-0.5'
                       }`}
                     />
                   </button>
@@ -354,12 +354,12 @@ export default function Settings() {
                     type="button"
                     onClick={() => toggleNotification('interview_reminders')}
                     className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out focus:outline-none ${
-                      notifications.interview_reminders ? 'bg-primary' : 'bg-surface-tertiary'
+                      settings.interview_reminders ? 'bg-primary' : 'bg-surface-tertiary'
                     }`}
                   >
                     <span
                       className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-xs transition duration-200 ease-in-out my-0.5 ${
-                        notifications.interview_reminders ? 'translate-x-5.5' : 'translate-x-0.5'
+                        settings.interview_reminders ? 'translate-x-5.5' : 'translate-x-0.5'
                       }`}
                     />
                   </button>
@@ -377,12 +377,12 @@ export default function Settings() {
                     type="button"
                     onClick={() => toggleNotification('daily_progress')}
                     className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out focus:outline-none ${
-                      notifications.daily_progress ? 'bg-primary' : 'bg-surface-tertiary'
+                      settings.daily_progress ? 'bg-primary' : 'bg-surface-tertiary'
                     }`}
                   >
                     <span
                       className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-xs transition duration-200 ease-in-out my-0.5 ${
-                        notifications.daily_progress ? 'translate-x-5.5' : 'translate-x-0.5'
+                        settings.daily_progress ? 'translate-x-5.5' : 'translate-x-0.5'
                       }`}
                     />
                   </button>
@@ -400,12 +400,12 @@ export default function Settings() {
                     type="button"
                     onClick={() => toggleNotification('streak_alerts')}
                     className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out focus:outline-none ${
-                      notifications.streak_alerts ? 'bg-primary' : 'bg-surface-tertiary'
+                      settings.streak_alerts ? 'bg-primary' : 'bg-surface-tertiary'
                     }`}
                   >
                     <span
                       className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-xs transition duration-200 ease-in-out my-0.5 ${
-                        notifications.streak_alerts ? 'translate-x-5.5' : 'translate-x-0.5'
+                        settings.streak_alerts ? 'translate-x-5.5' : 'translate-x-0.5'
                       }`}
                     />
                   </button>
