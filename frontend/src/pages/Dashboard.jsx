@@ -4,6 +4,7 @@ import ApplicationFunnel from '../components/ApplicationFunnel'
 import ApplicationsByStatus from '../components/ApplicationsByStatus'
 import PriorityTasksCard from '../components/PriorityTasksCard'
 import DailyProgressCard from '../components/DailyProgressCard'
+import CallsProgressCard from '../components/CallsProgressCard'
 import RecentActivityCard from '../components/RecentActivityCard'
 import MiniCalendarCard from '../components/MiniCalendarCard'
 import ApplicationStreakCard from '../components/ApplicationStreakCard'
@@ -96,7 +97,18 @@ export default function Dashboard() {
       <div className="grid gap-6 lg:grid-cols-3">
         <ApplicationFunnel summary={summary} />
         <ApplicationsByStatus summary={summary} />
-        <PriorityTasksCard />
+        <PriorityTasksCard 
+          tasks={data.due?.map(app => ({
+            id: app.id,
+            company: app.company,
+            taskTitle: `Follow-up: ${app.job_title}`,
+            dueDate: app.next_action_due,
+            priority: 'high',
+            completed: false,
+            domain: `${app.company.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`,
+            appDetails: app
+          })) || []}
+        />
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
@@ -105,6 +117,7 @@ export default function Dashboard() {
           <RecentActivityCard />
         </div>
         <div className="flex flex-col gap-6">
+          <CallsProgressCard summary={summary} />
           <div className="panel rounded-2xl p-5 border border-border bg-surface shadow-xs flex flex-col justify-between">
             <h3 className="text-sm font-bold text-foreground mb-4">Quick Actions</h3>
             <div className="grid grid-cols-2 gap-3 flex-1">
