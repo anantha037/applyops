@@ -16,6 +16,7 @@ async function request(path, options = {}, isRetry = false) {
 
   try {
     let response = await fetch(`${baseUrl}${path}`, {
+      cache: 'no-store',
       ...options,
       headers,
       credentials: 'include',
