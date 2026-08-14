@@ -159,6 +159,7 @@ class Resume(SQLModel, table=True):
     user_id:     Optional[str] = Field(default=None, foreign_key="users.id", index=True)
     filename:    str
     storage_key: str                             # object key in R2 — never a public URL
+    file_hash:   str                             # SHA-256 hash of the PDF bytes
     label:       Optional[str] = Field(default=None)
     uploaded_at: datetime      = Field(default_factory=_utc_now)
 
@@ -178,6 +179,7 @@ class Application(SQLModel, table=True):
     company:             str
     job_title:           str
     jd_summary:          Optional[str] = Field(default=None)
+    location:            Optional[str] = Field(default=None)
     application_method:  Optional[str] = Field(default=None)
     contact_id:          Optional[str] = Field(default=None, foreign_key="contacts.id")
     resume_id:           Optional[str] = Field(default=None, foreign_key="resumes.id")
@@ -298,6 +300,7 @@ class RefreshToken(SQLModel, table=True):
     expires_at:  datetime
     created_at:  datetime = Field(default_factory=_utc_now)
     revoked:     bool     = Field(default=False)
+    revoked_at:  Optional[datetime] = Field(default=None)
 
 
 # ---------------------------------------------------------------------------
