@@ -178,6 +178,14 @@ def rotate_refresh_token(raw_token: str, session: Session) -> tuple[str, str]:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
 
     if rt.revoked:
+        if rt.revoked_at and _utc_now() - _ensure_aware(rt.revoked_at) < timedelta(seconds=30):
+            # Grace period active (concurrent request fallback). Return 409 to prevent family revocation.
+            logger.info("Concurrent refresh detected within grace period for user %s. Returning 409.", user.id)
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Concurrent refresh detected",
+            )
+
         # Token Reuse Detected! Revoke the entire family for this user.
         logger.warning("Token reuse detected for user %s! Revoking all refresh tokens.", user.id)
         all_user_tokens = session.exec(
@@ -194,6 +202,7 @@ def rotate_refresh_token(raw_token: str, session: Session) -> tuple[str, str]:
 
     # Valid rotation: revoke old token
     rt.revoked = True
+    rt.revoked_at = _utc_now()
     session.add(rt)
     session.commit()
 
