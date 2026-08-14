@@ -178,7 +178,7 @@ def rotate_refresh_token(raw_token: str, session: Session) -> tuple[str, str]:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
 
     if rt.revoked:
-        if rt.revoked_at and _utc_now() - _ensure_aware(rt.revoked_at) < timedelta(seconds=30):
+        if rt.revoked_at and _utc_now() - _ensure_aware(rt.revoked_at) < timedelta(seconds=5):
             # Grace period active (concurrent request fallback). Return 409 to prevent family revocation.
             logger.info("Concurrent refresh detected within grace period for user %s. Returning 409.", user.id)
             raise HTTPException(
