@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api/client'
 import Dropdown from '../components/ui/Dropdown'
+import ManageResumesModal from '../components/ManageResumesModal'
 import {
   Plus, X, Search, Check, AlertCircle, Calendar, Sparkles,
   Briefcase, Send, Clock, CalendarCheck, Trophy, XCircle, Ghost, ChevronDown, ChevronUp,
   FileText, Eye, Download
 } from 'lucide-react'
 
-const METHODS = ['LinkedIn Easy Apply', 'Company Website', 'Indeed', 'Email', 'Referral', 'Cold Call', 'Other']
 
 const METHOD_DROPDOWN_OPTIONS = METHODS.map(m => ({ label: m, value: m }))
 
@@ -171,65 +171,76 @@ function NextActionCell({ action, onClick }) {
 }
 
 function ViewResumeModal({ resume, onClose, onDownload }) {
+  const [url, setUrl] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    if (resume && resume.id) {
+      setLoading(true)
+      api.getResumeUrl(resume.id)
+        .then(data => setUrl(data.url))
+        .catch(err => setError(err.message))
+        .finally(() => setLoading(false))
+    }
+  }, [resume])
+
   if (!resume) return null
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in-80 duration-150" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="bg-surface rounded-2xl border border-white/5 shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto scrollbar-none select-none flex flex-col">
-        <div className="flex items-center justify-between px-6 pt-5 pb-3 border-b border-white/5">
+      <div className="bg-surface rounded-2xl border border-border shadow-2xl w-full max-w-4xl h-[90vh] flex flex-col overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-surface-secondary/30">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
               <FileText className="w-5 h-5" />
             </div>
             <div>
               <h3 className="text-base font-bold text-foreground">Resume Preview</h3>
-              <p className="text-xs text-foreground-secondary font-medium">{resume.fileName} • PDF · {resume.fileSize}</p>
+              <p className="text-xs text-foreground-secondary font-medium truncate max-w-md" title={resume.fileName || resume.filename}>{resume.fileName || resume.filename}</p>
             </div>
           </div>
-          <button onClick={onClose} className="rounded-lg p-1.5 text-foreground-secondary hover:text-foreground hover:bg-surface-secondary/80 transition-colors">
+          <button onClick={onClose} className="rounded-lg p-1.5 text-foreground-secondary hover:text-foreground hover:bg-surface-tertiary transition-colors">
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="p-6 flex-1 bg-surface-secondary/30 my-2 mx-6 rounded-xl border border-transparent flex flex-col gap-4 text-xs font-sans text-foreground">
-          <div className="border-b border-white/5 pb-3 flex justify-between items-start">
-            <div>
-              <h4 className="text-base font-bold text-foreground">John Doe</h4>
-              <p className="text-xs font-medium text-primary">Senior Frontend Engineer</p>
+        <div className="flex-1 bg-background relative overflow-hidden">
+          {loading && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
             </div>
-            <span className="text-[10px] font-semibold text-foreground-secondary/70">San Francisco, CA • john.doe@email.com</span>
-          </div>
-
-          <div>
-            <h5 className="text-[11px] font-bold text-foreground uppercase tracking-wider mb-1">Professional Summary</h5>
-            <p className="text-foreground-secondary leading-relaxed">
-              Experienced Senior Frontend Engineer with 7+ years of expertise building high-performance web applications using React, TypeScript, and modern CSS architecture.
-            </p>
-          </div>
-
-          <div>
-            <h5 className="text-[11px] font-bold text-foreground uppercase tracking-wider mb-1">Technical Skills</h5>
-            <p className="text-foreground-secondary">
-              React, Next.js, Vite, TypeScript, JavaScript (ES6+), Tailwind CSS, State Management, GraphQL, REST APIs.
-            </p>
-          </div>
+          )}
+          {error && (
+            <div className="absolute inset-0 flex items-center justify-center flex-col gap-2 text-foreground-secondary">
+              <AlertCircle className="w-8 h-8 text-red-500/70" />
+              <p className="text-sm font-medium">Failed to load preview: {error}</p>
+            </div>
+          )}
+          {url && (
+            <iframe 
+              src={`${url}#toolbar=0`} 
+              className="w-full h-full border-0"
+              title="Resume PDF Preview"
+            />
+          )}
         </div>
 
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-white/5">
+        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border bg-surface-secondary/30">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl px-4 py-2 text-xs font-semibold text-foreground-secondary hover:bg-surface-secondary/60 transition-colors"
+            className="rounded-xl px-4 py-2 text-xs font-bold text-foreground-secondary hover:text-foreground hover:bg-surface-tertiary transition-colors"
           >
             Close
           </button>
           <button
             type="button"
             onClick={onDownload}
-            className="flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-white hover:bg-primary-hover transition-all shadow-2xs active:scale-95"
+            className="flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-white hover:bg-primary-hover transition-all shadow-2xs active:scale-95"
           >
             <Download className="w-3.5 h-3.5" />
-            <span>Download</span>
+            <span>Download PDF</span>
           </button>
         </div>
       </div>
@@ -528,7 +539,7 @@ function PostCreateBanner({ info, onDismiss, onEdit }) {
   )
 }
 
-function NewApplicationModal({ isOpen, onClose, onSubmit, form, setForm, resumes = [], onUploadResume }) {
+function NewApplicationModal({ isOpen, onClose, onSubmit, form, setForm, resumes = [], onUploadResume, onManageResumes }) {
   if (!isOpen) return null
 
   return (
@@ -575,6 +586,16 @@ function NewApplicationModal({ isOpen, onClose, onSubmit, form, setForm, resumes
               className="w-full rounded-xl border border-transparent bg-surface-secondary hover:bg-surface-tertiary px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/25 transition-all"
               value={form.job_title}
               onChange={e => setForm({ ...form, job_title: e.target.value })}
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">Location (Optional)</label>
+            <input
+              placeholder="e.g. San Francisco, Remote, NYC"
+              className="w-full rounded-xl border border-transparent bg-surface-secondary hover:bg-surface-tertiary px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/25 transition-all"
+              value={form.location}
+              onChange={e => setForm({ ...form, location: e.target.value })}
             />
           </div>
 
@@ -663,9 +684,12 @@ function NewApplicationModal({ isOpen, onClose, onSubmit, form, setForm, resumes
             
             <div className="space-y-3 p-3.5 rounded-xl bg-surface-secondary/40 border border-transparent">
               <div>
-                <label className="block text-[11px] font-semibold text-foreground-secondary mb-1">Select existing resume</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-[11px] font-semibold text-foreground-secondary">Select existing resume</label>
+                  <button type="button" onClick={onManageResumes} className="text-[10px] font-bold text-primary hover:text-primary-hover">Manage Resumes</button>
+                </div>
                 <Dropdown
-                  options={[{label: 'None', value: ''}, ...resumes.map(r => ({ label: r.filename, value: r.id }))]}
+                  options={[{label: 'None', value: ''}, ...resumes.map(r => ({ label: `${r.filename} (Uploaded: ${r.uploaded_at ? r.uploaded_at.split('T')[0] : 'Unknown'})`, value: r.id }))]}
                   value={form.resume_id}
                   onChange={val => setForm({ ...form, resume_id: val })}
                   className="w-full"
@@ -784,6 +808,7 @@ function NewApplicationModal({ isOpen, onClose, onSubmit, form, setForm, resumes
 const EMPTY_FORM = {
   company: '',
   job_title: '',
+  location: '',
   application_method: 'LinkedIn Easy Apply',
   has_contact: false,
   contact_name: '',
@@ -814,6 +839,7 @@ export default function Applications() {
   const [filterStage, setFilterStage] = useState('All')
   const [search, setSearch] = useState('')
   const [isExpanded, setIsExpanded] = useState(false)
+  const [showManageResumes, setShowManageResumes] = useState(false)
   
   const [resumes, setResumes] = useState([])
 
@@ -854,12 +880,36 @@ export default function Applications() {
       setResumes(prev => [...prev, result])
       setForm(prev => ({ ...prev, resume_id: result.id }))
     } catch (e) {
-      setError(e.message)
+      if (e.status === 409 && e.existing_resume) {
+        if (window.confirm(`${e.message}\n\nWould you like to use this existing resume instead?`)) {
+          setForm(prev => ({ ...prev, resume_id: e.existing_resume.id }))
+        }
+      } else {
+        setError(e.message)
+      }
+    }
+  }
+
+  const handleResumeDeleted = (id) => {
+    if (form.resume_id === id) {
+      setForm(prev => ({ ...prev, resume_id: '' }))
     }
   }
 
   const submit = e => {
     e.preventDefault()
+    
+    const isDuplicate = apps.find(a => 
+      a.company?.trim().toLowerCase() === form.company?.trim().toLowerCase() && 
+      a.job_title?.trim().toLowerCase() === form.job_title?.trim().toLowerCase()
+    )
+
+    if (isDuplicate) {
+      if (!window.confirm(`You already have an existing application for '${isDuplicate.job_title}' at '${isDuplicate.company}' (Applied on ${isDuplicate.date_applied || 'an unknown date'}).\n\nAre you sure you want to create a new, separate application track for this?`)) {
+        return
+      }
+    }
+
     const nextActionObj = form.enable_next_action ? {
       id: `act_${Date.now()}`,
       type: form.next_action_type,
@@ -873,6 +923,7 @@ export default function Applications() {
     const payload = {
       company: form.company,
       job_title: form.job_title,
+      location: form.location,
       application_method: form.application_method,
       next_action: nextActionObj,
       next_action_due: nextActionObj?.date || null,
@@ -991,6 +1042,11 @@ export default function Applications() {
     api.updateApplication(appId, { remarks: newRemarks }).catch(e => setError(e.message))
   }
 
+  const updateAppLocation = (appId, newLocation) => {
+    setApps(prev => prev.map(a => a.id === appId ? { ...a, location: newLocation } : a))
+    api.updateApplication(appId, { location: newLocation }).catch(e => setError(e.message))
+  }
+
   const updateAppStage = (appId, newStage) => {
     const updates = { stage: newStage }
     setApps(prev => prev.map(a => a.id === appId ? { ...a, ...updates } : a))
@@ -1086,6 +1142,15 @@ export default function Applications() {
         setForm={setForm}
         resumes={resumes}
         onUploadResume={handleUploadResume}
+        onManageResumes={() => setShowManageResumes(true)}
+      />
+
+      <ManageResumesModal
+        isOpen={showManageResumes}
+        onClose={() => setShowManageResumes(false)}
+        resumes={resumes}
+        setResumes={setResumes}
+        onResumeDeleted={handleResumeDeleted}
       />
 
       {editActionApp && (
@@ -1206,6 +1271,7 @@ export default function Applications() {
               <tr className="text-[10px] font-extrabold uppercase tracking-wider text-foreground-secondary">
                 <th className="px-5 py-3.5 font-extrabold">Company</th>
                 <th className="px-5 py-3.5 font-extrabold">Role</th>
+                <th className="px-5 py-3.5 font-extrabold">Location</th>
                 <th className="px-5 py-3.5 font-extrabold">Status</th>
                 <th className="px-5 py-3.5 font-extrabold">Stage</th>
                 <th className="px-5 py-3.5 font-extrabold">Applied On</th>
@@ -1228,6 +1294,9 @@ export default function Applications() {
                       <div className="h-3 w-32 rounded bg-surface-secondary" />
                     </td>
                     <td className="px-5 py-4">
+                      <div className="h-3 w-20 rounded bg-surface-secondary" />
+                    </td>
+                    <td className="px-5 py-4">
                       <div className="h-5 w-20 rounded-full bg-surface-secondary" />
                     </td>
                     <td className="px-5 py-4">
@@ -1246,7 +1315,7 @@ export default function Applications() {
                 ))
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-16 text-center text-xs text-muted">
+                  <td colSpan={9} className="py-16 text-center text-xs text-muted">
                     No applications match the current filter parameters.
                   </td>
                 </tr>
@@ -1269,6 +1338,22 @@ export default function Applications() {
                             <span className="text-[10px] text-foreground-secondary/70">{app.application_method}</span>
                           )}
                         </div>
+                      </td>
+
+                      <td className="px-5 py-4">
+                        <input
+                          className="bg-transparent text-xs font-medium text-foreground placeholder:text-muted/50 focus:outline-none focus:ring-1 focus:ring-primary/40 rounded px-2 py-1 w-full max-w-[120px] transition-all hover:bg-surface-secondary/40"
+                          placeholder="Add location..."
+                          defaultValue={app.location || ''}
+                          onBlur={e => {
+                            if (e.target.value !== (app.location || '')) {
+                              updateAppLocation(app.id, e.target.value)
+                            }
+                          }}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') e.target.blur()
+                          }}
+                        />
                       </td>
 
                       <td className="px-5 py-4">
