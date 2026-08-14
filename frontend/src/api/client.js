@@ -4,6 +4,34 @@ const isBrowser = typeof window !== 'undefined' && typeof localStorage !== 'unde
 
 let refreshPromise = null
 
+async function _doRefresh() {
+  try {
+    const refreshRes = await fetch(`${baseUrl}/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({})
+    })
+    
+    // 409 means backend grace period caught a concurrent refresh and didn't revoke family.
+    // The other tab handled the actual rotation, so we treat 409 as success here.
+    if (refreshRes.ok || refreshRes.status === 409) {
+      if (isBrowser) localStorage.setItem('applyops_is_logged_in', '1')
+      return true
+    } else {
+      if (isBrowser) localStorage.removeItem('applyops_is_logged_in')
+      window.dispatchEvent(new Event('auth:unauthorized'))
+      return false
+    }
+  } catch (err) {
+    if (isBrowser) localStorage.removeItem('applyops_is_logged_in')
+    window.dispatchEvent(new Event('auth:unauthorized'))
+    return false
+  } finally {
+    refreshPromise = null
+  }
+}
+
 async function request(path, options = {}, isRetry = false) {
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), 30_000)
@@ -27,35 +55,31 @@ async function request(path, options = {}, isRetry = false) {
     const isLoggedIn = isBrowser && localStorage.getItem('applyops_is_logged_in') === '1';
     if (response.status === 401 && !isRetry && isLoggedIn && !path.startsWith('/auth/')) {
       try {
-        if (!refreshPromise) {
-          refreshPromise = fetch(`${baseUrl}/auth/refresh`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({})
-          }).then(async refreshRes => {
-            if (refreshRes.ok) {
-              const data = await refreshRes.json()
-              if (isBrowser) localStorage.setItem('applyops_is_logged_in', '1')
-              return true
-            } else {
-              if (isBrowser) localStorage.removeItem('applyops_is_logged_in')
-              window.dispatchEvent(new Event('auth:unauthorized'))
-              return false
+        let success = false;
+        
+        if (isBrowser && navigator.locks) {
+          success = await navigator.locks.request('applyops_refresh', { mode: 'exclusive' }, async () => {
+            let retry = await fetch(`${baseUrl}${path}`, {
+              cache: 'no-store',
+              ...options,
+              headers,
+              credentials: 'include',
+              signal: controller.signal,
+            })
+            if (retry.status !== 401) {
+              response = retry;
+              return true;
             }
-          }).catch(() => {
-            if (isBrowser) localStorage.removeItem('applyops_is_logged_in')
-            window.dispatchEvent(new Event('auth:unauthorized'))
-            return false
-          }).finally(() => {
-            refreshPromise = null
+            return await _doRefresh()
           })
+        } else {
+          if (!refreshPromise) refreshPromise = _doRefresh()
+          success = await refreshPromise
         }
 
-        const success = await refreshPromise
-        if (success) {
-          // Retry original request
+        if (success && response.status === 401) {
           response = await fetch(`${baseUrl}${path}`, {
+            cache: 'no-store',
             ...options,
             headers,
             credentials: 'include',
@@ -121,10 +145,17 @@ export const resumesApi = {
     })
     if (!response.ok) {
       const errorBody = await response.json().catch(() => ({}))
+      if (typeof errorBody.detail === 'object' && errorBody.detail !== null && errorBody.detail.message) {
+        const err = new Error(errorBody.detail.message)
+        err.existing_resume = errorBody.detail.existing_resume
+        err.status = response.status
+        throw err
+      }
       throw new Error(errorBody.detail ?? `Upload failed with status ${response.status}`)
     }
     return response.json()
-  }
+  },
+  deleteResume: (id) => request(`/resumes/${id}`, { method: 'DELETE' })
 }
 
 export const contactsApi = {
@@ -219,6 +250,7 @@ export const api = {
   listResumes: resumesApi.listResumes,
   getResumeUrl: resumesApi.getResumeUrl,
   uploadResume: resumesApi.uploadResume,
+  deleteResume: resumesApi.deleteResume,
   updateMe: authApi.updateMe,
   me: authApi.me
 }
