@@ -943,6 +943,12 @@ class ResumeMeta:
         self.uploaded_at = uploaded_at
 
 
+class ResumeDuplicateException(Exception):
+    def __init__(self, existing_resume: ResumeMeta):
+        self.existing_resume = existing_resume
+        super().__init__("Resume already exists")
+
+
 def upload_resume(
     user_id: str,
     file: IO[bytes],
@@ -971,6 +977,22 @@ def upload_resume(
             f"Resume too large: {len(data):,} bytes (max {MAX_RESUME_BYTES:,} bytes / 10 MB)"
         )
 
+    import hashlib
+    file_hash = hashlib.sha256(data).hexdigest()
+
+    with Session(engine) as session:
+        existing = session.exec(select(Resume).where(Resume.user_id == user_id, Resume.file_hash == file_hash)).first()
+        if existing:
+            raise ResumeDuplicateException(
+                ResumeMeta(
+                    id=existing.id,
+                    filename=existing.filename,
+                    storage_key=existing.storage_key,
+                    label=existing.label,
+                    uploaded_at=existing.uploaded_at,
+                )
+            )
+
     resume_id   = _new_id()
     storage_key = f"{user_id}/resumes/{resume_id}.pdf"
 
@@ -990,6 +1012,7 @@ def upload_resume(
             user_id=user_id,
             filename=filename,
             storage_key=storage_key,
+            file_hash=file_hash,
             label=label or None,
             uploaded_at=datetime.now(timezone.utc),
         )
@@ -1044,22 +1067,25 @@ def get_resume_presigned_url(
     )
     return url
 
-
-def delete_resume(user_id: str, resume_id: str) -> bool:
-    """Delete a resume from R2 and remove its Postgres metadata row."""
+def delete_resume(user_id: str, resume_id: str) -> None:
     with Session(engine) as session:
-        row = session.get(Resume, resume_id)
-        if row is None or row.user_id != user_id:
-            return False
-        storage_key = row.storage_key
-        session.delete(row)
+        resume = session.exec(select(Resume).where(Resume.user_id == user_id, Resume.id == resume_id)).first()
+        if not resume:
+            raise ValueError("Resume not found")
+            
+        apps_count = session.exec(select(func.count(Application.id)).where(Application.resume_id == resume_id)).one()
+        if apps_count > 0:
+            raise ValueError(f"Cannot delete this resume because it is attached to {apps_count} application(s).")
+            
+        client = get_r2_client()
+        client.delete_object(
+            Bucket=R2_BUCKET_NAME,
+            Key=resume.storage_key,
+        )
+        
+        session.delete(resume)
         session.commit()
 
-    # Best-effort R2 delete — don't let an R2 error leave orphan metadata
-    try:
-        client = get_r2_client()
-        client.delete_object(Bucket=R2_BUCKET_NAME, Key=storage_key)
-    except Exception:
-        pass  # Log in Phase D; not critical for Phase B
 
-    return True
+
+    # Replaced by updated delete_resume above.
