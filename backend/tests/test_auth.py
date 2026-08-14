@@ -142,11 +142,19 @@ def test_refresh_token_rotation(unique_email, valid_password):
     new_refresh = res_refresh.cookies.get("applyops_refresh_token")
     assert new_refresh != refresh_token
 
-    # Using old refresh token again should trigger family revocation
+    # Using old refresh token again IMMEDIATELY should trigger the grace period (409)
     client.cookies.set("applyops_refresh_token", refresh_token)
-    res_reuse = client.post("/auth/refresh", json={})
-    assert res_reuse.status_code == 401
-    assert "Token reuse detected" in res_reuse.json()["detail"]
+    res_reuse_grace = client.post("/auth/refresh", json={})
+    assert res_reuse_grace.status_code == 409
+    assert "Concurrent refresh detected" in res_reuse_grace.json()["detail"]
+
+    # Using old refresh token again AFTER grace period should trigger family revocation
+    from unittest.mock import patch
+    with patch("backend.auth._utc_now") as mock_now:
+        mock_now.return_value = datetime.now(timezone.utc) + timedelta(seconds=6)
+        res_reuse = client.post("/auth/refresh", json={})
+        assert res_reuse.status_code == 401
+        assert "Token reuse detected" in res_reuse.json()["detail"]
 
     # The new_refresh token should now also be revoked
     client.cookies.set("applyops_refresh_token", new_refresh)
