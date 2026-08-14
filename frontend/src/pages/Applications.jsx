@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 
 
+const METHODS = ['Company Website', 'LinkedIn', 'Referral', 'Wellfound', 'Other']
 const METHOD_DROPDOWN_OPTIONS = METHODS.map(m => ({ label: m, value: m }))
 
 const ACTION_TYPE_OPTIONS = [
