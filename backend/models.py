@@ -112,6 +112,7 @@ class ApplicationFields(BaseModel):
     company: Annotated[str, Field(min_length=1)]
     job_title: Annotated[str, Field(min_length=1)]
     jd_summary: str = ""
+    location: str | None = None
     application_method: str = ""
     hr_name: str = ""
     hr_phone: str = ""
@@ -145,6 +146,7 @@ class ApplicationUpdate(BaseModel):
     company: Annotated[str | None, Field(min_length=1)] = None
     job_title: Annotated[str | None, Field(min_length=1)] = None
     jd_summary: str | None = None
+    location: str | None = None
     application_method: str | None = None
     hr_name: str | None = None
     hr_phone: str | None = None
