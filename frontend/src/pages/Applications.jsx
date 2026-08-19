@@ -9,7 +9,7 @@ import {
 } from 'lucide-react'
 
 
-const METHODS = ['Company Website', 'LinkedIn', 'Referral', 'Wellfound', 'Other']
+const METHODS = ['Company Website', 'LinkedIn', 'Referral', 'Wellfound', 'Indeed', 'Naukri', 'Other']
 const METHOD_DROPDOWN_OPTIONS = METHODS.map(m => ({ label: m, value: m }))
 
 const ACTION_TYPE_OPTIONS = [
@@ -590,14 +590,26 @@ function NewApplicationModal({ isOpen, onClose, onSubmit, form, setForm, resumes
             />
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">Location (Optional)</label>
-            <input
-              placeholder="e.g. San Francisco, Remote, NYC"
-              className="w-full rounded-xl border border-transparent bg-surface-secondary hover:bg-surface-tertiary px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/25 transition-all"
-              value={form.location}
-              onChange={e => setForm({ ...form, location: e.target.value })}
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">Date Applied *</label>
+              <input
+                type="date"
+                required
+                className="w-full rounded-xl border border-transparent bg-surface-secondary hover:bg-surface-tertiary px-3.5 py-2.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 transition-all [color-scheme:dark]"
+                value={form.date_applied || ''}
+                onChange={e => setForm({ ...form, date_applied: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">Location (Optional)</label>
+              <input
+                placeholder="e.g. San Francisco, Remote, NYC"
+                className="w-full rounded-xl border border-transparent bg-surface-secondary hover:bg-surface-tertiary px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/25 transition-all"
+                value={form.location}
+                onChange={e => setForm({ ...form, location: e.target.value })}
+              />
+            </div>
           </div>
 
           <div>
@@ -612,6 +624,14 @@ function NewApplicationModal({ isOpen, onClose, onSubmit, form, setForm, resumes
                 triggerClassName="bg-surface-secondary text-foreground hover:bg-surface-tertiary border border-transparent"
               />
             </div>
+            {form.application_method === 'Other' && (
+              <input
+                placeholder="Please specify..."
+                className="w-full mt-2 rounded-xl border border-transparent bg-surface-secondary hover:bg-surface-tertiary px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/25 transition-all"
+                value={form.application_method_other || ''}
+                onChange={e => setForm({ ...form, application_method_other: e.target.value })}
+              />
+            )}
           </div>
 
           <div className="pt-2 border-t border-white/5 space-y-3">
@@ -670,6 +690,15 @@ function NewApplicationModal({ isOpen, onClose, onSubmit, form, setForm, resumes
                       onChange={e => setForm({ ...form, contact_phone: e.target.value })}
                     />
                   </div>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-foreground-secondary mb-1">LinkedIn Profile</label>
+                  <input
+                    placeholder="https://linkedin.com/in/..."
+                    className="w-full rounded-lg border border-transparent bg-surface-secondary px-3 py-1.5 text-xs text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/25"
+                    value={form.contact_linkedin}
+                    onChange={e => setForm({ ...form, contact_linkedin: e.target.value })}
+                  />
                 </div>
               </div>
             )}
@@ -807,15 +836,18 @@ function NewApplicationModal({ isOpen, onClose, onSubmit, form, setForm, resumes
 }
 
 const EMPTY_FORM = {
+  date_applied: new Date().toISOString().split('T')[0],
   company: '',
   job_title: '',
   location: '',
-  application_method: 'LinkedIn Easy Apply',
+  application_method: 'LinkedIn',
+  application_method_other: '',
   has_contact: false,
   contact_name: '',
   contact_role: '',
   contact_email: '',
   contact_phone: '',
+  contact_linkedin: '',
   resume_id: '',
   enable_next_action: true,
   next_action_type: 'Follow Up',
@@ -922,17 +954,19 @@ export default function Applications() {
     } : null
 
     const payload = {
+      date_applied: form.date_applied,
       company: form.company,
       job_title: form.job_title,
       location: form.location,
-      application_method: form.application_method,
+      application_method: form.application_method === 'Other' ? form.application_method_other : form.application_method,
       next_action: nextActionObj,
       next_action_due: nextActionObj?.date || null,
       ...(form.has_contact ? {
         contact_name: form.contact_name,
         contact_role: form.contact_role,
         contact_email: form.contact_email,
-        contact_phone: form.contact_phone
+        contact_phone: form.contact_phone,
+        contact_linkedin: form.contact_linkedin
       } : {}),
       ...(form.resume_id ? { resume_id: form.resume_id } : {})
     }

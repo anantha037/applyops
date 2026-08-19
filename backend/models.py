@@ -134,6 +134,7 @@ class ApplicationCreate(ApplicationFields):
     contact_email: str | None = None
     contact_phone: str | None = None
     contact_role: str | None = None
+    contact_linkedin: str | None = None
     resume_id: str | None = None
 
 
@@ -165,6 +166,7 @@ class ApplicationUpdate(BaseModel):
     contact_email: str | None = None
     contact_phone: str | None = None
     contact_role: str | None = None
+    contact_linkedin: str | None = None
     resume_id: str | None = None
 
 

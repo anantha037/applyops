@@ -80,6 +80,7 @@ def _app_to_pydantic(row: DBApplication) -> Application:
         company=row.company,
         job_title=row.job_title,
         jd_summary=row.jd_summary or "",
+        location=row.location,
         application_method=row.application_method or "",
         # hr_* fields no longer exist — leave as empty strings so the
         # existing Pydantic schema stays valid until Phase D cleans it up.
@@ -127,6 +128,7 @@ def find_or_create_contact(
     phone: str | None = None,
     role: str | None = None,
     company: str | None = None,
+    linkedin_url: str | None = None,
 ) -> Contact | None:
     """Find an existing contact or create a new one.
 
@@ -178,6 +180,7 @@ def find_or_create_contact(
         if norm_phone   and not existing.phone:   existing.phone   = norm_phone;   changed = True
         if norm_role    and not existing.role:    existing.role    = norm_role;    changed = True
         if norm_company and not existing.company: existing.company = norm_company; changed = True
+        if linkedin_url and not existing.linkedin_url: existing.linkedin_url = linkedin_url; changed = True
         if changed:
             session.add(existing)
         return existing
@@ -191,6 +194,7 @@ def find_or_create_contact(
         phone=norm_phone,
         role=norm_role,
         company=norm_company,
+        linkedin_url=linkedin_url,
         created_at=datetime.now(timezone.utc),
     )
     session.add(contact)
@@ -351,6 +355,7 @@ def create_application(
     contact_email: str | None = None,
     contact_phone: str | None = None,
     contact_role:  str | None = None,
+    contact_linkedin: str | None = None,
     resume_id:     str | None = None,
 ) -> Application:
     """Create a new application row.
@@ -360,7 +365,7 @@ def create_application(
     """
     with Session(engine) as session:
         contact_id: str | None = None
-        if any([contact_name, contact_email, contact_phone]):
+        if any([contact_name, contact_email, contact_phone, contact_linkedin]):
             contact = find_or_create_contact(
                 session,
                 user_id,
@@ -369,6 +374,7 @@ def create_application(
                 phone=contact_phone,
                 role=contact_role,
                 company=payload.get("company"),
+                linkedin_url=contact_linkedin,
             )
             contact_id = contact.id if contact else None
 
@@ -385,6 +391,7 @@ def create_application(
             company=payload["company"],
             job_title=payload["job_title"],
             jd_summary=payload.get("jd_summary") or None,
+            location=payload.get("location") or None,
             application_method=payload.get("application_method") or None,
             contact_id=contact_id,
             resume_id=resume_id,
@@ -414,6 +421,7 @@ def update_application(
     contact_email: str | None = None,
     contact_phone: str | None = None,
     contact_role:  str | None = None,
+    contact_linkedin: str | None = None,
     resume_id:     str | None = None,
 ) -> Application | None:
     """Patch an existing application."""
@@ -423,7 +431,7 @@ def update_application(
             return None
 
         # Handle contact linkage
-        if any([contact_name, contact_email, contact_phone]):
+        if any([contact_name, contact_email, contact_phone, contact_linkedin]):
             contact = find_or_create_contact(
                 session,
                 user_id,
@@ -432,6 +440,7 @@ def update_application(
                 phone=contact_phone,
                 role=contact_role,
                 company=changes.get("company") or row.company,
+                linkedin_url=contact_linkedin,
             )
             row.contact_id = contact.id if contact else row.contact_id
 
@@ -445,7 +454,7 @@ def update_application(
         # Apply scalar field updates
         scalar_fields = (
             "date_applied", "company", "job_title", "jd_summary",
-            "application_method", "ctc", "status", "stage",
+            "location", "application_method", "ctc", "status", "stage",
             "last_touch_date", "next_action_due", "interview_date",
             "interview_round", "interview_attended", "latest_update", "remarks",
         )
