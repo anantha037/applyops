@@ -5,7 +5,7 @@ import { format, parseISO } from 'date-fns'
 const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
 
 function intensityClass(total) {
-  if (total === 0) return 'bg-surface-tertiary/40'
+  if (total === 0) return 'bg-surface-tertiary'
   if (total === 1) return 'bg-emerald-500/20 text-emerald-400'
   if (total <= 3) return 'bg-emerald-500/45 text-white/90 font-medium'
   if (total <= 5) return 'bg-emerald-500/75 text-white font-semibold'
@@ -205,7 +205,7 @@ export default function ApplicationStreakCard({ data: propData, onViewHistory })
       <div className="mt-3 flex items-center justify-between">
         <div className="flex items-center gap-[3px]">
           <span className="text-[8px] font-medium text-muted mr-0.5">Less</span>
-          <div className="w-[9px] h-[9px] rounded-[2px] bg-surface-tertiary/40" />
+          <div className="w-[9px] h-[9px] rounded-[2px] bg-surface-tertiary" />
           <div className="w-[9px] h-[9px] rounded-[2px] bg-emerald-500/20" />
           <div className="w-[9px] h-[9px] rounded-[2px] bg-emerald-500/45" />
           <div className="w-[9px] h-[9px] rounded-[2px] bg-emerald-500/75" />

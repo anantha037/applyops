@@ -57,7 +57,7 @@ function CustomDonutTooltip({ active, payload, total }) {
 
 function KpiCard({ title, value, comparison, isPositive, context, icon: Icon }) {
   return (
-    <div className="group relative overflow-hidden rounded-2xl p-4 md:p-5 bg-surface hover:bg-surface-secondary/70 hover:-translate-y-[2px] shadow-xs hover:shadow-md transition-all duration-200 ease-out cursor-pointer flex flex-col justify-between select-none">
+    <div className="group relative overflow-hidden rounded-2xl p-4 md:p-5 bg-surface hover:bg-surface-tertiary hover:-translate-y-[2px] shadow-xs hover:shadow-md transition-all duration-200 ease-out cursor-pointer flex flex-col justify-between select-none">
       <div>
         <div className="flex items-center justify-between gap-2 mb-3">
           <span className="text-xs font-semibold text-foreground-secondary group-hover:text-foreground transition-colors duration-200 truncate">
@@ -465,7 +465,7 @@ export default function Analytics() {
                       className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs cursor-pointer transition-all duration-150 ${
                         isHovered
                           ? 'bg-surface-secondary text-foreground scale-[1.02] shadow-xs'
-                          : 'text-foreground-secondary hover:text-foreground hover:bg-surface-secondary/50'
+                          : 'text-foreground-secondary hover:text-foreground hover:bg-surface-tertiary'
                       }`}
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
@@ -508,7 +508,7 @@ export default function Analytics() {
                   className={`flex flex-col items-center justify-center p-2 rounded-xl text-center transition-all duration-150 ${
                     d.active
                       ? 'bg-primary/10 text-primary font-semibold'
-                      : 'bg-surface-secondary/40 text-muted'
+                      : 'bg-surface-secondary text-muted'
                   }`}
                 >
                   <span className="text-[10px] uppercase font-bold tracking-wider">{d.day}</span>
@@ -537,8 +537,8 @@ export default function Analytics() {
                     onMouseLeave={() => setHoveredFunnel(null)}
                     className={`relative p-3.5 rounded-xl transition-all duration-200 cursor-pointer flex items-center justify-between gap-4 ${
                       isHovered
-                        ? 'bg-surface-secondary/80 shadow-xs translate-x-1'
-                        : 'bg-surface-secondary/40 hover:bg-surface-secondary/60'
+                        ? 'bg-surface-secondary shadow-xs translate-x-1'
+                        : 'bg-surface-secondary hover:bg-surface-tertiary'
                     }`}
                   >
                     <div className="flex items-center gap-3">
@@ -618,7 +618,7 @@ export default function Analytics() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-            <div className="p-3.5 rounded-xl bg-surface-secondary/40 hover:bg-surface-secondary/70 transition-colors">
+            <div className="p-3.5 rounded-xl bg-surface-secondary hover:bg-surface-tertiary transition-colors">
               <div className="flex items-center gap-2 mb-1.5">
                 <div className="w-6 h-6 rounded-md bg-amber-500/15 text-amber-500 flex items-center justify-center">
                   <Zap className="w-3.5 h-3.5" />
@@ -630,7 +630,7 @@ export default function Analytics() {
               </p>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-surface-secondary/40 hover:bg-surface-secondary/70 transition-colors">
+            <div className="p-3.5 rounded-xl bg-surface-secondary hover:bg-surface-tertiary transition-colors">
               <div className="flex items-center gap-2 mb-1.5">
                 <div className="w-6 h-6 rounded-md bg-emerald-500/15 text-emerald-500 flex items-center justify-center">
                   <TrendingUp className="w-3.5 h-3.5" />
@@ -642,7 +642,7 @@ export default function Analytics() {
               </p>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-surface-secondary/40 hover:bg-surface-secondary/70 transition-colors">
+            <div className="p-3.5 rounded-xl bg-surface-secondary hover:bg-surface-tertiary transition-colors">
               <div className="flex items-center gap-2 mb-1.5">
                 <div className="w-6 h-6 rounded-md bg-rose-500/15 text-rose-500 flex items-center justify-center">
                   <AlertCircle className="w-3.5 h-3.5" />
@@ -654,7 +654,7 @@ export default function Analytics() {
               </p>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-surface-secondary/40 hover:bg-surface-secondary/70 transition-colors">
+            <div className="p-3.5 rounded-xl bg-surface-secondary hover:bg-surface-tertiary transition-colors">
               <div className="flex items-center gap-2 mb-1.5">
                 <div className="w-6 h-6 rounded-md bg-blue-500/15 text-blue-500 flex items-center justify-center">
                   <Clock className="w-3.5 h-3.5" />

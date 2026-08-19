@@ -160,7 +160,7 @@ export default function Updates() {
             className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-150 ${
               unreadCount > 0
                 ? 'bg-surface-secondary text-foreground-secondary hover:text-foreground hover:bg-surface-tertiary shadow-xs cursor-pointer'
-                : 'bg-surface-secondary/40 text-muted cursor-not-allowed opacity-60'
+                : 'bg-surface-secondary text-muted cursor-not-allowed opacity-60'
             }`}
           >
             <CheckCheck className="w-3.5 h-3.5" />
@@ -211,7 +211,7 @@ export default function Updates() {
         </div>
       </div>
 
-      <div className="flex items-center gap-1.5 p-1 bg-surface-secondary/50 rounded-xl w-fit overflow-x-auto scrollbar-none">
+      <div className="flex items-center gap-1.5 p-1 bg-surface-secondary rounded-xl w-fit overflow-x-auto scrollbar-none">
         {tabs.map((t) => {
           const isActive = tab === t.value
           return (
@@ -222,7 +222,7 @@ export default function Updates() {
               className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-150 flex items-center gap-2 cursor-pointer ${
                 isActive
                   ? 'bg-primary text-primary-foreground shadow-xs'
-                  : 'text-foreground-secondary hover:text-foreground hover:bg-surface-secondary/70'
+                  : 'text-foreground-secondary hover:text-foreground hover:bg-surface-tertiary'
               }`}
             >
               <span>{t.label}</span>
@@ -263,7 +263,7 @@ export default function Updates() {
                   </div>
 
                   {tk.response && (
-                    <div className="p-3 rounded-xl bg-surface-secondary/50 space-y-1">
+                    <div className="p-3 rounded-xl bg-surface-secondary space-y-1">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-primary block">ApplyOps Team Response</span>
                       <p className="text-xs text-foreground-secondary font-medium leading-relaxed">
                         {tk.response}
@@ -286,7 +286,7 @@ export default function Updates() {
                     {attentionItems.map((item) => (
                       <div
                         key={`attention-${item.id}`}
-                        className="p-3.5 rounded-xl bg-surface hover:bg-surface-secondary/70 transition-all duration-150 flex items-center justify-between gap-4 shadow-xs"
+                        className="p-3.5 rounded-xl bg-surface hover:bg-surface-tertiary transition-all duration-150 flex items-center justify-between gap-4 shadow-xs"
                       >
                         <div className="flex items-center gap-3 min-w-0">
                           <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${item.iconColor}`}>
@@ -331,8 +331,8 @@ export default function Updates() {
                           onClick={() => handleToggleRead(item.id)}
                           className={`group relative p-3.5 md:p-4 rounded-xl transition-all duration-150 cursor-pointer flex items-start gap-3.5 ${
                             item.unread
-                              ? 'bg-surface shadow-xs hover:bg-surface-secondary/80'
-                              : 'bg-surface/40 opacity-80 hover:opacity-100 hover:bg-surface-secondary/50'
+                              ? 'bg-surface shadow-xs hover:bg-surface-tertiary'
+                              : 'bg-surface opacity-80 hover:opacity-100 hover:bg-surface-tertiary'
                           }`}
                         >
                           <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-transform duration-150 group-hover:scale-105 ${item.iconColor}`}>
@@ -401,15 +401,15 @@ export default function Updates() {
             </div>
 
             <div className="space-y-2 text-xs font-medium text-foreground-secondary">
-              <div className="flex items-center justify-between p-2 rounded-xl bg-surface-secondary/40">
+              <div className="flex items-center justify-between p-2 rounded-xl bg-surface-secondary">
                 <span className="text-muted">Environment</span>
                 <span className="font-semibold text-foreground">Production</span>
               </div>
-              <div className="flex items-center justify-between p-2 rounded-xl bg-surface-secondary/40">
+              <div className="flex items-center justify-between p-2 rounded-xl bg-surface-secondary">
                 <span className="text-muted">Database Engine</span>
                 <span className="font-semibold text-foreground">PostgreSQL (Neon)</span>
               </div>
-              <div className="flex items-center justify-between p-2 rounded-xl bg-surface-secondary/40">
+              <div className="flex items-center justify-between p-2 rounded-xl bg-surface-secondary">
                 <span className="text-muted">Telegram Reminders</span>
                 <span className="font-semibold text-emerald-500 flex items-center gap-1">
                   <Check className="w-3.5 h-3.5" /> Connected
@@ -427,7 +427,7 @@ export default function Updates() {
             </div>
 
             <div className="space-y-2 pt-0.5">
-              <div className="flex items-center gap-3 p-2.5 rounded-xl bg-surface-secondary/40">
+              <div className="flex items-center gap-3 p-2.5 rounded-xl bg-surface-secondary">
                 <div className="w-7 h-7 rounded-lg bg-amber-500/15 text-amber-500 flex items-center justify-center flex-shrink-0 font-bold text-xs">
                   🔥
                 </div>
@@ -437,7 +437,7 @@ export default function Updates() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 p-2.5 rounded-xl bg-surface-secondary/40">
+              <div className="flex items-center gap-3 p-2.5 rounded-xl bg-surface-secondary">
                 <div className="w-7 h-7 rounded-lg bg-primary/15 text-primary flex items-center justify-center flex-shrink-0 font-bold text-xs">
                   ↗
                 </div>
@@ -447,7 +447,7 @@ export default function Updates() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 p-2.5 rounded-xl bg-surface-secondary/40">
+              <div className="flex items-center gap-3 p-2.5 rounded-xl bg-surface-secondary">
                 <div className="w-7 h-7 rounded-lg bg-emerald-500/15 text-emerald-500 flex items-center justify-center flex-shrink-0 font-bold text-xs">
                   ✓
                 </div>

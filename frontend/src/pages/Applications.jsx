@@ -191,7 +191,7 @@ function ViewResumeModal({ resume, onClose, onDownload }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in-80 duration-150" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="bg-surface rounded-2xl border border-border shadow-2xl w-full max-w-4xl h-[90vh] flex flex-col overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-surface-secondary/30">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-surface-secondary">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
               <FileText className="w-5 h-5" />
@@ -227,7 +227,7 @@ function ViewResumeModal({ resume, onClose, onDownload }) {
           )}
         </div>
 
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border bg-surface-secondary/30">
+        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border bg-surface-secondary">
           <button
             type="button"
             onClick={onClose}
@@ -305,7 +305,7 @@ function EditNextActionModal({ app, onClose, onSave, onRemove }) {
               <p className="text-[11px] text-foreground-secondary font-medium">{app.company} · {app.job_title}</p>
             </div>
           </div>
-          <button onClick={onClose} className="rounded-lg p-1.5 text-foreground-secondary hover:text-foreground hover:bg-surface-secondary/80 transition-colors">
+          <button onClick={onClose} className="rounded-lg p-1.5 text-foreground-secondary hover:text-foreground hover:bg-surface-tertiary transition-colors">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -327,7 +327,7 @@ function EditNextActionModal({ app, onClose, onSave, onRemove }) {
             <input
               required
               placeholder="e.g. Follow up with recruiter"
-              className="w-full rounded-xl border border-transparent bg-surface-secondary hover:bg-surface-tertiary px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/25 transition-all"
+              className="w-full rounded-xl border border-transparent bg-surface-secondary hover:bg-surface-tertiary px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary transition-all"
               value={form.title}
               onChange={e => setForm({ ...form, title: e.target.value })}
             />
@@ -339,7 +339,7 @@ function EditNextActionModal({ app, onClose, onSave, onRemove }) {
               <input
                 type="date"
                 required
-                className="w-full rounded-xl border border-transparent bg-surface-secondary hover:bg-surface-tertiary px-3.5 py-2.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 transition-all [color-scheme:dark]"
+                className="w-full rounded-xl border border-transparent bg-surface-secondary hover:bg-surface-tertiary px-3.5 py-2.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-all [color-scheme:dark]"
                 value={form.date}
                 onChange={e => setForm({ ...form, date: e.target.value })}
               />
@@ -439,7 +439,7 @@ function StatusSuggestionModal({ prompt, onClose, onAccept, onKeep, onRemove, on
           <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/5">
             <button
               onClick={() => { onKeep(); onClose() }}
-              className="rounded-xl px-4 py-2 text-xs font-semibold text-foreground-secondary hover:bg-surface-secondary/60 transition-colors"
+              className="rounded-xl px-4 py-2 text-xs font-semibold text-foreground-secondary hover:bg-surface-tertiary transition-colors"
             >
               Keep Completed
             </button>
@@ -468,7 +468,7 @@ function StatusSuggestionModal({ prompt, onClose, onAccept, onKeep, onRemove, on
           </div>
         </div>
 
-        <div className="bg-surface-secondary/40 rounded-xl p-3.5 my-4 border border-transparent space-y-1 text-xs">
+        <div className="bg-surface-secondary rounded-xl p-3.5 my-4 border border-transparent space-y-1 text-xs">
           <span className="text-[10px] font-bold text-primary uppercase tracking-wider">Suggested Next Action</span>
           <p className="font-bold text-foreground">{suggestedAction?.title}</p>
           <p className="text-foreground-secondary font-medium text-[11px]">
@@ -488,7 +488,7 @@ function StatusSuggestionModal({ prompt, onClose, onAccept, onKeep, onRemove, on
           <div className="grid grid-cols-2 gap-2 mt-1">
             <button
               onClick={() => { onKeep(); onClose() }}
-              className="rounded-xl px-3 py-2 text-xs font-semibold text-foreground-secondary bg-surface-secondary/60 hover:bg-surface-secondary transition-colors"
+              className="rounded-xl px-3 py-2 text-xs font-semibold text-foreground-secondary bg-surface-secondary hover:bg-surface-secondary transition-colors"
             >
               Keep Current Action
             </button>
@@ -561,7 +561,7 @@ function NewApplicationModal({ isOpen, onClose, onSubmit, form, setForm, resumes
           </div>
           <button
             onClick={onClose}
-            className="rounded-lg p-1.5 text-foreground-secondary hover:text-foreground hover:bg-surface-secondary/80 transition-colors"
+            className="rounded-lg p-1.5 text-foreground-secondary hover:text-foreground hover:bg-surface-tertiary transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -573,7 +573,7 @@ function NewApplicationModal({ isOpen, onClose, onSubmit, form, setForm, resumes
             <input
               required
               placeholder="e.g. Stripe, Linear, Vercel"
-              className="w-full rounded-xl border border-transparent bg-surface-secondary hover:bg-surface-tertiary px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/25 transition-all"
+              className="w-full rounded-xl border border-transparent bg-surface-secondary hover:bg-surface-tertiary px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary transition-all"
               value={form.company}
               onChange={e => setForm({ ...form, company: e.target.value })}
             />
@@ -584,7 +584,7 @@ function NewApplicationModal({ isOpen, onClose, onSubmit, form, setForm, resumes
             <input
               required
               placeholder="e.g. Senior Frontend Engineer"
-              className="w-full rounded-xl border border-transparent bg-surface-secondary hover:bg-surface-tertiary px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/25 transition-all"
+              className="w-full rounded-xl border border-transparent bg-surface-secondary hover:bg-surface-tertiary px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary transition-all"
               value={form.job_title}
               onChange={e => setForm({ ...form, job_title: e.target.value })}
             />
@@ -596,7 +596,7 @@ function NewApplicationModal({ isOpen, onClose, onSubmit, form, setForm, resumes
               <input
                 type="date"
                 required
-                className="w-full rounded-xl border border-transparent bg-surface-secondary hover:bg-surface-tertiary px-3.5 py-2.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 transition-all [color-scheme:dark]"
+                className="w-full rounded-xl border border-transparent bg-surface-secondary hover:bg-surface-tertiary px-3.5 py-2.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-all [color-scheme:dark]"
                 value={form.date_applied || ''}
                 onChange={e => setForm({ ...form, date_applied: e.target.value })}
               />
@@ -605,7 +605,7 @@ function NewApplicationModal({ isOpen, onClose, onSubmit, form, setForm, resumes
               <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">Location (Optional)</label>
               <input
                 placeholder="e.g. San Francisco, Remote, NYC"
-                className="w-full rounded-xl border border-transparent bg-surface-secondary hover:bg-surface-tertiary px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/25 transition-all"
+                className="w-full rounded-xl border border-transparent bg-surface-secondary hover:bg-surface-tertiary px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary transition-all"
                 value={form.location}
                 onChange={e => setForm({ ...form, location: e.target.value })}
               />
@@ -627,7 +627,7 @@ function NewApplicationModal({ isOpen, onClose, onSubmit, form, setForm, resumes
             {form.application_method === 'Other' && (
               <input
                 placeholder="Please specify..."
-                className="w-full mt-2 rounded-xl border border-transparent bg-surface-secondary hover:bg-surface-tertiary px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/25 transition-all"
+                className="w-full mt-2 rounded-xl border border-transparent bg-surface-secondary hover:bg-surface-tertiary px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary transition-all"
                 value={form.application_method_other || ''}
                 onChange={e => setForm({ ...form, application_method_other: e.target.value })}
               />
@@ -649,13 +649,13 @@ function NewApplicationModal({ isOpen, onClose, onSubmit, form, setForm, resumes
             </div>
 
             {form.has_contact && (
-              <div className="space-y-3 p-3.5 rounded-xl bg-surface-secondary/40 border border-transparent">
+              <div className="space-y-3 p-3.5 rounded-xl bg-surface-secondary border border-transparent">
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="block text-[11px] font-semibold text-foreground-secondary mb-1">Name</label>
                     <input
                       placeholder="e.g. Jane Doe"
-                      className="w-full rounded-lg border border-transparent bg-surface-secondary px-3 py-1.5 text-xs text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/25"
+                      className="w-full rounded-lg border border-transparent bg-surface-secondary px-3 py-1.5 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary"
                       value={form.contact_name}
                       onChange={e => setForm({ ...form, contact_name: e.target.value })}
                     />
@@ -664,7 +664,7 @@ function NewApplicationModal({ isOpen, onClose, onSubmit, form, setForm, resumes
                     <label className="block text-[11px] font-semibold text-foreground-secondary mb-1">Role</label>
                     <input
                       placeholder="e.g. Recruiter"
-                      className="w-full rounded-lg border border-transparent bg-surface-secondary px-3 py-1.5 text-xs text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/25"
+                      className="w-full rounded-lg border border-transparent bg-surface-secondary px-3 py-1.5 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary"
                       value={form.contact_role}
                       onChange={e => setForm({ ...form, contact_role: e.target.value })}
                     />
@@ -676,7 +676,7 @@ function NewApplicationModal({ isOpen, onClose, onSubmit, form, setForm, resumes
                     <input
                       type="email"
                       placeholder="jane@example.com"
-                      className="w-full rounded-lg border border-transparent bg-surface-secondary px-3 py-1.5 text-xs text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/25"
+                      className="w-full rounded-lg border border-transparent bg-surface-secondary px-3 py-1.5 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary"
                       value={form.contact_email}
                       onChange={e => setForm({ ...form, contact_email: e.target.value })}
                     />
@@ -685,7 +685,7 @@ function NewApplicationModal({ isOpen, onClose, onSubmit, form, setForm, resumes
                     <label className="block text-[11px] font-semibold text-foreground-secondary mb-1">Phone</label>
                     <input
                       placeholder="+1234567890"
-                      className="w-full rounded-lg border border-transparent bg-surface-secondary px-3 py-1.5 text-xs text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/25"
+                      className="w-full rounded-lg border border-transparent bg-surface-secondary px-3 py-1.5 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary"
                       value={form.contact_phone}
                       onChange={e => setForm({ ...form, contact_phone: e.target.value })}
                     />
@@ -695,7 +695,7 @@ function NewApplicationModal({ isOpen, onClose, onSubmit, form, setForm, resumes
                   <label className="block text-[11px] font-semibold text-foreground-secondary mb-1">LinkedIn Profile</label>
                   <input
                     placeholder="https://linkedin.com/in/..."
-                    className="w-full rounded-lg border border-transparent bg-surface-secondary px-3 py-1.5 text-xs text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/25"
+                    className="w-full rounded-lg border border-transparent bg-surface-secondary px-3 py-1.5 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary"
                     value={form.contact_linkedin}
                     onChange={e => setForm({ ...form, contact_linkedin: e.target.value })}
                   />
@@ -712,7 +712,7 @@ function NewApplicationModal({ isOpen, onClose, onSubmit, form, setForm, resumes
               </label>
             </div>
             
-            <div className="space-y-3 p-3.5 rounded-xl bg-surface-secondary/40 border border-transparent">
+            <div className="space-y-3 p-3.5 rounded-xl bg-surface-secondary border border-transparent">
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="block text-[11px] font-semibold text-foreground-secondary">Select existing resume</label>
@@ -759,7 +759,7 @@ function NewApplicationModal({ isOpen, onClose, onSubmit, form, setForm, resumes
             </div>
 
             {form.enable_next_action && (
-              <div className="space-y-3 p-3.5 rounded-xl bg-surface-secondary/40 border border-transparent">
+              <div className="space-y-3 p-3.5 rounded-xl bg-surface-secondary border border-transparent">
                 <div>
                   <label className="block text-[11px] font-semibold text-foreground-secondary mb-1">Action Type</label>
                   <Dropdown
@@ -782,7 +782,7 @@ function NewApplicationModal({ isOpen, onClose, onSubmit, form, setForm, resumes
                   <label className="block text-[11px] font-semibold text-foreground-secondary mb-1">Title</label>
                   <input
                     placeholder="e.g. Follow up with recruiter"
-                    className="w-full rounded-lg border border-transparent bg-surface-secondary px-3 py-1.5 text-xs text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/25"
+                    className="w-full rounded-lg border border-transparent bg-surface-secondary px-3 py-1.5 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary"
                     value={form.next_action_title}
                     onChange={e => setForm({ ...form, next_action_title: e.target.value })}
                   />
@@ -793,7 +793,7 @@ function NewApplicationModal({ isOpen, onClose, onSubmit, form, setForm, resumes
                     <label className="block text-[11px] font-semibold text-foreground-secondary mb-1">Date</label>
                     <input
                       type="date"
-                      className="w-full rounded-lg border border-transparent bg-surface-secondary px-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 [color-scheme:dark]"
+                      className="w-full rounded-lg border border-transparent bg-surface-secondary px-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary [color-scheme:dark]"
                       value={form.next_action_date}
                       onChange={e => setForm({ ...form, next_action_date: e.target.value })}
                     />
@@ -818,7 +818,7 @@ function NewApplicationModal({ isOpen, onClose, onSubmit, form, setForm, resumes
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl px-4 py-2 text-xs font-semibold text-foreground-secondary hover:bg-surface-secondary/60 transition-colors"
+              className="rounded-xl px-4 py-2 text-xs font-semibold text-foreground-secondary hover:bg-surface-tertiary transition-colors"
             >
               Cancel
             </button>
@@ -1237,7 +1237,7 @@ export default function Applications() {
                 onClick={() => setFilterStatus(s.statusValue)}
                 className={`panel text-left p-3.5 rounded-2xl border border-transparent shadow-2xs flex flex-col justify-between transition-all active:scale-95 focus:outline-none ${isFilterActive
                     ? 'ring-2 ring-primary/40 bg-surface'
-                    : 'bg-surface-secondary/30 hover:bg-surface-secondary/60 hover:-translate-y-0.5'
+                    : 'bg-surface-secondary hover:bg-surface-tertiary hover:-translate-y-0.5'
                   }`}
               >
                 <div className="flex items-center justify-between">
@@ -1260,7 +1260,7 @@ export default function Applications() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
           <input
             placeholder="Search companies, job titles…"
-            className="w-full rounded-xl border border-transparent bg-surface-secondary text-foreground placeholder:text-muted/70 px-3 py-2.5 pl-9 pr-8 text-xs focus:bg-surface-tertiary focus:outline-none focus:ring-2 focus:ring-primary/25 transition-all"
+            className="w-full rounded-xl border border-transparent bg-surface-secondary text-foreground placeholder:text-muted px-3 py-2.5 pl-9 pr-8 text-xs focus:bg-surface-tertiary focus:outline-none focus:ring-2 focus:ring-primary transition-all"
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
@@ -1358,7 +1358,7 @@ export default function Applications() {
                 visible.map(app => {
                   const res = app.resume
                   return (
-                    <tr key={app.id} className="group hover:bg-surface-secondary/30 transition-colors duration-150">
+                    <tr key={app.id} className="group hover:bg-surface-tertiary transition-colors duration-150">
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
                           <ApplicationStatusIcon status={app.status} />
@@ -1377,7 +1377,7 @@ export default function Applications() {
 
                       <td className="px-5 py-4">
                         <input
-                          className="bg-transparent text-xs font-medium text-foreground placeholder:text-muted/50 focus:outline-none focus:ring-1 focus:ring-primary/40 rounded px-2 py-1 w-full max-w-[120px] transition-all hover:bg-surface-secondary/40"
+                          className="bg-transparent text-xs font-medium text-foreground placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-primary rounded px-2 py-1 w-full max-w-[120px] transition-all hover:bg-surface-tertiary"
                           placeholder="Add location..."
                           defaultValue={app.location || ''}
                           onBlur={e => {
@@ -1407,7 +1407,7 @@ export default function Applications() {
                           size="sm"
                           options={STAGE_DROPDOWN_OPTIONS}
                           value={app.stage}
-                          triggerClassName="bg-surface-secondary/60 text-foreground-secondary hover:text-foreground hover:bg-surface-secondary"
+                          triggerClassName="bg-surface-secondary text-foreground-secondary hover:text-foreground hover:bg-surface-secondary"
                           onChange={val => updateAppStage(app.id, val)}
                           align="left"
                         />
@@ -1424,7 +1424,7 @@ export default function Applications() {
 
                       <td className="px-5 py-4">
                         <input
-                          className="bg-transparent text-xs font-medium text-foreground placeholder:text-muted/50 focus:outline-none focus:ring-1 focus:ring-primary/40 rounded px-2 py-1 w-full max-w-[150px] transition-all hover:bg-surface-secondary/40"
+                          className="bg-transparent text-xs font-medium text-foreground placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-primary rounded px-2 py-1 w-full max-w-[150px] transition-all hover:bg-surface-tertiary"
                           placeholder="Add remarks..."
                           defaultValue={app.remarks || ''}
                           onBlur={e => {

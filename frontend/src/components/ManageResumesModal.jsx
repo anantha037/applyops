@@ -27,7 +27,7 @@ export default function ManageResumesModal({ isOpen, onClose, resumes, setResume
       <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={onClose} />
       
       <div className="relative w-full max-w-md bg-surface border border-border rounded-2xl shadow-xl overflow-hidden flex flex-col">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-surface-secondary/30">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-surface-secondary">
           <h2 className="text-sm font-bold text-foreground flex items-center gap-2">
             <FileText className="w-4 h-4 text-primary" />
             Manage Resumes
@@ -52,7 +52,7 @@ export default function ManageResumesModal({ isOpen, onClose, resumes, setResume
           ) : (
             <div className="space-y-2">
               {resumes.map(resume => (
-                <div key={resume.id} className="flex items-center justify-between p-3 rounded-xl bg-surface-secondary/40 border border-border group hover:border-primary/30 transition-colors">
+                <div key={resume.id} className="flex items-center justify-between p-3 rounded-xl bg-surface-secondary border border-border group hover:border-primary/30 transition-colors">
                   <div className="flex flex-col overflow-hidden mr-3">
                     <span className="text-xs font-bold text-foreground truncate">{resume.filename}</span>
                     <span className="text-[10px] font-semibold text-foreground-secondary mt-0.5">

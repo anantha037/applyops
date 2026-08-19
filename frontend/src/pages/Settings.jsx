@@ -170,14 +170,14 @@ export default function Settings() {
         </p>
       </div>
 
-      <div className="flex items-center gap-1.5 p-1 bg-surface-secondary/50 rounded-xl w-fit overflow-x-auto scrollbar-none">
+      <div className="flex items-center gap-1.5 p-1 bg-surface-secondary rounded-xl w-fit overflow-x-auto scrollbar-none">
         <button
           type="button"
           onClick={() => setActiveSection('goals')}
           className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-150 flex items-center gap-2 cursor-pointer ${
             activeSection === 'goals'
               ? 'bg-primary text-primary-foreground shadow-xs'
-              : 'text-foreground-secondary hover:text-foreground hover:bg-surface-secondary/70'
+              : 'text-foreground-secondary hover:text-foreground hover:bg-surface-tertiary'
           }`}
         >
           <Target className="w-3.5 h-3.5" />
@@ -190,7 +190,7 @@ export default function Settings() {
           className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-150 flex items-center gap-2 cursor-pointer ${
             activeSection === 'notifications'
               ? 'bg-primary text-primary-foreground shadow-xs'
-              : 'text-foreground-secondary hover:text-foreground hover:bg-surface-secondary/70'
+              : 'text-foreground-secondary hover:text-foreground hover:bg-surface-tertiary'
           }`}
         >
           <Bell className="w-3.5 h-3.5" />
@@ -203,7 +203,7 @@ export default function Settings() {
           className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-150 flex items-center gap-2 cursor-pointer ${
             activeSection === 'preferences'
               ? 'bg-primary text-primary-foreground shadow-xs'
-              : 'text-foreground-secondary hover:text-foreground hover:bg-surface-secondary/70'
+              : 'text-foreground-secondary hover:text-foreground hover:bg-surface-tertiary'
           }`}
         >
           <SlidersHorizontal className="w-3.5 h-3.5" />
@@ -228,7 +228,7 @@ export default function Settings() {
               </div>
 
               <div className="space-y-4 pt-1">
-                <div className="p-4 rounded-xl bg-surface-secondary/40 space-y-2">
+                <div className="p-4 rounded-xl bg-surface-secondary space-y-2">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
                       <label className="block text-xs font-bold text-foreground">Weekly application goal</label>
@@ -267,7 +267,7 @@ export default function Settings() {
                   </p>
                 </div>
 
-                <div className="p-4 rounded-xl bg-surface-secondary/40 space-y-2">
+                <div className="p-4 rounded-xl bg-surface-secondary space-y-2">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
                       <label className="block text-xs font-bold text-foreground">Daily calls goal</label>
@@ -306,7 +306,7 @@ export default function Settings() {
                   </p>
                 </div>
 
-                <div className="p-4 rounded-xl bg-surface-secondary/40 space-y-3">
+                <div className="p-4 rounded-xl bg-surface-secondary space-y-3">
                   <div>
                     <label className="block text-xs font-bold text-foreground">Working hours</label>
                     <p className="text-[11px] text-foreground-secondary font-medium mt-0.5">
@@ -361,7 +361,7 @@ export default function Settings() {
               </div>
 
               <div className="space-y-2 pt-1">
-                <div className="p-3.5 rounded-xl bg-surface-secondary/40 flex items-center justify-between gap-4">
+                <div className="p-3.5 rounded-xl bg-surface-secondary flex items-center justify-between gap-4">
                   <div className="min-w-0 pr-2">
                     <h4 className="text-xs font-bold text-foreground">Application reminders</h4>
                     <p className="text-[11px] text-foreground-secondary font-medium mt-0.5">
@@ -384,7 +384,7 @@ export default function Settings() {
                   </button>
                 </div>
 
-                <div className="p-3.5 rounded-xl bg-surface-secondary/40 flex items-center justify-between gap-4">
+                <div className="p-3.5 rounded-xl bg-surface-secondary flex items-center justify-between gap-4">
                   <div className="min-w-0 pr-2">
                     <h4 className="text-xs font-bold text-foreground">Follow-up reminders</h4>
                     <p className="text-[11px] text-foreground-secondary font-medium mt-0.5">
@@ -407,7 +407,7 @@ export default function Settings() {
                   </button>
                 </div>
 
-                <div className="p-3.5 rounded-xl bg-surface-secondary/40 flex items-center justify-between gap-4">
+                <div className="p-3.5 rounded-xl bg-surface-secondary flex items-center justify-between gap-4">
                   <div className="min-w-0 pr-2">
                     <h4 className="text-xs font-bold text-foreground">Interview reminders</h4>
                     <p className="text-[11px] text-foreground-secondary font-medium mt-0.5">
@@ -430,7 +430,7 @@ export default function Settings() {
                   </button>
                 </div>
 
-                <div className="p-3.5 rounded-xl bg-surface-secondary/40 flex items-center justify-between gap-4">
+                <div className="p-3.5 rounded-xl bg-surface-secondary flex items-center justify-between gap-4">
                   <div className="min-w-0 pr-2">
                     <h4 className="text-xs font-bold text-foreground">Daily progress summary</h4>
                     <p className="text-[11px] text-foreground-secondary font-medium mt-0.5">
@@ -453,7 +453,7 @@ export default function Settings() {
                   </button>
                 </div>
 
-                <div className="p-3.5 rounded-xl bg-surface-secondary/40 flex items-center justify-between gap-4">
+                <div className="p-3.5 rounded-xl bg-surface-secondary flex items-center justify-between gap-4">
                   <div className="min-w-0 pr-2">
                     <h4 className="text-xs font-bold text-foreground">Streak notifications</h4>
                     <p className="text-[11px] text-foreground-secondary font-medium mt-0.5">
@@ -477,7 +477,7 @@ export default function Settings() {
                 </div>
               </div>
 
-              <div className="p-3.5 rounded-xl bg-surface-secondary/30 flex items-center justify-between gap-4">
+              <div className="p-3.5 rounded-xl bg-surface-secondary flex items-center justify-between gap-4">
                 <div className="flex items-center gap-2.5 min-w-0">
                   <ShieldCheck className="w-4 h-4 text-emerald-500 flex-shrink-0" />
                   <div>
@@ -510,7 +510,7 @@ export default function Settings() {
               </div>
 
               <div className="space-y-4 pt-1">
-                <div className="p-4 rounded-xl bg-surface-secondary/40 space-y-2">
+                <div className="p-4 rounded-xl bg-surface-secondary space-y-2">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
                       <label className="block text-xs font-bold text-foreground">Your Name</label>
@@ -531,7 +531,7 @@ export default function Settings() {
                   </div>
                 </div>
 
-                <div className="p-3.5 rounded-xl bg-surface-secondary/40 flex items-center justify-between gap-4">
+                <div className="p-3.5 rounded-xl bg-surface-secondary flex items-center justify-between gap-4">
                   <div>
                     <h4 className="text-xs font-bold text-foreground">AI Coaching Engine</h4>
                     <p className="text-[11px] text-foreground-secondary font-medium mt-0.5">
@@ -543,7 +543,7 @@ export default function Settings() {
                   </span>
                 </div>
 
-                <div className="p-3.5 rounded-xl bg-surface-secondary/40 flex items-center justify-between gap-4">
+                <div className="p-3.5 rounded-xl bg-surface-secondary flex items-center justify-between gap-4">
                   <div>
                     <h4 className="text-xs font-bold text-foreground">Google Sheets 2-Way Sync</h4>
                     <p className="text-[11px] text-foreground-secondary font-medium mt-0.5">
@@ -576,7 +576,7 @@ export default function Settings() {
                 className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all duration-150 ${
                   hasChanges
                     ? 'bg-surface-secondary text-foreground-secondary hover:text-foreground hover:bg-surface-tertiary cursor-pointer'
-                    : 'bg-surface-secondary/40 text-muted cursor-not-allowed opacity-50'
+                    : 'bg-surface-secondary text-muted cursor-not-allowed opacity-50'
                 }`}
               >
                 Cancel
@@ -614,7 +614,7 @@ export default function Settings() {
             </div>
 
             <div className="space-y-2 pt-0.5">
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-surface-secondary/40">
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-surface-secondary">
                 <div className="flex items-center gap-2.5">
                   <Target className="w-3.5 h-3.5 text-primary" />
                   <span className="text-xs font-medium text-foreground-secondary">Weekly Goal</span>
@@ -622,7 +622,7 @@ export default function Settings() {
                 <span className="text-xs font-bold text-foreground">{settings.weekly_goal} apps/wk</span>
               </div>
 
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-surface-secondary/40">
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-surface-secondary">
                 <div className="flex items-center gap-2.5">
                   <Clock className="w-3.5 h-3.5 text-indigo-400" />
                   <span className="text-xs font-medium text-foreground-secondary">Working Window</span>
@@ -632,7 +632,7 @@ export default function Settings() {
                 </span>
               </div>
 
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-surface-secondary/40">
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-surface-secondary">
                 <div className="flex items-center gap-2.5">
                   <Bell className="w-3.5 h-3.5 text-blue-400" />
                   <span className="text-xs font-medium text-foreground-secondary">Notifications</span>
@@ -640,7 +640,7 @@ export default function Settings() {
                 <span className="text-xs font-bold text-foreground">{enabledNotifCount} enabled</span>
               </div>
 
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-surface-secondary/40">
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-surface-secondary">
                 <div className="flex items-center gap-2.5">
                   <Sparkles className="w-3.5 h-3.5 text-amber-400" />
                   <span className="text-xs font-medium text-foreground-secondary">AI Coach</span>

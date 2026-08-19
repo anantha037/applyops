@@ -8,7 +8,7 @@ export default function DueTodayList({ applications = [], onLog }) {
           {applications.map((app) => (
             <div 
               key={app.id} 
-              className="flex items-center justify-between p-3.5 bg-surface hover:bg-surface-secondary/50 transition-colors"
+              className="flex items-center justify-between p-3.5 bg-surface hover:bg-surface-tertiary transition-colors"
             >
               <div>
                 <p className="font-semibold text-sm text-foreground">{app.company}</p>
