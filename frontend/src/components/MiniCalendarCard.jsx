@@ -1,19 +1,21 @@
 import React from 'react'
 import { Calendar as CalendarIcon, ArrowUpRight } from 'lucide-react'
 
-const EVENT_DAYS = {
-  4: { label: 'Applied Google', color: 'bg-primary' },
-  8: { label: 'Stripe Interview', color: 'bg-amber-500' },
-  12: { label: 'Amazon Call', color: 'bg-emerald-500' },
-  15: { label: 'Vercel Review', color: 'bg-indigo-500' },
-  20: { label: 'Netflix Offer', color: 'bg-rose-500' },
-}
+const EVENT_DAYS = {}
 
 export default function MiniCalendarCard({ onViewFullCalendar }) {
-  const daysInMonth = 31
-  const startDayOffset = 5 // August 2026 starts on Saturday (0: Mon, 5: Sat)
+  const today = new Date()
+  const currentMonth = today.getMonth()
+  const currentYear = today.getFullYear()
+  const currentDay = today.getDate()
+
+  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate()
+  const firstDayOfWeek = new Date(currentYear, currentMonth, 1).getDay()
+  const startDayOffset = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1 // 0: Mon, 6: Sun
+
   const days = Array.from({ length: daysInMonth }, (_, i) => i + 1)
-  const currentDay = 7
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  const monthName = monthNames[currentMonth]
 
   return (
     <div className="panel rounded-2xl p-5 border border-border bg-surface shadow-xs h-full flex flex-col justify-between select-none">
@@ -25,7 +27,7 @@ export default function MiniCalendarCard({ onViewFullCalendar }) {
             <span>Calendar</span>
           </h3>
           <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-surface-secondary text-foreground-secondary">
-            Aug 2026
+            {monthName} {currentYear}
           </span>
         </div>
 
@@ -72,7 +74,7 @@ export default function MiniCalendarCard({ onViewFullCalendar }) {
                     ? 'bg-primary text-white font-bold shadow-xs'
                     : 'text-foreground hover:bg-surface-secondary'
                 }`}
-                title={event ? `${day} Aug: ${event.label}` : `${day} Aug`}
+                title={event ? `${day} ${monthName}: ${event.label}` : `${day} ${monthName}`}
               >
                 <span>{day}</span>
                 {event && !isToday && (

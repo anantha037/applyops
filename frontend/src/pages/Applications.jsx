@@ -872,6 +872,7 @@ export default function Applications() {
 
   const [filterStatus, setFilterStatus] = useState('All')
   const [filterStage, setFilterStage] = useState('All')
+  const [filterDateRange, setFilterDateRange] = useState('All Time')
   const [search, setSearch] = useState('')
   const [isExpanded, setIsExpanded] = useState(false)
   const [showManageResumes, setShowManageResumes] = useState(false)
@@ -1164,12 +1165,33 @@ export default function Applications() {
 
   const statusDropdownOptions = statuses.map(s => ({ label: s, value: s }))
   const stageDropdownOptions = stages.map(s => ({ label: s, value: s }))
+  const dateRangeOptions = [
+    { label: 'All Time', value: 'All Time' },
+    { label: 'Last 7 Days', value: '7d' },
+    { label: 'Last 30 Days', value: '30d' },
+    { label: 'This Month', value: 'month' },
+    { label: 'This Year', value: 'year' }
+  ]
 
   const filtered = apps.filter(a => {
     const matchStatus = filterStatus === 'All' || a.status === filterStatus
     const matchStage = filterStage === 'All' || a.stage === filterStage
     const matchSearch = !search || [a.company, a.job_title].some(f => f?.toLowerCase().includes(search.toLowerCase()))
-    return matchStatus && matchStage && matchSearch
+    let matchDate = true
+    if (filterDateRange !== 'All Time') {
+      if (!a.date_applied) {
+        matchDate = false
+      } else {
+        const d = new Date(a.date_applied)
+        const now = new Date()
+        if (filterDateRange === '7d') matchDate = (now - d) <= 7 * 24 * 60 * 60 * 1000
+        else if (filterDateRange === '30d') matchDate = (now - d) <= 30 * 24 * 60 * 60 * 1000
+        else if (filterDateRange === 'month') matchDate = d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
+        else if (filterDateRange === 'year') matchDate = d.getFullYear() === now.getFullYear()
+      }
+    }
+
+    return matchStatus && matchStage && matchSearch && matchDate
   })
 
   const visible = isExpanded ? filtered : filtered.slice(0, INITIAL_LIMIT)
@@ -1193,10 +1215,11 @@ export default function Applications() {
     { label: 'Ghosted', statusValue: 'Ghosted', value: counts.ghosted, iconBg: 'bg-warning-light', iconColor: 'text-warning', Icon: Ghost },
   ]
 
-  const isFiltered = filterStatus !== 'All' || filterStage !== 'All' || search !== ''
+  const isFiltered = filterStatus !== 'All' || filterStage !== 'All' || filterDateRange !== 'All Time' || search !== ''
   const clearFilters = () => {
     setFilterStatus('All')
     setFilterStage('All')
+    setFilterDateRange('All Time')
     setSearch('')
   }
 
@@ -1351,6 +1374,14 @@ export default function Applications() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <Dropdown
+            prefix="Date"
+            options={dateRangeOptions}
+            value={filterDateRange}
+            onChange={setFilterDateRange}
+            align="right"
+          />
+
           <Dropdown
             prefix="Status"
             options={statusDropdownOptions}
@@ -1519,7 +1550,7 @@ export default function Applications() {
 
                       <td className="px-5 py-4">
                         <input
-                          className="bg-transparent text-xs font-medium text-foreground placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-primary rounded px-2 py-1 w-full max-w-[150px] transition-all hover:bg-surface-tertiary"
+                          className="bg-transparent text-[11px] font-medium text-foreground-secondary placeholder:text-muted/60 focus:outline-none focus:bg-surface-secondary hover:bg-surface-tertiary rounded px-1.5 py-1 -ml-1.5 w-full min-w-[120px] max-w-[200px] transition-colors truncate focus:text-clip"
                           placeholder="Add remarks..."
                           defaultValue={app.remarks || ''}
                           onBlur={e => {
