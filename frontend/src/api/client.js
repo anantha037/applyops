@@ -246,11 +246,13 @@ export const api = {
   contacts: contactsApi.getContacts,
   createContact: contactsApi.createContact,
   updateContact: contactsApi.updateContact,
+  deleteContact: contactsApi.deleteContact,
   analyticsOverview: analyticsApi.getOverview,
   listResumes: resumesApi.listResumes,
   getResumeUrl: resumesApi.getResumeUrl,
   uploadResume: resumesApi.uploadResume,
   deleteResume: resumesApi.deleteResume,
   updateMe: authApi.updateMe,
-  me: authApi.me
+  me: authApi.me,
+  deleteApplication: applicationsApi.deleteApplication
 }

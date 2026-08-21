@@ -1,3 +1,4 @@
+import { Edit, Trash2 } from 'lucide-react'
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import { api } from '../api/client'
 import Dropdown from '../components/ui/Dropdown'
@@ -138,8 +139,8 @@ function MarkAsAppliedModal({ contact, onClose, onConfirm }) {
   )
 }
 
-function AddContactModal({ onClose, onSave }) {
-  const [form, setForm] = useState({
+function ContactModal({ isEdit, onClose, onSave }) {
+  const [form, setForm] = useState(arguments[0].initialData || {
     name: '',
     company: '',
     role: '',
@@ -181,8 +182,8 @@ function AddContactModal({ onClose, onSave }) {
               <UserPlusIcon />
             </div>
             <div>
-              <h3 className="text-base font-bold text-foreground">Add New Contact</h3>
-              <p className="text-[11px] text-foreground-secondary font-medium">Create a contact or recruiter entry</p>
+              <h3 className="text-base font-bold text-foreground">{isEdit ? 'Edit Contact' : 'Add New Contact'}</h3>
+              <p className="text-[11px] text-foreground-secondary font-medium">{isEdit ? 'Update contact details' : 'Create a contact or recruiter entry'}</p>
             </div>
           </div>
           <button onClick={onClose} className="rounded-lg p-1.5 text-foreground-secondary hover:text-foreground hover:bg-surface-tertiary transition-colors">
@@ -335,7 +336,7 @@ function AddContactModal({ onClose, onSave }) {
               disabled={saving}
               className="rounded-xl bg-primary px-5 py-2 text-xs font-semibold text-white hover:bg-primary-hover disabled:opacity-60 transition-all shadow-2xs active:scale-95"
             >
-              {saving ? 'Saving...' : 'Save Contact'}
+              {saving ? 'Saving...' : (isEdit ? 'Save Changes' : 'Save Contact')}
             </button>
           </div>
         </form>
@@ -406,6 +407,9 @@ export default function Contacts() {
   const [activeTab, setActiveTab] = useState('All Contacts')
   const [appFilter, setAppFilter] = useState('All')
   const [showAddModal, setShowAddModal] = useState(false)
+  const [editContact, setEditContact] = useState(null)
+  const [deleteContactId, setDeleteContactId] = useState(null)
+  const [deleteError, setDeleteError] = useState('')
   const [applyTargetContact, setApplyTargetContact] = useState(null)
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 10
@@ -424,6 +428,38 @@ export default function Contacts() {
   }, [])
 
   useEffect(() => { load() }, [load])
+
+
+  const handleEditClick = (contact) => {
+    setEditContact(contact)
+    setShowAddModal(true)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteContactId) return
+    try {
+      await api.deleteContact(deleteContactId)
+      await load()
+      setDeleteContactId(null)
+      setDeleteError('')
+    } catch (err) {
+      setDeleteError(err.message || 'Failed to delete contact')
+    }
+  }
+
+  const handleSaveContact = async (payload) => {
+    const formatted = {
+      ...payload,
+      tags: typeof payload.tags === 'string' ? payload.tags.split(',').map(t => t.trim()).filter(Boolean) : payload.tags
+    }
+    if (editContact) {
+      await api.updateContact(editContact.id, formatted)
+    } else {
+      await api.createContact(formatted)
+    }
+    await load()
+    setEditContact(null)
+  }
 
   const handleAdd = async (payload) => {
     const formatted = {
@@ -702,9 +738,20 @@ export default function Contacts() {
                             <PhoneIcon />
                           </a>
                         )}
-                      </div>
-                    </td>
-                  </tr>
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-3.5 text-right">
+                        <div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button onClick={() => handleEditClick(c)} className="p-1.5 text-foreground-secondary hover:text-primary hover:bg-surface-secondary rounded-lg transition-colors" title="Edit Contact">
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => setDeleteContactId(c.id)} className="p-1.5 text-foreground-secondary hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors" title="Delete Contact">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+
                 )
               })}
             </tbody>
@@ -734,8 +781,43 @@ export default function Contacts() {
         )}
       </div>
 
+      {deleteContactId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in-80 duration-150" onClick={(e) => e.target === e.currentTarget && (setDeleteContactId(null), setDeleteError(''))}>
+          <div className="bg-surface rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden select-none border border-transparent">
+            <div className="p-6">
+              <h3 className="text-base font-bold text-foreground mb-2">Delete Contact</h3>
+              {deleteError ? (
+                <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-xs font-medium text-rose-400">{deleteError}</div>
+              ) : (
+                <p className="text-xs text-foreground-secondary mb-6">Are you sure you want to delete this contact?</p>
+              )}
+              <div className="flex items-center justify-end gap-3">
+                <button onClick={() => { setDeleteContactId(null); setDeleteError(''); }} className="px-4 py-2 text-xs font-semibold text-foreground-secondary hover:bg-surface-tertiary rounded-xl transition-colors">Cancel</button>
+                <button onClick={handleDeleteConfirm} className="px-4 py-2 text-xs font-semibold text-white bg-rose-500 hover:bg-rose-600 rounded-xl transition-colors shadow-2xs">Delete</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showAddModal && (
-        <AddContactModal onClose={() => setShowAddModal(false)} onSave={handleAdd} />
+        <ContactModal
+          isEdit={!!editContact}
+          initialData={editContact ? {
+            name: editContact.name || '',
+            company: editContact.company || '',
+            role: editContact.role || '',
+            email: editContact.email || '',
+            phone: editContact.phone || '',
+            mark_applied: false,
+            application_method: 'LinkedIn Easy Apply',
+            tags: editContact.tags ? (Array.isArray(editContact.tags) ? editContact.tags.join(', ') : editContact.tags) : '',
+            notes: editContact.notes || '',
+            linkedin_url: editContact.linkedin_url || ''
+          } : undefined}
+          onClose={() => setShowAddModal(false)}
+          onSave={handleSaveContact}
+        />
       )}
 
       {applyTargetContact && (

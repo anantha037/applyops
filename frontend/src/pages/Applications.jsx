@@ -5,7 +5,7 @@ import ManageResumesModal from '../components/ManageResumesModal'
 import {
   Plus, X, Search, Check, AlertCircle, Calendar, Sparkles,
   Briefcase, Send, Clock, CalendarCheck, Trophy, XCircle, Ghost, ChevronDown, ChevronUp,
-  FileText, Eye, Download
+  FileText, Eye, Download, Edit, Trash2
 } from 'lucide-react'
 
 
@@ -540,7 +540,7 @@ function PostCreateBanner({ info, onDismiss, onEdit }) {
   )
 }
 
-function NewApplicationModal({ isOpen, onClose, onSubmit, form, setForm, resumes = [], onUploadResume, onManageResumes }) {
+function ApplicationModal({ isEdit, isOpen, onClose, onSubmit, form, setForm, resumes = [], onUploadResume, onManageResumes }) {
   if (!isOpen) return null
 
   return (
@@ -555,8 +555,8 @@ function NewApplicationModal({ isOpen, onClose, onSubmit, form, setForm, resumes
               <Plus className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-foreground">New Application</h3>
-              <p className="text-[11px] text-foreground-secondary font-medium">Add a new job application to your tracking pipeline</p>
+              <h3 className="text-base font-bold text-foreground">{isEdit ? 'Edit Application' : 'New Application'}</h3>
+              <p className="text-[11px] text-foreground-secondary font-medium">{isEdit ? 'Update existing application details' : 'Add a new job application to your tracking pipeline'}</p>
             </div>
           </div>
           <button
@@ -1169,7 +1169,25 @@ export default function Applications() {
         }}
       />
 
-      <NewApplicationModal
+
+      {deleteAppId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in-80 duration-150" onClick={(e) => e.target === e.currentTarget && setDeleteAppId(null)}>
+          <div className="bg-surface rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden select-none border border-transparent">
+            <div className="p-6">
+              <h3 className="text-base font-bold text-foreground mb-2">Delete Application</h3>
+              <p className="text-xs text-foreground-secondary mb-6">Are you sure you want to delete this application? All related calendar events and activity logs will also be permanently deleted.</p>
+              <div className="flex items-center justify-end gap-3">
+                <button onClick={() => setDeleteAppId(null)} className="px-4 py-2 text-xs font-semibold text-foreground-secondary hover:bg-surface-tertiary rounded-xl transition-colors">Cancel</button>
+                <button onClick={handleDeleteConfirm} className="px-4 py-2 text-xs font-semibold text-white bg-rose-500 hover:bg-rose-600 rounded-xl transition-colors shadow-2xs">Delete</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ApplicationModal
+        isEdit={!!editApp}
+
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
         onSubmit={submit}
@@ -1313,7 +1331,21 @@ export default function Applications() {
                 <th className="px-5 py-3.5 font-extrabold">Next Action</th>
                 <th className="px-5 py-3.5 font-extrabold">Remarks</th>
                 <th className="px-5 py-3.5 font-extrabold">Resume</th>
-              </tr>
+                  <th className="px-5 py-3.5 font-extrabold text-right">Actions</th>
+
+                      <td className="px-5 py-4">
+                        <div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button onClick={() => handleEditClick(app)} className="p-1.5 text-foreground-secondary hover:text-primary hover:bg-surface-secondary rounded-lg transition-colors" title="Edit Application">
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => setDeleteAppId(app.id)} className="p-1.5 text-foreground-secondary hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors" title="Delete Application">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                      <td className="px-5 py-4"><div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity"><button onClick={() => handleEditClick(app)} className="p-1.5 text-foreground-secondary hover:text-primary hover:bg-surface-secondary rounded-lg transition-colors" title="Edit Application"><Edit className="w-4 h-4" /></button><button onClick={() => setDeleteAppId(app.id)} className="p-1.5 text-foreground-secondary hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors" title="Delete Application"><Trash2 className="w-4 h-4" /></button></div></td>
+                    </tr>
+
             </thead>
             <tbody>
               {loading ? (
@@ -1346,6 +1378,7 @@ export default function Applications() {
                     <td className="px-5 py-4">
                       <div className="h-5 w-16 rounded bg-surface-secondary" />
                     </td>
+                    <td className="px-5 py-4"><div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity"><button onClick={() => handleEditClick(app)} className="p-1.5 text-foreground-secondary hover:text-primary hover:bg-surface-secondary rounded-lg transition-colors" title="Edit Application"><Edit className="w-4 h-4" /></button><button onClick={() => setDeleteAppId(app.id)} className="p-1.5 text-foreground-secondary hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors" title="Delete Application"><Trash2 className="w-4 h-4" /></button></div></td>
                   </tr>
                 ))
               ) : filtered.length === 0 ? (
@@ -1353,6 +1386,7 @@ export default function Applications() {
                   <td colSpan={9} className="py-16 text-center text-xs text-muted">
                     No applications match the current filter parameters.
                   </td>
+                  <td className="px-5 py-4"><div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity"><button onClick={() => handleEditClick(app)} className="p-1.5 text-foreground-secondary hover:text-primary hover:bg-surface-secondary rounded-lg transition-colors" title="Edit Application"><Edit className="w-4 h-4" /></button><button onClick={() => setDeleteAppId(app.id)} className="p-1.5 text-foreground-secondary hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors" title="Delete Application"><Trash2 className="w-4 h-4" /></button></div></td>
                 </tr>
               ) : (
                 visible.map(app => {
@@ -1466,6 +1500,7 @@ export default function Applications() {
                           <span className="text-xs font-medium text-foreground-secondary/50">No resume</span>
                         )}
                       </td>
+                      <td className="px-5 py-4"><div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity"><button onClick={() => handleEditClick(app)} className="p-1.5 text-foreground-secondary hover:text-primary hover:bg-surface-secondary rounded-lg transition-colors" title="Edit Application"><Edit className="w-4 h-4" /></button><button onClick={() => setDeleteAppId(app.id)} className="p-1.5 text-foreground-secondary hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors" title="Delete Application"><Trash2 className="w-4 h-4" /></button></div></td>
                     </tr>
                   )
                 })

@@ -320,6 +320,21 @@ def update_contact(user_id: str, contact_id: str, changes: dict) -> ContactView 
         )
 
 
+def delete_contact(user_id: str, contact_id: str) -> None:
+    """Delete a contact if not referenced by applications."""
+    with Session(engine) as session:
+        contact = session.exec(select(Contact).where(Contact.user_id == user_id, Contact.id == contact_id)).first()
+        if not contact:
+            raise ValueError("Contact not found")
+
+        apps_count = session.exec(select(func.count(DBApplication.id)).where(DBApplication.contact_id == contact_id)).one()
+        if apps_count > 0:
+            raise ValueError(f"Cannot delete this contact because it is attached to {apps_count} application(s).")
+
+        session.delete(contact)
+        session.commit()
+
+
 # ---------------------------------------------------------------------------
 # Applications
 # ---------------------------------------------------------------------------
@@ -473,6 +488,17 @@ def delete_application(user_id: str, application_id: str) -> bool:
         row = session.get(DBApplication, application_id)
         if row is None or row.user_id != user_id:
             return False
+
+        # Manually cascade delete calendar events and activity logs to avoid IntegrityError
+        # and prevent leaving orphaned records.
+        events = session.exec(select(DBCalendarEvent).where(DBCalendarEvent.related_application_id == application_id)).all()
+        for ev in events:
+            session.delete(ev)
+
+        activities = session.exec(select(ActivityLog).where(ActivityLog.application_id == application_id)).all()
+        for act in activities:
+            session.delete(act)
+
         session.delete(row)
         session.commit()
         return True
