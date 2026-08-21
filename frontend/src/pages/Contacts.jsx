@@ -429,6 +429,15 @@ export default function Contacts() {
 
   useEffect(() => { load() }, [load])
 
+  const handleJumpToApplication = (appId) => {
+    sessionStorage.setItem('applyops_pending_action', JSON.stringify({ type: 'edit_app', appId }))
+    window.location.hash = '#/applications'
+  }
+
+  const handleAddApplication = (contact) => {
+    sessionStorage.setItem('applyops_pending_action', JSON.stringify({ type: 'new_from_contact', contact }))
+    window.location.hash = '#/applications'
+  }
 
   const handleEditClick = (contact) => {
     setEditContact(contact)
@@ -662,7 +671,24 @@ export default function Contacts() {
                       <InlineLinkedinEdit contact={c} onSave={handleUpdateLinkedin} />
                     </td>
                     <td className="py-3.5 px-3.5">
-                      {isApplied ? (
+                      {c.applications && c.applications.length > 0 ? (
+                        <div className="flex flex-col gap-1.5">
+                          {c.applications.map(app => (
+                            <button
+                              key={app.id}
+                              onClick={() => handleJumpToApplication(app.id)}
+                              className="text-left group/app flex flex-col hover:bg-surface-tertiary p-1.5 -ml-1.5 rounded-lg transition-colors"
+                            >
+                              <span className="text-xs font-bold text-primary group-hover/app:underline decoration-primary/50">
+                                {app.company || 'Unknown Company'}
+                              </span>
+                              <span className="text-[10px] text-foreground-secondary font-medium">
+                                {app.job_title || 'Unknown Role'}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      ) : isApplied ? (
                         <div className="flex flex-col">
                           <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
@@ -715,7 +741,7 @@ export default function Contacts() {
                       </div>
                     </td>
                     <td className="py-3.5 px-3.5 text-right">
-                      <div className="flex items-center justify-end gap-1">
+                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         {c.email && (
                           <button
                             type="button"
@@ -738,19 +764,18 @@ export default function Contacts() {
                             <PhoneIcon />
                           </a>
                         )}
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-3.5 text-right">
-                        <div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => handleEditClick(c)} className="p-1.5 text-foreground-secondary hover:text-primary hover:bg-surface-secondary rounded-lg transition-colors" title="Edit Contact">
-                            <Edit className="w-4 h-4" />
-                          </button>
-                          <button onClick={() => setDeleteContactId(c.id)} className="p-1.5 text-foreground-secondary hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors" title="Delete Contact">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+                        <button onClick={() => handleAddApplication(c)} className="p-1.5 text-foreground-secondary hover:text-primary hover:bg-surface-secondary rounded-lg transition-colors" title="Add Application">
+                          <svg className="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+                        </button>
+                        <button onClick={() => handleEditClick(c)} className="p-1.5 text-foreground-secondary hover:text-primary hover:bg-surface-secondary rounded-lg transition-colors" title="Edit Contact">
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => setDeleteContactId(c.id)} className="p-1.5 text-foreground-secondary hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors" title="Delete Contact">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
 
                 )
               })}

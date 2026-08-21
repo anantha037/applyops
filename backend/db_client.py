@@ -221,16 +221,20 @@ def list_contacts(user_id: str) -> list[ContactView]:
         for act in activities:
             act_by_contact[act.contact_id].append(act)
             
-        # Also need application_id? A contact can have multiple applications. 
+        # Get all linked applications
         apps = session.exec(
             select(DBApplication).where(
                 DBApplication.user_id == user_id,
                 DBApplication.contact_id.is_not(None)
             )
         ).all()
-        app_by_contact = {}
+        app_by_contact = defaultdict(list)
         for app in apps:
-            app_by_contact[app.contact_id] = app.id
+            app_by_contact[app.contact_id].append({
+                "id": app.id,
+                "company": app.company or "",
+                "job_title": app.job_title or ""
+            })
             
         results = []
         for c in contacts:
@@ -244,6 +248,8 @@ def list_contacts(user_id: str) -> list[ContactView]:
                 for a in c_acts
             )
             
+            linked_apps = app_by_contact[c.id]
+
             results.append(ContactView(
                 id=c.id,
                 name=c.name or "",
@@ -255,7 +261,8 @@ def list_contacts(user_id: str) -> list[ContactView]:
                 notes=c.notes or "",
                 linkedin_url=c.linkedin_url or "",
                 source="postgres",
-                application_id=app_by_contact.get(c.id),
+                application_id=linked_apps[0]["id"] if linked_apps else None,
+                applications=linked_apps,
                 last_contacted=last_contact,
                 responded=responded,
                 last_action_status=c.last_action_status,

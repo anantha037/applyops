@@ -25,19 +25,21 @@ export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(() => authApi.isAuthenticated())
   
   const [view, setView] = useState(() => {
-    const hash = window.location.hash.replace('#/', '')
-    return views[hash] ? hash : 'dashboard'
+    const rawHash = window.location.hash.replace('#/', '')
+    const hashPath = rawHash.split('?')[0]
+    return views[hashPath] ? hashPath : 'dashboard'
   })
   
   useEffect(() => {
-    if (!window.location.hash || !views[window.location.hash.replace('#/', '')]) {
+    if (!window.location.hash || !views[window.location.hash.replace('#/', '').split('?')[0]]) {
       window.location.hash = `#/dashboard`
     }
 
     const handleHashChange = () => {
-      const hash = window.location.hash.replace('#/', '')
-      if (views[hash]) {
-        setView(hash)
+      const rawHash = window.location.hash.replace('#/', '')
+      const hashPath = rawHash.split('?')[0]
+      if (views[hashPath]) {
+        setView(hashPath)
       }
     }
     

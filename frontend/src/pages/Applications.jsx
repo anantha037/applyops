@@ -863,6 +863,8 @@ export default function Applications() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
+  const [editApp, setEditApp] = useState(null)
+  const [deleteAppId, setDeleteAppId] = useState(null)
   const [previewResume, setPreviewResume] = useState(null)
   const [editActionApp, setEditActionApp] = useState(null)
   const [statusPrompt, setStatusPrompt] = useState(null)
@@ -901,11 +903,57 @@ export default function Applications() {
         return app
       })
       setApps(appsWithResumes)
+      
+      // Handle cross-page navigation actions
+      const pendingActionStr = sessionStorage.getItem('applyops_pending_action')
+      if (pendingActionStr) {
+        sessionStorage.removeItem('applyops_pending_action')
+        try {
+          const pendingAction = JSON.parse(pendingActionStr)
+          if (pendingAction.type === 'edit_app') {
+            const targetApp = appsWithResumes.find(a => a.id === pendingAction.appId)
+            if (targetApp) {
+              setEditApp(targetApp)
+              setForm({
+                ...EMPTY_FORM,
+                ...targetApp,
+                has_contact: !!(targetApp.contact_name || targetApp.contact_email || targetApp.contact_phone || targetApp.contact_linkedin)
+              })
+              setShowAddModal(true)
+            }
+          } else if (pendingAction.type === 'new_from_contact') {
+            const contact = pendingAction.contact
+            setEditApp(null)
+            setForm({
+              ...EMPTY_FORM,
+              has_contact: true,
+              contact_name: contact.name || '',
+              contact_role: contact.role || '',
+              contact_email: contact.email || '',
+              contact_phone: contact.phone || '',
+              contact_linkedin: contact.linkedin_url || ''
+            })
+            setShowAddModal(true)
+          }
+        } catch (err) {
+          console.error('Failed to parse pending action', err)
+        }
+      }
     })
     .catch(e => setError(e.message))
     .finally(() => setLoading(false))
   }
   useEffect(() => { load() }, [])
+
+  const handleEditClick = (app) => {
+    setEditApp(app)
+    setForm({
+      ...EMPTY_FORM,
+      ...app,
+      has_contact: !!(app.contact_name || app.contact_email || app.contact_phone || app.contact_linkedin)
+    })
+    setShowAddModal(true)
+  }
 
   const handleUploadResume = async (file) => {
     try {
@@ -937,7 +985,7 @@ export default function Applications() {
       a.job_title?.trim().toLowerCase() === form.job_title?.trim().toLowerCase()
     )
 
-    if (isDuplicate) {
+    if (!editApp && isDuplicate) {
       if (!window.confirm(`You already have an existing application for '${isDuplicate.job_title}' at '${isDuplicate.company}' (Applied on ${isDuplicate.date_applied || 'an unknown date'}).\n\nAre you sure you want to create a new, separate application track for this?`)) {
         return
       }
@@ -971,24 +1019,35 @@ export default function Applications() {
       ...(form.resume_id ? { resume_id: form.resume_id } : {})
     }
 
-    api.createApplication(payload)
-      .then(newApp => {
-        setForm({
-          ...EMPTY_FORM,
-          next_action_date: getFutureDateStr(2)
+    if (editApp) {
+      api.updateApplication(editApp.id, payload)
+        .then(() => {
+          setForm(EMPTY_FORM)
+          setShowAddModal(false)
+          setEditApp(null)
+          load()
         })
-        setShowAddModal(false)
-        if (nextActionObj) {
-          setCreatedBannerInfo({
-            company: newApp.company,
-            job_title: newApp.job_title,
-            next_action: nextActionObj,
-            appId: newApp.id
+        .catch(e => setError(e.message))
+    } else {
+      api.createApplication(payload)
+        .then(newApp => {
+          setForm({
+            ...EMPTY_FORM,
+            next_action_date: getFutureDateStr(2)
           })
-        }
-        load()
-      })
-      .catch(e => setError(e.message))
+          setShowAddModal(false)
+          if (nextActionObj) {
+            setCreatedBannerInfo({
+              company: newApp.company,
+              job_title: newApp.job_title,
+              next_action: nextActionObj,
+              appId: newApp.id
+            })
+          }
+          load()
+        })
+        .catch(e => setError(e.message))
+    }
   }
 
   const saveNextAction = (appId, actionObj) => {
@@ -1187,9 +1246,11 @@ export default function Applications() {
 
       <ApplicationModal
         isEdit={!!editApp}
-
         isOpen={showAddModal}
-        onClose={() => setShowAddModal(false)}
+        onClose={() => {
+          setShowAddModal(false)
+          setEditApp(null)
+        }}
         onSubmit={submit}
         form={form}
         setForm={setForm}
