@@ -8,7 +8,10 @@ async function _doRefresh() {
   try {
     const refreshRes = await fetch(`${baseUrl}/auth/refresh`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'X-ApplyOps-Client': '1'
+      },
       credentials: 'include',
       body: JSON.stringify({})
     })
