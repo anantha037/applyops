@@ -5,11 +5,11 @@ import ManageResumesModal from '../components/ManageResumesModal'
 import {
   Plus, X, Search, Check, AlertCircle, Calendar, Sparkles,
   Briefcase, Send, Clock, CalendarCheck, Trophy, XCircle, Ghost, ChevronDown, ChevronUp,
-  FileText, Eye, Download
+  FileText, Eye, Download, Edit, Trash2
 } from 'lucide-react'
 
 
-const METHODS = ['Company Website', 'LinkedIn', 'Referral', 'Wellfound', 'Other']
+const METHODS = ['Company Website', 'LinkedIn', 'Referral', 'Wellfound', 'Indeed', 'Naukri', 'Other']
 const METHOD_DROPDOWN_OPTIONS = METHODS.map(m => ({ label: m, value: m }))
 
 const ACTION_TYPE_OPTIONS = [
@@ -191,7 +191,7 @@ function ViewResumeModal({ resume, onClose, onDownload }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in-80 duration-150" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="bg-surface rounded-2xl border border-border shadow-2xl w-full max-w-4xl h-[90vh] flex flex-col overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-surface-secondary/30">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-surface-secondary">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
               <FileText className="w-5 h-5" />
@@ -227,7 +227,7 @@ function ViewResumeModal({ resume, onClose, onDownload }) {
           )}
         </div>
 
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border bg-surface-secondary/30">
+        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border bg-surface-secondary">
           <button
             type="button"
             onClick={onClose}
@@ -305,7 +305,7 @@ function EditNextActionModal({ app, onClose, onSave, onRemove }) {
               <p className="text-[11px] text-foreground-secondary font-medium">{app.company} · {app.job_title}</p>
             </div>
           </div>
-          <button onClick={onClose} className="rounded-lg p-1.5 text-foreground-secondary hover:text-foreground hover:bg-surface-secondary/80 transition-colors">
+          <button onClick={onClose} className="rounded-lg p-1.5 text-foreground-secondary hover:text-foreground hover:bg-surface-tertiary transition-colors">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -327,7 +327,7 @@ function EditNextActionModal({ app, onClose, onSave, onRemove }) {
             <input
               required
               placeholder="e.g. Follow up with recruiter"
-              className="w-full rounded-xl border border-transparent bg-surface-secondary hover:bg-surface-tertiary px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/25 transition-all"
+              className="w-full rounded-xl border border-transparent bg-surface-secondary hover:bg-surface-tertiary px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary transition-all"
               value={form.title}
               onChange={e => setForm({ ...form, title: e.target.value })}
             />
@@ -339,7 +339,7 @@ function EditNextActionModal({ app, onClose, onSave, onRemove }) {
               <input
                 type="date"
                 required
-                className="w-full rounded-xl border border-transparent bg-surface-secondary hover:bg-surface-tertiary px-3.5 py-2.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 transition-all [color-scheme:dark]"
+                className="w-full rounded-xl border border-transparent bg-surface-secondary hover:bg-surface-tertiary px-3.5 py-2.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-all [color-scheme:dark]"
                 value={form.date}
                 onChange={e => setForm({ ...form, date: e.target.value })}
               />
@@ -439,7 +439,7 @@ function StatusSuggestionModal({ prompt, onClose, onAccept, onKeep, onRemove, on
           <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/5">
             <button
               onClick={() => { onKeep(); onClose() }}
-              className="rounded-xl px-4 py-2 text-xs font-semibold text-foreground-secondary hover:bg-surface-secondary/60 transition-colors"
+              className="rounded-xl px-4 py-2 text-xs font-semibold text-foreground-secondary hover:bg-surface-tertiary transition-colors"
             >
               Keep Completed
             </button>
@@ -468,7 +468,7 @@ function StatusSuggestionModal({ prompt, onClose, onAccept, onKeep, onRemove, on
           </div>
         </div>
 
-        <div className="bg-surface-secondary/40 rounded-xl p-3.5 my-4 border border-transparent space-y-1 text-xs">
+        <div className="bg-surface-secondary rounded-xl p-3.5 my-4 border border-transparent space-y-1 text-xs">
           <span className="text-[10px] font-bold text-primary uppercase tracking-wider">Suggested Next Action</span>
           <p className="font-bold text-foreground">{suggestedAction?.title}</p>
           <p className="text-foreground-secondary font-medium text-[11px]">
@@ -488,7 +488,7 @@ function StatusSuggestionModal({ prompt, onClose, onAccept, onKeep, onRemove, on
           <div className="grid grid-cols-2 gap-2 mt-1">
             <button
               onClick={() => { onKeep(); onClose() }}
-              className="rounded-xl px-3 py-2 text-xs font-semibold text-foreground-secondary bg-surface-secondary/60 hover:bg-surface-secondary transition-colors"
+              className="rounded-xl px-3 py-2 text-xs font-semibold text-foreground-secondary bg-surface-secondary hover:bg-surface-secondary transition-colors"
             >
               Keep Current Action
             </button>
@@ -540,7 +540,7 @@ function PostCreateBanner({ info, onDismiss, onEdit }) {
   )
 }
 
-function NewApplicationModal({ isOpen, onClose, onSubmit, form, setForm, resumes = [], onUploadResume, onManageResumes }) {
+function ApplicationModal({ isEdit, isOpen, onClose, onSubmit, form, setForm, resumes = [], onUploadResume, onManageResumes }) {
   if (!isOpen) return null
 
   return (
@@ -555,13 +555,13 @@ function NewApplicationModal({ isOpen, onClose, onSubmit, form, setForm, resumes
               <Plus className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-foreground">New Application</h3>
-              <p className="text-[11px] text-foreground-secondary font-medium">Add a new job application to your tracking pipeline</p>
+              <h3 className="text-base font-bold text-foreground">{isEdit ? 'Edit Application' : 'New Application'}</h3>
+              <p className="text-[11px] text-foreground-secondary font-medium">{isEdit ? 'Update existing application details' : 'Add a new job application to your tracking pipeline'}</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="rounded-lg p-1.5 text-foreground-secondary hover:text-foreground hover:bg-surface-secondary/80 transition-colors"
+            className="rounded-lg p-1.5 text-foreground-secondary hover:text-foreground hover:bg-surface-tertiary transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -573,7 +573,7 @@ function NewApplicationModal({ isOpen, onClose, onSubmit, form, setForm, resumes
             <input
               required
               placeholder="e.g. Stripe, Linear, Vercel"
-              className="w-full rounded-xl border border-transparent bg-surface-secondary hover:bg-surface-tertiary px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/25 transition-all"
+              className="w-full rounded-xl border border-transparent bg-surface-secondary hover:bg-surface-tertiary px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary transition-all"
               value={form.company}
               onChange={e => setForm({ ...form, company: e.target.value })}
             />
@@ -584,20 +584,32 @@ function NewApplicationModal({ isOpen, onClose, onSubmit, form, setForm, resumes
             <input
               required
               placeholder="e.g. Senior Frontend Engineer"
-              className="w-full rounded-xl border border-transparent bg-surface-secondary hover:bg-surface-tertiary px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/25 transition-all"
+              className="w-full rounded-xl border border-transparent bg-surface-secondary hover:bg-surface-tertiary px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary transition-all"
               value={form.job_title}
               onChange={e => setForm({ ...form, job_title: e.target.value })}
             />
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">Location (Optional)</label>
-            <input
-              placeholder="e.g. San Francisco, Remote, NYC"
-              className="w-full rounded-xl border border-transparent bg-surface-secondary hover:bg-surface-tertiary px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/25 transition-all"
-              value={form.location}
-              onChange={e => setForm({ ...form, location: e.target.value })}
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">Date Applied *</label>
+              <input
+                type="date"
+                required
+                className="w-full rounded-xl border border-transparent bg-surface-secondary hover:bg-surface-tertiary px-3.5 py-2.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-all [color-scheme:dark]"
+                value={form.date_applied || ''}
+                onChange={e => setForm({ ...form, date_applied: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">Location (Optional)</label>
+              <input
+                placeholder="e.g. San Francisco, Remote, NYC"
+                className="w-full rounded-xl border border-transparent bg-surface-secondary hover:bg-surface-tertiary px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+                value={form.location}
+                onChange={e => setForm({ ...form, location: e.target.value })}
+              />
+            </div>
           </div>
 
           <div>
@@ -612,6 +624,14 @@ function NewApplicationModal({ isOpen, onClose, onSubmit, form, setForm, resumes
                 triggerClassName="bg-surface-secondary text-foreground hover:bg-surface-tertiary border border-transparent"
               />
             </div>
+            {form.application_method === 'Other' && (
+              <input
+                placeholder="Please specify..."
+                className="w-full mt-2 rounded-xl border border-transparent bg-surface-secondary hover:bg-surface-tertiary px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+                value={form.application_method_other || ''}
+                onChange={e => setForm({ ...form, application_method_other: e.target.value })}
+              />
+            )}
           </div>
 
           <div className="pt-2 border-t border-white/5 space-y-3">
@@ -629,13 +649,13 @@ function NewApplicationModal({ isOpen, onClose, onSubmit, form, setForm, resumes
             </div>
 
             {form.has_contact && (
-              <div className="space-y-3 p-3.5 rounded-xl bg-surface-secondary/40 border border-transparent">
+              <div className="space-y-3 p-3.5 rounded-xl bg-surface-secondary border border-transparent">
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="block text-[11px] font-semibold text-foreground-secondary mb-1">Name</label>
                     <input
                       placeholder="e.g. Jane Doe"
-                      className="w-full rounded-lg border border-transparent bg-surface-secondary px-3 py-1.5 text-xs text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/25"
+                      className="w-full rounded-lg border border-transparent bg-surface-secondary px-3 py-1.5 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary"
                       value={form.contact_name}
                       onChange={e => setForm({ ...form, contact_name: e.target.value })}
                     />
@@ -644,7 +664,7 @@ function NewApplicationModal({ isOpen, onClose, onSubmit, form, setForm, resumes
                     <label className="block text-[11px] font-semibold text-foreground-secondary mb-1">Role</label>
                     <input
                       placeholder="e.g. Recruiter"
-                      className="w-full rounded-lg border border-transparent bg-surface-secondary px-3 py-1.5 text-xs text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/25"
+                      className="w-full rounded-lg border border-transparent bg-surface-secondary px-3 py-1.5 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary"
                       value={form.contact_role}
                       onChange={e => setForm({ ...form, contact_role: e.target.value })}
                     />
@@ -656,7 +676,7 @@ function NewApplicationModal({ isOpen, onClose, onSubmit, form, setForm, resumes
                     <input
                       type="email"
                       placeholder="jane@example.com"
-                      className="w-full rounded-lg border border-transparent bg-surface-secondary px-3 py-1.5 text-xs text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/25"
+                      className="w-full rounded-lg border border-transparent bg-surface-secondary px-3 py-1.5 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary"
                       value={form.contact_email}
                       onChange={e => setForm({ ...form, contact_email: e.target.value })}
                     />
@@ -665,11 +685,20 @@ function NewApplicationModal({ isOpen, onClose, onSubmit, form, setForm, resumes
                     <label className="block text-[11px] font-semibold text-foreground-secondary mb-1">Phone</label>
                     <input
                       placeholder="+1234567890"
-                      className="w-full rounded-lg border border-transparent bg-surface-secondary px-3 py-1.5 text-xs text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/25"
+                      className="w-full rounded-lg border border-transparent bg-surface-secondary px-3 py-1.5 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary"
                       value={form.contact_phone}
                       onChange={e => setForm({ ...form, contact_phone: e.target.value })}
                     />
                   </div>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-foreground-secondary mb-1">LinkedIn Profile</label>
+                  <input
+                    placeholder="https://linkedin.com/in/..."
+                    className="w-full rounded-lg border border-transparent bg-surface-secondary px-3 py-1.5 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary"
+                    value={form.contact_linkedin}
+                    onChange={e => setForm({ ...form, contact_linkedin: e.target.value })}
+                  />
                 </div>
               </div>
             )}
@@ -683,7 +712,7 @@ function NewApplicationModal({ isOpen, onClose, onSubmit, form, setForm, resumes
               </label>
             </div>
             
-            <div className="space-y-3 p-3.5 rounded-xl bg-surface-secondary/40 border border-transparent">
+            <div className="space-y-3 p-3.5 rounded-xl bg-surface-secondary border border-transparent">
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="block text-[11px] font-semibold text-foreground-secondary">Select existing resume</label>
@@ -730,7 +759,7 @@ function NewApplicationModal({ isOpen, onClose, onSubmit, form, setForm, resumes
             </div>
 
             {form.enable_next_action && (
-              <div className="space-y-3 p-3.5 rounded-xl bg-surface-secondary/40 border border-transparent">
+              <div className="space-y-3 p-3.5 rounded-xl bg-surface-secondary border border-transparent">
                 <div>
                   <label className="block text-[11px] font-semibold text-foreground-secondary mb-1">Action Type</label>
                   <Dropdown
@@ -753,7 +782,7 @@ function NewApplicationModal({ isOpen, onClose, onSubmit, form, setForm, resumes
                   <label className="block text-[11px] font-semibold text-foreground-secondary mb-1">Title</label>
                   <input
                     placeholder="e.g. Follow up with recruiter"
-                    className="w-full rounded-lg border border-transparent bg-surface-secondary px-3 py-1.5 text-xs text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/25"
+                    className="w-full rounded-lg border border-transparent bg-surface-secondary px-3 py-1.5 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary"
                     value={form.next_action_title}
                     onChange={e => setForm({ ...form, next_action_title: e.target.value })}
                   />
@@ -764,7 +793,7 @@ function NewApplicationModal({ isOpen, onClose, onSubmit, form, setForm, resumes
                     <label className="block text-[11px] font-semibold text-foreground-secondary mb-1">Date</label>
                     <input
                       type="date"
-                      className="w-full rounded-lg border border-transparent bg-surface-secondary px-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 [color-scheme:dark]"
+                      className="w-full rounded-lg border border-transparent bg-surface-secondary px-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary [color-scheme:dark]"
                       value={form.next_action_date}
                       onChange={e => setForm({ ...form, next_action_date: e.target.value })}
                     />
@@ -789,7 +818,7 @@ function NewApplicationModal({ isOpen, onClose, onSubmit, form, setForm, resumes
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl px-4 py-2 text-xs font-semibold text-foreground-secondary hover:bg-surface-secondary/60 transition-colors"
+              className="rounded-xl px-4 py-2 text-xs font-semibold text-foreground-secondary hover:bg-surface-tertiary transition-colors"
             >
               Cancel
             </button>
@@ -807,15 +836,18 @@ function NewApplicationModal({ isOpen, onClose, onSubmit, form, setForm, resumes
 }
 
 const EMPTY_FORM = {
+  date_applied: new Date().toISOString().split('T')[0],
   company: '',
   job_title: '',
   location: '',
-  application_method: 'LinkedIn Easy Apply',
+  application_method: 'LinkedIn',
+  application_method_other: '',
   has_contact: false,
   contact_name: '',
   contact_role: '',
   contact_email: '',
   contact_phone: '',
+  contact_linkedin: '',
   resume_id: '',
   enable_next_action: true,
   next_action_type: 'Follow Up',
@@ -831,6 +863,8 @@ export default function Applications() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
+  const [editApp, setEditApp] = useState(null)
+  const [deleteAppId, setDeleteAppId] = useState(null)
   const [previewResume, setPreviewResume] = useState(null)
   const [editActionApp, setEditActionApp] = useState(null)
   const [statusPrompt, setStatusPrompt] = useState(null)
@@ -838,6 +872,7 @@ export default function Applications() {
 
   const [filterStatus, setFilterStatus] = useState('All')
   const [filterStage, setFilterStage] = useState('All')
+  const [filterDateRange, setFilterDateRange] = useState('All Time')
   const [search, setSearch] = useState('')
   const [isExpanded, setIsExpanded] = useState(false)
   const [showManageResumes, setShowManageResumes] = useState(false)
@@ -869,11 +904,68 @@ export default function Applications() {
         return app
       })
       setApps(appsWithResumes)
+      
+      // Handle cross-page navigation actions
+      const pendingActionStr = sessionStorage.getItem('applyops_pending_action')
+      if (pendingActionStr) {
+        sessionStorage.removeItem('applyops_pending_action')
+        try {
+          const pendingAction = JSON.parse(pendingActionStr)
+          if (pendingAction.type === 'edit_app') {
+            const targetApp = appsWithResumes.find(a => a.id === pendingAction.appId)
+            if (targetApp) {
+              setEditApp(targetApp)
+              setForm({
+                ...EMPTY_FORM,
+                ...targetApp,
+                has_contact: !!(targetApp.contact_name || targetApp.contact_email || targetApp.contact_phone || targetApp.contact_linkedin)
+              })
+              setShowAddModal(true)
+            }
+          } else if (pendingAction.type === 'new_from_contact') {
+            const contact = pendingAction.contact
+            setEditApp(null)
+            setForm({
+              ...EMPTY_FORM,
+              has_contact: true,
+              contact_name: contact.name || '',
+              contact_role: contact.role || '',
+              contact_email: contact.email || '',
+              contact_phone: contact.phone || '',
+              contact_linkedin: contact.linkedin_url || ''
+            })
+            setShowAddModal(true)
+          }
+        } catch (err) {
+          console.error('Failed to parse pending action', err)
+        }
+      }
     })
     .catch(e => setError(e.message))
     .finally(() => setLoading(false))
   }
   useEffect(() => { load() }, [])
+
+  const handleEditClick = (app) => {
+    setEditApp(app)
+
+    let method = app.application_method
+    let methodOther = ''
+    
+    if (method && !METHODS.includes(method)) {
+      methodOther = method
+      method = 'Other'
+    }
+
+    setForm({
+      ...EMPTY_FORM,
+      ...app,
+      application_method: method,
+      application_method_other: methodOther,
+      has_contact: !!(app.contact_name || app.contact_email || app.contact_phone || app.contact_linkedin)
+    })
+    setShowAddModal(true)
+  }
 
   const handleUploadResume = async (file) => {
     try {
@@ -905,7 +997,7 @@ export default function Applications() {
       a.job_title?.trim().toLowerCase() === form.job_title?.trim().toLowerCase()
     )
 
-    if (isDuplicate) {
+    if (!editApp && isDuplicate) {
       if (!window.confirm(`You already have an existing application for '${isDuplicate.job_title}' at '${isDuplicate.company}' (Applied on ${isDuplicate.date_applied || 'an unknown date'}).\n\nAre you sure you want to create a new, separate application track for this?`)) {
         return
       }
@@ -922,39 +1014,52 @@ export default function Applications() {
     } : null
 
     const payload = {
+      date_applied: form.date_applied,
       company: form.company,
       job_title: form.job_title,
       location: form.location,
-      application_method: form.application_method,
+      application_method: form.application_method === 'Other' ? form.application_method_other : form.application_method,
       next_action: nextActionObj,
       next_action_due: nextActionObj?.date || null,
       ...(form.has_contact ? {
         contact_name: form.contact_name,
         contact_role: form.contact_role,
         contact_email: form.contact_email,
-        contact_phone: form.contact_phone
+        contact_phone: form.contact_phone,
+        contact_linkedin: form.contact_linkedin
       } : {}),
       ...(form.resume_id ? { resume_id: form.resume_id } : {})
     }
 
-    api.createApplication(payload)
-      .then(newApp => {
-        setForm({
-          ...EMPTY_FORM,
-          next_action_date: getFutureDateStr(2)
+    if (editApp) {
+      api.updateApplication(editApp.id, payload)
+        .then(() => {
+          setForm(EMPTY_FORM)
+          setShowAddModal(false)
+          setEditApp(null)
+          load()
         })
-        setShowAddModal(false)
-        if (nextActionObj) {
-          setCreatedBannerInfo({
-            company: newApp.company,
-            job_title: newApp.job_title,
-            next_action: nextActionObj,
-            appId: newApp.id
+        .catch(e => setError(e.message))
+    } else {
+      api.createApplication(payload)
+        .then(newApp => {
+          setForm({
+            ...EMPTY_FORM,
+            next_action_date: getFutureDateStr(2)
           })
-        }
-        load()
-      })
-      .catch(e => setError(e.message))
+          setShowAddModal(false)
+          if (nextActionObj) {
+            setCreatedBannerInfo({
+              company: newApp.company,
+              job_title: newApp.job_title,
+              next_action: nextActionObj,
+              appId: newApp.id
+            })
+          }
+          load()
+        })
+        .catch(e => setError(e.message))
+    }
   }
 
   const saveNextAction = (appId, actionObj) => {
@@ -1071,12 +1176,33 @@ export default function Applications() {
 
   const statusDropdownOptions = statuses.map(s => ({ label: s, value: s }))
   const stageDropdownOptions = stages.map(s => ({ label: s, value: s }))
+  const dateRangeOptions = [
+    { label: 'All Time', value: 'All Time' },
+    { label: 'Last 7 Days', value: '7d' },
+    { label: 'Last 30 Days', value: '30d' },
+    { label: 'This Month', value: 'month' },
+    { label: 'This Year', value: 'year' }
+  ]
 
   const filtered = apps.filter(a => {
     const matchStatus = filterStatus === 'All' || a.status === filterStatus
     const matchStage = filterStage === 'All' || a.stage === filterStage
     const matchSearch = !search || [a.company, a.job_title].some(f => f?.toLowerCase().includes(search.toLowerCase()))
-    return matchStatus && matchStage && matchSearch
+    let matchDate = true
+    if (filterDateRange !== 'All Time') {
+      if (!a.date_applied) {
+        matchDate = false
+      } else {
+        const d = new Date(a.date_applied)
+        const now = new Date()
+        if (filterDateRange === '7d') matchDate = (now - d) <= 7 * 24 * 60 * 60 * 1000
+        else if (filterDateRange === '30d') matchDate = (now - d) <= 30 * 24 * 60 * 60 * 1000
+        else if (filterDateRange === 'month') matchDate = d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
+        else if (filterDateRange === 'year') matchDate = d.getFullYear() === now.getFullYear()
+      }
+    }
+
+    return matchStatus && matchStage && matchSearch && matchDate
   })
 
   const visible = isExpanded ? filtered : filtered.slice(0, INITIAL_LIMIT)
@@ -1100,10 +1226,11 @@ export default function Applications() {
     { label: 'Ghosted', statusValue: 'Ghosted', value: counts.ghosted, iconBg: 'bg-warning-light', iconColor: 'text-warning', Icon: Ghost },
   ]
 
-  const isFiltered = filterStatus !== 'All' || filterStage !== 'All' || search !== ''
+  const isFiltered = filterStatus !== 'All' || filterStage !== 'All' || filterDateRange !== 'All Time' || search !== ''
   const clearFilters = () => {
     setFilterStatus('All')
     setFilterStage('All')
+    setFilterDateRange('All Time')
     setSearch('')
   }
 
@@ -1135,9 +1262,29 @@ export default function Applications() {
         }}
       />
 
-      <NewApplicationModal
+
+      {deleteAppId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in-80 duration-150" onClick={(e) => e.target === e.currentTarget && setDeleteAppId(null)}>
+          <div className="bg-surface rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden select-none border border-transparent">
+            <div className="p-6">
+              <h3 className="text-base font-bold text-foreground mb-2">Delete Application</h3>
+              <p className="text-xs text-foreground-secondary mb-6">Are you sure you want to delete this application? All related calendar events and activity logs will also be permanently deleted.</p>
+              <div className="flex items-center justify-end gap-3">
+                <button onClick={() => setDeleteAppId(null)} className="px-4 py-2 text-xs font-semibold text-foreground-secondary hover:bg-surface-tertiary rounded-xl transition-colors">Cancel</button>
+                <button onClick={handleDeleteConfirm} className="px-4 py-2 text-xs font-semibold text-white bg-rose-500 hover:bg-rose-600 rounded-xl transition-colors shadow-2xs">Delete</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ApplicationModal
+        isEdit={!!editApp}
         isOpen={showAddModal}
-        onClose={() => setShowAddModal(false)}
+        onClose={() => {
+          setShowAddModal(false)
+          setEditApp(null)
+        }}
         onSubmit={submit}
         form={form}
         setForm={setForm}
@@ -1203,7 +1350,7 @@ export default function Applications() {
                 onClick={() => setFilterStatus(s.statusValue)}
                 className={`panel text-left p-3.5 rounded-2xl border border-transparent shadow-2xs flex flex-col justify-between transition-all active:scale-95 focus:outline-none ${isFilterActive
                     ? 'ring-2 ring-primary/40 bg-surface'
-                    : 'bg-surface-secondary/30 hover:bg-surface-secondary/60 hover:-translate-y-0.5'
+                    : 'bg-surface-secondary hover:bg-surface-tertiary hover:-translate-y-0.5'
                   }`}
               >
                 <div className="flex items-center justify-between">
@@ -1226,7 +1373,7 @@ export default function Applications() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
           <input
             placeholder="Search companies, job titles…"
-            className="w-full rounded-xl border border-transparent bg-surface-secondary text-foreground placeholder:text-muted/70 px-3 py-2.5 pl-9 pr-8 text-xs focus:bg-surface-tertiary focus:outline-none focus:ring-2 focus:ring-primary/25 transition-all"
+            className="w-full rounded-xl border border-transparent bg-surface-secondary text-foreground placeholder:text-muted px-3 py-2.5 pl-9 pr-8 text-xs focus:bg-surface-tertiary focus:outline-none focus:ring-2 focus:ring-primary transition-all"
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
@@ -1238,6 +1385,14 @@ export default function Applications() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <Dropdown
+            prefix="Date"
+            options={dateRangeOptions}
+            value={filterDateRange}
+            onChange={setFilterDateRange}
+            align="right"
+          />
+
           <Dropdown
             prefix="Status"
             options={statusDropdownOptions}
@@ -1279,7 +1434,21 @@ export default function Applications() {
                 <th className="px-5 py-3.5 font-extrabold">Next Action</th>
                 <th className="px-5 py-3.5 font-extrabold">Remarks</th>
                 <th className="px-5 py-3.5 font-extrabold">Resume</th>
-              </tr>
+                  <th className="px-5 py-3.5 font-extrabold text-right">Actions</th>
+
+                      <td className="px-5 py-4">
+                        <div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button onClick={() => handleEditClick(app)} className="p-1.5 text-foreground-secondary hover:text-primary hover:bg-surface-secondary rounded-lg transition-colors" title="Edit Application">
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => setDeleteAppId(app.id)} className="p-1.5 text-foreground-secondary hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors" title="Delete Application">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                      <td className="px-5 py-4"><div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity"><button onClick={() => handleEditClick(app)} className="p-1.5 text-foreground-secondary hover:text-primary hover:bg-surface-secondary rounded-lg transition-colors" title="Edit Application"><Edit className="w-4 h-4" /></button><button onClick={() => setDeleteAppId(app.id)} className="p-1.5 text-foreground-secondary hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors" title="Delete Application"><Trash2 className="w-4 h-4" /></button></div></td>
+                    </tr>
+
             </thead>
             <tbody>
               {loading ? (
@@ -1312,6 +1481,7 @@ export default function Applications() {
                     <td className="px-5 py-4">
                       <div className="h-5 w-16 rounded bg-surface-secondary" />
                     </td>
+                    <td className="px-5 py-4"><div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity"><button onClick={() => handleEditClick(app)} className="p-1.5 text-foreground-secondary hover:text-primary hover:bg-surface-secondary rounded-lg transition-colors" title="Edit Application"><Edit className="w-4 h-4" /></button><button onClick={() => setDeleteAppId(app.id)} className="p-1.5 text-foreground-secondary hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors" title="Delete Application"><Trash2 className="w-4 h-4" /></button></div></td>
                   </tr>
                 ))
               ) : filtered.length === 0 ? (
@@ -1319,12 +1489,13 @@ export default function Applications() {
                   <td colSpan={9} className="py-16 text-center text-xs text-muted">
                     No applications match the current filter parameters.
                   </td>
+                  <td className="px-5 py-4"><div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity"><button onClick={() => handleEditClick(app)} className="p-1.5 text-foreground-secondary hover:text-primary hover:bg-surface-secondary rounded-lg transition-colors" title="Edit Application"><Edit className="w-4 h-4" /></button><button onClick={() => setDeleteAppId(app.id)} className="p-1.5 text-foreground-secondary hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors" title="Delete Application"><Trash2 className="w-4 h-4" /></button></div></td>
                 </tr>
               ) : (
                 visible.map(app => {
                   const res = app.resume
                   return (
-                    <tr key={app.id} className="group hover:bg-surface-secondary/30 transition-colors duration-150">
+                    <tr key={app.id} className="group hover:bg-surface-tertiary transition-colors duration-150">
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
                           <ApplicationStatusIcon status={app.status} />
@@ -1343,7 +1514,7 @@ export default function Applications() {
 
                       <td className="px-5 py-4">
                         <input
-                          className="bg-transparent text-xs font-medium text-foreground placeholder:text-muted/50 focus:outline-none focus:ring-1 focus:ring-primary/40 rounded px-2 py-1 w-full max-w-[120px] transition-all hover:bg-surface-secondary/40"
+                          className="bg-transparent text-xs font-medium text-foreground placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-primary rounded px-2 py-1 w-full max-w-[120px] transition-all hover:bg-surface-tertiary"
                           placeholder="Add location..."
                           defaultValue={app.location || ''}
                           onBlur={e => {
@@ -1373,7 +1544,7 @@ export default function Applications() {
                           size="sm"
                           options={STAGE_DROPDOWN_OPTIONS}
                           value={app.stage}
-                          triggerClassName="bg-surface-secondary/60 text-foreground-secondary hover:text-foreground hover:bg-surface-secondary"
+                          triggerClassName="bg-surface-secondary text-foreground-secondary hover:text-foreground hover:bg-surface-secondary"
                           onChange={val => updateAppStage(app.id, val)}
                           align="left"
                         />
@@ -1390,7 +1561,7 @@ export default function Applications() {
 
                       <td className="px-5 py-4">
                         <input
-                          className="bg-transparent text-xs font-medium text-foreground placeholder:text-muted/50 focus:outline-none focus:ring-1 focus:ring-primary/40 rounded px-2 py-1 w-full max-w-[150px] transition-all hover:bg-surface-secondary/40"
+                          className="bg-transparent text-[11px] font-medium text-foreground-secondary placeholder:text-muted/60 focus:outline-none focus:bg-surface-secondary hover:bg-surface-tertiary rounded px-1.5 py-1 -ml-1.5 w-full min-w-[120px] max-w-[200px] transition-colors truncate focus:text-clip"
                           placeholder="Add remarks..."
                           defaultValue={app.remarks || ''}
                           onBlur={e => {
@@ -1432,6 +1603,7 @@ export default function Applications() {
                           <span className="text-xs font-medium text-foreground-secondary/50">No resume</span>
                         )}
                       </td>
+                      <td className="px-5 py-4"><div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity"><button onClick={() => handleEditClick(app)} className="p-1.5 text-foreground-secondary hover:text-primary hover:bg-surface-secondary rounded-lg transition-colors" title="Edit Application"><Edit className="w-4 h-4" /></button><button onClick={() => setDeleteAppId(app.id)} className="p-1.5 text-foreground-secondary hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors" title="Delete Application"><Trash2 className="w-4 h-4" /></button></div></td>
                     </tr>
                   )
                 })

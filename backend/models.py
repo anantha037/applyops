@@ -134,6 +134,7 @@ class ApplicationCreate(ApplicationFields):
     contact_email: str | None = None
     contact_phone: str | None = None
     contact_role: str | None = None
+    contact_linkedin: str | None = None
     resume_id: str | None = None
 
 
@@ -165,6 +166,7 @@ class ApplicationUpdate(BaseModel):
     contact_email: str | None = None
     contact_phone: str | None = None
     contact_role: str | None = None
+    contact_linkedin: str | None = None
     resume_id: str | None = None
 
 
@@ -263,6 +265,11 @@ class ContactManual(ContactCreate):
     id: str
 
 
+class LinkedApplication(BaseModel):
+    id: str
+    company: str
+    job_title: str
+
 class ContactView(BaseModel):
     """Merged/enriched contact returned by GET /contacts.
 
@@ -281,6 +288,7 @@ class ContactView(BaseModel):
     linkedin_url:          str = ""
     source:                str          # "application" | "manual" | "both"
     application_id:        str | None = None
+    applications:          list[LinkedApplication] = Field(default_factory=list)
     last_contacted:        str | None = None  # ISO date string or None
     responded:             bool = False
     last_action_status:    str = "Not Contacted"

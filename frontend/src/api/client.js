@@ -8,7 +8,10 @@ async function _doRefresh() {
   try {
     const refreshRes = await fetch(`${baseUrl}/auth/refresh`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'X-ApplyOps-Client': '1'
+      },
       credentials: 'include',
       body: JSON.stringify({})
     })
@@ -246,11 +249,13 @@ export const api = {
   contacts: contactsApi.getContacts,
   createContact: contactsApi.createContact,
   updateContact: contactsApi.updateContact,
+  deleteContact: contactsApi.deleteContact,
   analyticsOverview: analyticsApi.getOverview,
   listResumes: resumesApi.listResumes,
   getResumeUrl: resumesApi.getResumeUrl,
   uploadResume: resumesApi.uploadResume,
   deleteResume: resumesApi.deleteResume,
   updateMe: authApi.updateMe,
-  me: authApi.me
+  me: authApi.me,
+  deleteApplication: applicationsApi.deleteApplication
 }

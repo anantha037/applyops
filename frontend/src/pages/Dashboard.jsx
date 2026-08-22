@@ -123,28 +123,28 @@ export default function Dashboard() {
             <div className="grid grid-cols-2 gap-3 flex-1">
               <button 
                 onClick={() => window.location.hash = '#/applications'} 
-                className="flex flex-col items-center justify-center gap-2.5 rounded-xl bg-surface-secondary/40 border border-transparent hover:border-primary/40 hover:bg-surface-secondary p-4 transition-all group focus:outline-none focus:ring-2 focus:ring-primary/40"
+                className="flex flex-col items-center justify-center gap-2.5 rounded-xl bg-surface-secondary border border-transparent hover:border-primary/40 hover:bg-surface-secondary p-4 transition-all group focus:outline-none focus:ring-2 focus:ring-primary/40"
               >
                 <span className="text-2xl text-primary group-hover:scale-110 transition-transform">+</span>
                 <span className="text-[11px] font-semibold text-foreground-secondary group-hover:text-foreground">Add Application</span>
               </button>
               <button 
                 onClick={() => window.location.hash = '#/calendar'} 
-                className="flex flex-col items-center justify-center gap-2.5 rounded-xl bg-surface-secondary/40 border border-transparent hover:border-emerald-500/40 hover:bg-surface-secondary p-4 transition-all group focus:outline-none focus:ring-2 focus:ring-primary/40"
+                className="flex flex-col items-center justify-center gap-2.5 rounded-xl bg-surface-secondary border border-transparent hover:border-emerald-500/40 hover:bg-surface-secondary p-4 transition-all group focus:outline-none focus:ring-2 focus:ring-primary/40"
               >
                 <span className="text-2xl text-emerald-400 group-hover:scale-110 transition-transform">📅</span>
                 <span className="text-[11px] font-semibold text-foreground-secondary group-hover:text-foreground">Schedule</span>
               </button>
               <button 
                 onClick={() => window.location.hash = '#/analytics'} 
-                className="flex flex-col items-center justify-center gap-2.5 rounded-xl bg-surface-secondary/40 border border-transparent hover:border-blue-500/40 hover:bg-surface-secondary p-4 transition-all group focus:outline-none focus:ring-2 focus:ring-primary/40"
+                className="flex flex-col items-center justify-center gap-2.5 rounded-xl bg-surface-secondary border border-transparent hover:border-blue-500/40 hover:bg-surface-secondary p-4 transition-all group focus:outline-none focus:ring-2 focus:ring-primary/40"
               >
                 <span className="text-2xl text-blue-400 group-hover:scale-110 transition-transform">📊</span>
                 <span className="text-[11px] font-semibold text-foreground-secondary group-hover:text-foreground">View Analytics</span>
               </button>
               <button 
                 onClick={() => window.open(`${baseUrl}/reports/export?type=full`, '_blank')} 
-                className="flex flex-col items-center justify-center gap-2.5 rounded-xl bg-surface-secondary/40 border border-transparent hover:border-amber-500/40 hover:bg-surface-secondary p-4 transition-all group focus:outline-none focus:ring-2 focus:ring-primary/40"
+                className="flex flex-col items-center justify-center gap-2.5 rounded-xl bg-surface-secondary border border-transparent hover:border-amber-500/40 hover:bg-surface-secondary p-4 transition-all group focus:outline-none focus:ring-2 focus:ring-primary/40"
               >
                 <span className="text-2xl text-amber-400 group-hover:scale-110 transition-transform">📥</span>
                 <span className="text-[11px] font-semibold text-foreground-secondary group-hover:text-foreground">Export Report</span>
@@ -161,7 +161,7 @@ export default function Dashboard() {
 
  function StatCard({ title, value, icon: Icon, gradient, iconColor, badge, badgePositive }) {
    return (
-     <div className="group relative overflow-hidden rounded-2xl p-4 bg-surface-secondary/40 hover:bg-surface-secondary/80 shadow-sm hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 hover:scale-[1.02] transition-all duration-300 ease-out cursor-pointer flex flex-col justify-between h-[124px]">
+     <div className="group relative overflow-hidden rounded-2xl p-4 bg-surface-secondary hover:bg-surface-tertiary shadow-sm hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 hover:scale-[1.02] transition-all duration-300 ease-out cursor-pointer flex flex-col justify-between h-[124px]">
        {/* Ambient Subtle Radial Gradient Overlay */}
        <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-25 group-hover:opacity-60 transition-opacity duration-300 pointer-events-none`} />
        

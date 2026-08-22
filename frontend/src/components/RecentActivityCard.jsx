@@ -36,7 +36,7 @@ export default function RecentActivityCard({ activities: propActivities = [], on
             return (
               <div
                 key={act.id}
-                className="group relative flex items-center justify-between p-3 rounded-xl bg-surface-secondary/40 hover:bg-surface-secondary/90 dark:hover:bg-surface-tertiary/60 border border-transparent hover:border-border/30 hover:translate-x-1.5 transition-all duration-200 ease-out cursor-pointer shadow-2xs hover:shadow-md overflow-hidden"
+                className="group relative flex items-center justify-between p-3 rounded-xl bg-surface-secondary hover:bg-surface-tertiary dark:hover:bg-surface-secondary border border-transparent hover:border-border/30 hover:translate-x-1.5 transition-all duration-200 ease-out cursor-pointer shadow-2xs hover:shadow-md overflow-hidden"
               >
                 {/* Left Hover Accent Indicator Line */}
                 <div className="absolute left-0 top-2 bottom-2 w-1 bg-primary rounded-r-full opacity-0 group-hover:opacity-100 transition-opacity duration-200" />

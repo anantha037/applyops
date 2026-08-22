@@ -47,7 +47,7 @@ export default function ActivityHeatmap({ data: propData }) {
   const getIntensityClass = (count, isToday) => {
     let base = ''
     if (count === 0) {
-      base = 'bg-surface-secondary/40 text-muted/60'
+      base = 'bg-surface-secondary text-muted/60'
     } else if (count === 1) {
       base = 'bg-emerald-500/20 text-emerald-400 font-bold'
     } else if (count <= 3) {
@@ -96,7 +96,7 @@ export default function ActivityHeatmap({ data: propData }) {
   return (
     <div ref={containerRef} className="panel rounded-2xl border border-transparent bg-surface shadow-2xs p-6 select-none mb-6 relative overflow-visible">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="rounded-2xl p-4 bg-surface-secondary/30 flex flex-col justify-between h-[100px] border border-transparent transition-all duration-200 hover:bg-surface-secondary/50">
+        <div className="rounded-2xl p-4 bg-surface-secondary flex flex-col justify-between h-[100px] border border-transparent transition-all duration-200 hover:bg-surface-tertiary">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wider text-foreground-secondary/70">Current Streak</span>
             <div className="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center flex-shrink-0">
@@ -106,7 +106,7 @@ export default function ActivityHeatmap({ data: propData }) {
           <p className="text-2xl font-extrabold text-foreground tracking-tight">🔥 {currentStreak} days</p>
         </div>
 
-        <div className="rounded-2xl p-4 bg-surface-secondary/30 flex flex-col justify-between h-[100px] border border-transparent transition-all duration-200 hover:bg-surface-secondary/50">
+        <div className="rounded-2xl p-4 bg-surface-secondary flex flex-col justify-between h-[100px] border border-transparent transition-all duration-200 hover:bg-surface-tertiary">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wider text-foreground-secondary/70">Applications ({rangeDays}d)</span>
             <div className="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
@@ -116,7 +116,7 @@ export default function ActivityHeatmap({ data: propData }) {
           <p className="text-2xl font-extrabold text-foreground tracking-tight">{filteredTotalApps}</p>
         </div>
 
-        <div className="rounded-2xl p-4 bg-surface-secondary/30 flex flex-col justify-between h-[100px] border border-transparent transition-all duration-200 hover:bg-surface-secondary/50">
+        <div className="rounded-2xl p-4 bg-surface-secondary flex flex-col justify-between h-[100px] border border-transparent transition-all duration-200 hover:bg-surface-tertiary">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wider text-foreground-secondary/70">Active Days</span>
             <div className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center flex-shrink-0">
@@ -126,7 +126,7 @@ export default function ActivityHeatmap({ data: propData }) {
           <p className="text-2xl font-extrabold text-foreground tracking-tight">{filteredActiveDays} / {rangeDays}</p>
         </div>
 
-        <div className="rounded-2xl p-4 bg-surface-secondary/30 flex flex-col justify-between h-[100px] border border-transparent transition-all duration-200 hover:bg-surface-secondary/50">
+        <div className="rounded-2xl p-4 bg-surface-secondary flex flex-col justify-between h-[100px] border border-transparent transition-all duration-200 hover:bg-surface-tertiary">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wider text-foreground-secondary/70">Best Streak</span>
             <div className="w-7 h-7 rounded-lg bg-purple-500/10 text-purple-500 flex items-center justify-center flex-shrink-0">
@@ -285,7 +285,7 @@ export default function ActivityHeatmap({ data: propData }) {
 
         <div className="flex items-center gap-1.5 text-[11px] font-semibold">
           <span className="text-muted">Less</span>
-          <div className="w-3.5 h-3.5 rounded-md bg-surface-secondary/40" />
+          <div className="w-3.5 h-3.5 rounded-md bg-surface-secondary" />
           <div className="w-3.5 h-3.5 rounded-md bg-emerald-500/20" />
           <div className="w-3.5 h-3.5 rounded-md bg-emerald-500/45" />
           <div className="w-3.5 h-3.5 rounded-md bg-emerald-500/75" />

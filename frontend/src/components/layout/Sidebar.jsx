@@ -166,7 +166,7 @@ export default function Sidebar({
         {!isCollapsed && (
           <div className="mt-auto px-1 pt-3 flex-shrink-0">
             <div 
-              onClick={() => onViewChange('dashboard')}
+              onClick={() => onViewChange('analytics')}
               className="rounded-xl bg-sidebar-surface/60 border border-sidebar-border p-3.5 space-y-2.5 shadow-2xs hover:bg-sidebar-hover/80 hover:border-primary/30 transition-all duration-200 cursor-pointer group"
             >
               <div className="flex items-center justify-between">

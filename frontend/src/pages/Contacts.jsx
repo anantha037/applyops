@@ -1,3 +1,4 @@
+import { Edit, Trash2 } from 'lucide-react'
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import { api } from '../api/client'
 import Dropdown from '../components/ui/Dropdown'
@@ -92,7 +93,7 @@ function MarkAsAppliedModal({ contact, onClose, onConfirm }) {
             <h3 className="text-base font-bold text-foreground">Mark as Applied</h3>
             <p className="text-[11px] text-foreground-secondary font-medium">Confirm that you applied for a role through this contact.</p>
           </div>
-          <button onClick={onClose} className="rounded-lg p-1.5 text-foreground-secondary hover:text-foreground hover:bg-surface-secondary/80 transition-colors">
+          <button onClick={onClose} className="rounded-lg p-1.5 text-foreground-secondary hover:text-foreground hover:bg-surface-tertiary transition-colors">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
           </button>
         </div>
@@ -100,7 +101,7 @@ function MarkAsAppliedModal({ contact, onClose, onConfirm }) {
         <form onSubmit={submit} className="px-6 py-4 space-y-4">
           {error && <p className="text-xs text-rose-400 bg-rose-500/10 rounded-xl p-3 border border-rose-500/20">{error}</p>}
 
-          <div className="p-3 rounded-xl bg-surface-secondary/50 border border-transparent">
+          <div className="p-3 rounded-xl bg-surface-secondary border border-transparent">
             <p className="text-xs font-bold text-foreground">{contact.name}</p>
             <p className="text-[11px] text-foreground-secondary font-medium">{contact.role || 'Contact'} {contact.company ? `· ${contact.company}` : ''}</p>
           </div>
@@ -120,7 +121,7 @@ function MarkAsAppliedModal({ contact, onClose, onConfirm }) {
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl px-4 py-2 text-xs font-semibold text-foreground-secondary hover:bg-surface-secondary/60 transition-colors"
+              className="rounded-xl px-4 py-2 text-xs font-semibold text-foreground-secondary hover:bg-surface-tertiary transition-colors"
             >
               Cancel
             </button>
@@ -138,8 +139,8 @@ function MarkAsAppliedModal({ contact, onClose, onConfirm }) {
   )
 }
 
-function AddContactModal({ onClose, onSave }) {
-  const [form, setForm] = useState({
+function ContactModal({ isEdit, onClose, onSave }) {
+  const [form, setForm] = useState(arguments[0].initialData || {
     name: '',
     company: '',
     role: '',
@@ -181,11 +182,11 @@ function AddContactModal({ onClose, onSave }) {
               <UserPlusIcon />
             </div>
             <div>
-              <h3 className="text-base font-bold text-foreground">Add New Contact</h3>
-              <p className="text-[11px] text-foreground-secondary font-medium">Create a contact or recruiter entry</p>
+              <h3 className="text-base font-bold text-foreground">{isEdit ? 'Edit Contact' : 'Add New Contact'}</h3>
+              <p className="text-[11px] text-foreground-secondary font-medium">{isEdit ? 'Update contact details' : 'Create a contact or recruiter entry'}</p>
             </div>
           </div>
-          <button onClick={onClose} className="rounded-lg p-1.5 text-foreground-secondary hover:text-foreground hover:bg-surface-secondary/80 transition-colors">
+          <button onClick={onClose} className="rounded-lg p-1.5 text-foreground-secondary hover:text-foreground hover:bg-surface-tertiary transition-colors">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
           </button>
         </div>
@@ -198,7 +199,7 @@ function AddContactModal({ onClose, onSave }) {
             <input
               required
               placeholder="Contact name"
-              className="w-full rounded-xl border border-transparent bg-surface-secondary/60 hover:bg-surface-secondary/80 px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted/60 focus:bg-surface focus:outline-none focus:ring-2 focus:ring-primary/25 transition-all"
+              className="w-full rounded-xl border border-transparent bg-surface-secondary hover:bg-surface-tertiary px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted focus:bg-surface focus:outline-none focus:ring-2 focus:ring-primary transition-all"
               value={form.name}
               onChange={e => setForm({ ...form, name: e.target.value })}
             />
@@ -209,7 +210,7 @@ function AddContactModal({ onClose, onSave }) {
               <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">Company</label>
               <input
                 placeholder="Company"
-                className="w-full rounded-xl border border-transparent bg-surface-secondary/60 hover:bg-surface-secondary/80 px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted/60 focus:bg-surface focus:outline-none focus:ring-2 focus:ring-primary/25 transition-all"
+                className="w-full rounded-xl border border-transparent bg-surface-secondary hover:bg-surface-tertiary px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted focus:bg-surface focus:outline-none focus:ring-2 focus:ring-primary transition-all"
                 value={form.company}
                 onChange={e => setForm({ ...form, company: e.target.value })}
               />
@@ -218,7 +219,7 @@ function AddContactModal({ onClose, onSave }) {
               <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">Role</label>
               <input
                 placeholder="e.g. Technical Recruiter"
-                className="w-full rounded-xl border border-transparent bg-surface-secondary/60 hover:bg-surface-secondary/80 px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted/60 focus:bg-surface focus:outline-none focus:ring-2 focus:ring-primary/25 transition-all"
+                className="w-full rounded-xl border border-transparent bg-surface-secondary hover:bg-surface-tertiary px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted focus:bg-surface focus:outline-none focus:ring-2 focus:ring-primary transition-all"
                 value={form.role}
                 onChange={e => setForm({ ...form, role: e.target.value })}
               />
@@ -231,7 +232,7 @@ function AddContactModal({ onClose, onSave }) {
               <input
                 type="email"
                 placeholder="john@company.com"
-                className="w-full rounded-xl border border-transparent bg-surface-secondary/60 hover:bg-surface-secondary/80 px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted/60 focus:bg-surface focus:outline-none focus:ring-2 focus:ring-primary/25 transition-all"
+                className="w-full rounded-xl border border-transparent bg-surface-secondary hover:bg-surface-tertiary px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted focus:bg-surface focus:outline-none focus:ring-2 focus:ring-primary transition-all"
                 value={form.email}
                 onChange={e => setForm({ ...form, email: e.target.value })}
               />
@@ -240,7 +241,7 @@ function AddContactModal({ onClose, onSave }) {
               <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">Phone</label>
               <input
                 placeholder="+1 (555) 000-0000"
-                className="w-full rounded-xl border border-transparent bg-surface-secondary/60 hover:bg-surface-secondary/80 px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted/60 focus:bg-surface focus:outline-none focus:ring-2 focus:ring-primary/25 transition-all"
+                className="w-full rounded-xl border border-transparent bg-surface-secondary hover:bg-surface-tertiary px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted focus:bg-surface focus:outline-none focus:ring-2 focus:ring-primary transition-all"
                 value={form.phone}
                 onChange={e => setForm({ ...form, phone: e.target.value })}
               />
@@ -294,7 +295,7 @@ function AddContactModal({ onClose, onSave }) {
             <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">Tags (comma-separated)</label>
             <input
               placeholder="e.g. Recruiter, High Priority"
-              className="w-full rounded-xl border border-transparent bg-surface-secondary/60 hover:bg-surface-secondary/80 px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted/60 focus:bg-surface focus:outline-none focus:ring-2 focus:ring-primary/25 transition-all"
+              className="w-full rounded-xl border border-transparent bg-surface-secondary hover:bg-surface-tertiary px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted focus:bg-surface focus:outline-none focus:ring-2 focus:ring-primary transition-all"
               value={form.tags}
               onChange={e => setForm({ ...form, tags: e.target.value })}
             />
@@ -305,7 +306,7 @@ function AddContactModal({ onClose, onSave }) {
             <input
               type="url"
               placeholder="https://linkedin.com/in/..."
-              className="w-full rounded-xl border border-transparent bg-surface-secondary/60 hover:bg-surface-secondary/80 px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted/60 focus:bg-surface focus:outline-none focus:ring-2 focus:ring-primary/25 transition-all"
+              className="w-full rounded-xl border border-transparent bg-surface-secondary hover:bg-surface-tertiary px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted focus:bg-surface focus:outline-none focus:ring-2 focus:ring-primary transition-all"
               value={form.linkedin_url}
               onChange={e => setForm({ ...form, linkedin_url: e.target.value })}
             />
@@ -316,7 +317,7 @@ function AddContactModal({ onClose, onSave }) {
             <textarea
               rows={2}
               placeholder="Optional notes"
-              className="w-full rounded-xl border border-transparent bg-surface-secondary/60 hover:bg-surface-secondary/80 px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted/60 focus:bg-surface focus:outline-none focus:ring-2 focus:ring-primary/25 transition-all resize-none"
+              className="w-full rounded-xl border border-transparent bg-surface-secondary hover:bg-surface-tertiary px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted focus:bg-surface focus:outline-none focus:ring-2 focus:ring-primary transition-all resize-none"
               value={form.notes}
               onChange={e => setForm({ ...form, notes: e.target.value })}
             />
@@ -326,7 +327,7 @@ function AddContactModal({ onClose, onSave }) {
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl px-4 py-2 text-xs font-semibold text-foreground-secondary hover:bg-surface-secondary/60 transition-colors"
+              className="rounded-xl px-4 py-2 text-xs font-semibold text-foreground-secondary hover:bg-surface-tertiary transition-colors"
             >
               Cancel
             </button>
@@ -335,7 +336,7 @@ function AddContactModal({ onClose, onSave }) {
               disabled={saving}
               className="rounded-xl bg-primary px-5 py-2 text-xs font-semibold text-white hover:bg-primary-hover disabled:opacity-60 transition-all shadow-2xs active:scale-95"
             >
-              {saving ? 'Saving...' : 'Save Contact'}
+              {saving ? 'Saving...' : (isEdit ? 'Save Changes' : 'Save Contact')}
             </button>
           </div>
         </form>
@@ -360,7 +361,7 @@ function InlineLinkedinEdit({ contact, onSave }) {
       <input
         autoFocus
         type="url"
-        className="w-24 sm:w-32 rounded bg-surface border border-primary/50 px-2 py-1 text-[10px] text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+        className="w-24 sm:w-32 rounded bg-surface border border-primary px-2 py-1 text-[10px] text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
         value={val}
         onChange={e => setVal(e.target.value)}
         onBlur={handleSave}
@@ -406,6 +407,9 @@ export default function Contacts() {
   const [activeTab, setActiveTab] = useState('All Contacts')
   const [appFilter, setAppFilter] = useState('All')
   const [showAddModal, setShowAddModal] = useState(false)
+  const [editContact, setEditContact] = useState(null)
+  const [deleteContactId, setDeleteContactId] = useState(null)
+  const [deleteError, setDeleteError] = useState('')
   const [applyTargetContact, setApplyTargetContact] = useState(null)
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 10
@@ -424,6 +428,47 @@ export default function Contacts() {
   }, [])
 
   useEffect(() => { load() }, [load])
+
+  const handleJumpToApplication = (appId) => {
+    sessionStorage.setItem('applyops_pending_action', JSON.stringify({ type: 'edit_app', appId }))
+    window.location.hash = '#/applications'
+  }
+
+  const handleAddApplication = (contact) => {
+    sessionStorage.setItem('applyops_pending_action', JSON.stringify({ type: 'new_from_contact', contact }))
+    window.location.hash = '#/applications'
+  }
+
+  const handleEditClick = (contact) => {
+    setEditContact(contact)
+    setShowAddModal(true)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteContactId) return
+    try {
+      await api.deleteContact(deleteContactId)
+      await load()
+      setDeleteContactId(null)
+      setDeleteError('')
+    } catch (err) {
+      setDeleteError(err.message || 'Failed to delete contact')
+    }
+  }
+
+  const handleSaveContact = async (payload) => {
+    const formatted = {
+      ...payload,
+      tags: typeof payload.tags === 'string' ? payload.tags.split(',').map(t => t.trim()).filter(Boolean) : payload.tags
+    }
+    if (editContact) {
+      await api.updateContact(editContact.id, formatted)
+    } else {
+      await api.createContact(formatted)
+    }
+    await load()
+    setEditContact(null)
+  }
 
   const handleAdd = async (payload) => {
     const formatted = {
@@ -576,7 +621,7 @@ export default function Contacts() {
             <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted/60" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
             <input 
               placeholder="Search contacts, companies, roles…" 
-              className="w-full rounded-xl border border-transparent bg-surface-secondary/60 hover:bg-surface-secondary/80 pl-9 pr-3.5 py-2 text-xs text-foreground placeholder:text-muted/60 focus:bg-surface focus:outline-none focus:ring-2 focus:ring-primary/25 transition-all" 
+              className="w-full rounded-xl border border-transparent bg-surface-secondary hover:bg-surface-tertiary pl-9 pr-3.5 py-2 text-xs text-foreground placeholder:text-muted focus:bg-surface focus:outline-none focus:ring-2 focus:ring-primary transition-all" 
               value={search} 
               onChange={e => { setSearch(e.target.value); setCurrentPage(1) }} 
             />
@@ -609,7 +654,7 @@ export default function Contacts() {
               ) : paginated.map(c => {
                 const isApplied = c.applied || Boolean(c.application_method) || Boolean(c.application_id)
                 return (
-                  <tr key={c.id} className="hover:bg-surface-secondary/40 transition-colors group rounded-xl">
+                  <tr key={c.id} className="hover:bg-surface-tertiary transition-colors group rounded-xl">
                     <td className="py-3.5 px-3.5">
                       <div className="flex items-center gap-2.5">
                         <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${getAvatarColor(c.name)}`}>
@@ -626,7 +671,24 @@ export default function Contacts() {
                       <InlineLinkedinEdit contact={c} onSave={handleUpdateLinkedin} />
                     </td>
                     <td className="py-3.5 px-3.5">
-                      {isApplied ? (
+                      {c.applications && c.applications.length > 0 ? (
+                        <div className="flex flex-col gap-1.5">
+                          {c.applications.map(app => (
+                            <button
+                              key={app.id}
+                              onClick={() => handleJumpToApplication(app.id)}
+                              className="text-left group/app flex flex-col hover:bg-surface-tertiary p-1.5 -ml-1.5 rounded-lg transition-colors"
+                            >
+                              <span className="text-xs font-bold text-primary group-hover/app:underline decoration-primary/50">
+                                {app.company || 'Unknown Company'}
+                              </span>
+                              <span className="text-[10px] text-foreground-secondary font-medium">
+                                {app.job_title || 'Unknown Role'}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      ) : isApplied ? (
                         <div className="flex flex-col">
                           <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
@@ -654,7 +716,7 @@ export default function Contacts() {
                           size="sm"
                           options={ACTION_STATUS_OPTIONS}
                           value={c.last_action_status || 'Not Contacted'}
-                          triggerClassName="bg-surface-secondary/60 text-foreground-secondary hover:text-foreground hover:bg-surface-secondary w-full"
+                          triggerClassName="bg-surface-secondary text-foreground-secondary hover:text-foreground hover:bg-surface-secondary w-full"
                           onChange={val => {
                             const newStatus = val
                             setContacts(prev => prev.map(contact => contact.id === c.id ? { ...contact, last_action_status: newStatus } : contact))
@@ -679,7 +741,7 @@ export default function Contacts() {
                       </div>
                     </td>
                     <td className="py-3.5 px-3.5 text-right">
-                      <div className="flex items-center justify-end gap-1">
+                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         {c.email && (
                           <button
                             type="button"
@@ -702,9 +764,19 @@ export default function Contacts() {
                             <PhoneIcon />
                           </a>
                         )}
+                        <button onClick={() => handleAddApplication(c)} className="p-1.5 text-foreground-secondary hover:text-primary hover:bg-surface-secondary rounded-lg transition-colors" title="Add Application">
+                          <svg className="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+                        </button>
+                        <button onClick={() => handleEditClick(c)} className="p-1.5 text-foreground-secondary hover:text-primary hover:bg-surface-secondary rounded-lg transition-colors" title="Edit Contact">
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => setDeleteContactId(c.id)} className="p-1.5 text-foreground-secondary hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors" title="Delete Contact">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
                     </td>
                   </tr>
+
                 )
               })}
             </tbody>
@@ -734,8 +806,43 @@ export default function Contacts() {
         )}
       </div>
 
+      {deleteContactId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in-80 duration-150" onClick={(e) => e.target === e.currentTarget && (setDeleteContactId(null), setDeleteError(''))}>
+          <div className="bg-surface rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden select-none border border-transparent">
+            <div className="p-6">
+              <h3 className="text-base font-bold text-foreground mb-2">Delete Contact</h3>
+              {deleteError ? (
+                <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-xs font-medium text-rose-400">{deleteError}</div>
+              ) : (
+                <p className="text-xs text-foreground-secondary mb-6">Are you sure you want to delete this contact?</p>
+              )}
+              <div className="flex items-center justify-end gap-3">
+                <button onClick={() => { setDeleteContactId(null); setDeleteError(''); }} className="px-4 py-2 text-xs font-semibold text-foreground-secondary hover:bg-surface-tertiary rounded-xl transition-colors">Cancel</button>
+                <button onClick={handleDeleteConfirm} className="px-4 py-2 text-xs font-semibold text-white bg-rose-500 hover:bg-rose-600 rounded-xl transition-colors shadow-2xs">Delete</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showAddModal && (
-        <AddContactModal onClose={() => setShowAddModal(false)} onSave={handleAdd} />
+        <ContactModal
+          isEdit={!!editContact}
+          initialData={editContact ? {
+            name: editContact.name || '',
+            company: editContact.company || '',
+            role: editContact.role || '',
+            email: editContact.email || '',
+            phone: editContact.phone || '',
+            mark_applied: false,
+            application_method: 'LinkedIn Easy Apply',
+            tags: editContact.tags ? (Array.isArray(editContact.tags) ? editContact.tags.join(', ') : editContact.tags) : '',
+            notes: editContact.notes || '',
+            linkedin_url: editContact.linkedin_url || ''
+          } : undefined}
+          onClose={() => setShowAddModal(false)}
+          onSave={handleSaveContact}
+        />
       )}
 
       {applyTargetContact && (

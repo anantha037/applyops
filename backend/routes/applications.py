@@ -50,6 +50,7 @@ def create_application(payload: ApplicationCreate, request: Request, user: User 
         contact_email=payload.contact_email,
         contact_phone=payload.contact_phone,
         contact_role=payload.contact_role,
+        contact_linkedin=payload.contact_linkedin,
         resume_id=payload.resume_id,
     )
     
@@ -89,6 +90,7 @@ def update_application(
     contact_email = changes.pop("contact_email", None)
     contact_phone = changes.pop("contact_phone", None)
     contact_role = changes.pop("contact_role", None)
+    contact_linkedin = changes.pop("contact_linkedin", None)
     resume_id = changes.pop("resume_id", None)
 
     result = db_client.update_application(
@@ -99,6 +101,7 @@ def update_application(
         contact_email=contact_email,
         contact_phone=contact_phone,
         contact_role=contact_role,
+        contact_linkedin=contact_linkedin,
         resume_id=resume_id,
     )
     if result is None:

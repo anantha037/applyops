@@ -80,6 +80,7 @@ def _app_to_pydantic(row: DBApplication) -> Application:
         company=row.company,
         job_title=row.job_title,
         jd_summary=row.jd_summary or "",
+        location=row.location,
         application_method=row.application_method or "",
         # hr_* fields no longer exist — leave as empty strings so the
         # existing Pydantic schema stays valid until Phase D cleans it up.
@@ -127,6 +128,7 @@ def find_or_create_contact(
     phone: str | None = None,
     role: str | None = None,
     company: str | None = None,
+    linkedin_url: str | None = None,
 ) -> Contact | None:
     """Find an existing contact or create a new one.
 
@@ -178,6 +180,7 @@ def find_or_create_contact(
         if norm_phone   and not existing.phone:   existing.phone   = norm_phone;   changed = True
         if norm_role    and not existing.role:    existing.role    = norm_role;    changed = True
         if norm_company and not existing.company: existing.company = norm_company; changed = True
+        if linkedin_url and not existing.linkedin_url: existing.linkedin_url = linkedin_url; changed = True
         if changed:
             session.add(existing)
         return existing
@@ -191,6 +194,7 @@ def find_or_create_contact(
         phone=norm_phone,
         role=norm_role,
         company=norm_company,
+        linkedin_url=linkedin_url,
         created_at=datetime.now(timezone.utc),
     )
     session.add(contact)
@@ -217,16 +221,20 @@ def list_contacts(user_id: str) -> list[ContactView]:
         for act in activities:
             act_by_contact[act.contact_id].append(act)
             
-        # Also need application_id? A contact can have multiple applications. 
+        # Get all linked applications
         apps = session.exec(
             select(DBApplication).where(
                 DBApplication.user_id == user_id,
                 DBApplication.contact_id.is_not(None)
             )
         ).all()
-        app_by_contact = {}
+        app_by_contact = defaultdict(list)
         for app in apps:
-            app_by_contact[app.contact_id] = app.id
+            app_by_contact[app.contact_id].append({
+                "id": app.id,
+                "company": app.company or "",
+                "job_title": app.job_title or ""
+            })
             
         results = []
         for c in contacts:
@@ -240,6 +248,8 @@ def list_contacts(user_id: str) -> list[ContactView]:
                 for a in c_acts
             )
             
+            linked_apps = app_by_contact[c.id]
+
             results.append(ContactView(
                 id=c.id,
                 name=c.name or "",
@@ -251,7 +261,8 @@ def list_contacts(user_id: str) -> list[ContactView]:
                 notes=c.notes or "",
                 linkedin_url=c.linkedin_url or "",
                 source="postgres",
-                application_id=app_by_contact.get(c.id),
+                application_id=linked_apps[0]["id"] if linked_apps else None,
+                applications=linked_apps,
                 last_contacted=last_contact,
                 responded=responded,
                 last_action_status=c.last_action_status,
@@ -316,6 +327,21 @@ def update_contact(user_id: str, contact_id: str, changes: dict) -> ContactView 
         )
 
 
+def delete_contact(user_id: str, contact_id: str) -> None:
+    """Delete a contact if not referenced by applications."""
+    with Session(engine) as session:
+        contact = session.exec(select(Contact).where(Contact.user_id == user_id, Contact.id == contact_id)).first()
+        if not contact:
+            raise ValueError("Contact not found")
+
+        apps_count = session.exec(select(func.count(DBApplication.id)).where(DBApplication.contact_id == contact_id)).one()
+        if apps_count > 0:
+            raise ValueError(f"Cannot delete this contact because it is attached to {apps_count} application(s).")
+
+        session.delete(contact)
+        session.commit()
+
+
 # ---------------------------------------------------------------------------
 # Applications
 # ---------------------------------------------------------------------------
@@ -351,6 +377,7 @@ def create_application(
     contact_email: str | None = None,
     contact_phone: str | None = None,
     contact_role:  str | None = None,
+    contact_linkedin: str | None = None,
     resume_id:     str | None = None,
 ) -> Application:
     """Create a new application row.
@@ -360,7 +387,7 @@ def create_application(
     """
     with Session(engine) as session:
         contact_id: str | None = None
-        if any([contact_name, contact_email, contact_phone]):
+        if any([contact_name, contact_email, contact_phone, contact_linkedin]):
             contact = find_or_create_contact(
                 session,
                 user_id,
@@ -369,6 +396,7 @@ def create_application(
                 phone=contact_phone,
                 role=contact_role,
                 company=payload.get("company"),
+                linkedin_url=contact_linkedin,
             )
             contact_id = contact.id if contact else None
 
@@ -385,6 +413,7 @@ def create_application(
             company=payload["company"],
             job_title=payload["job_title"],
             jd_summary=payload.get("jd_summary") or None,
+            location=payload.get("location") or None,
             application_method=payload.get("application_method") or None,
             contact_id=contact_id,
             resume_id=resume_id,
@@ -414,6 +443,7 @@ def update_application(
     contact_email: str | None = None,
     contact_phone: str | None = None,
     contact_role:  str | None = None,
+    contact_linkedin: str | None = None,
     resume_id:     str | None = None,
 ) -> Application | None:
     """Patch an existing application."""
@@ -423,7 +453,7 @@ def update_application(
             return None
 
         # Handle contact linkage
-        if any([contact_name, contact_email, contact_phone]):
+        if any([contact_name, contact_email, contact_phone, contact_linkedin]):
             contact = find_or_create_contact(
                 session,
                 user_id,
@@ -432,6 +462,7 @@ def update_application(
                 phone=contact_phone,
                 role=contact_role,
                 company=changes.get("company") or row.company,
+                linkedin_url=contact_linkedin,
             )
             row.contact_id = contact.id if contact else row.contact_id
 
@@ -445,7 +476,7 @@ def update_application(
         # Apply scalar field updates
         scalar_fields = (
             "date_applied", "company", "job_title", "jd_summary",
-            "application_method", "ctc", "status", "stage",
+            "location", "application_method", "ctc", "status", "stage",
             "last_touch_date", "next_action_due", "interview_date",
             "interview_round", "interview_attended", "latest_update", "remarks",
         )
@@ -464,6 +495,17 @@ def delete_application(user_id: str, application_id: str) -> bool:
         row = session.get(DBApplication, application_id)
         if row is None or row.user_id != user_id:
             return False
+
+        # Manually cascade delete calendar events and activity logs to avoid IntegrityError
+        # and prevent leaving orphaned records.
+        events = session.exec(select(DBCalendarEvent).where(DBCalendarEvent.related_application_id == application_id)).all()
+        for ev in events:
+            session.delete(ev)
+
+        activities = session.exec(select(ActivityLog).where(ActivityLog.application_id == application_id)).all()
+        for act in activities:
+            session.delete(act)
+
         session.delete(row)
         session.commit()
         return True

@@ -130,7 +130,7 @@ function UpcomingEvents({ events = [], loading = false, selectedDate }) {
     return (
       <div className="space-y-3 select-none">
         {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="flex items-center gap-2.5 p-2.5 rounded-xl bg-surface-secondary/30 animate-pulse">
+          <div key={i} className="flex items-center gap-2.5 p-2.5 rounded-xl bg-surface-secondary animate-pulse">
             <div className="w-7 h-7 rounded-lg bg-surface-secondary flex-shrink-0" />
             <div className="flex-1 space-y-1.5">
               <div className="h-3 w-28 rounded bg-surface-secondary" />
@@ -189,7 +189,7 @@ function UpcomingEvents({ events = [], loading = false, selectedDate }) {
                 const TypeIcon = cfg.Icon
                 const isExpanded = expandedId === ev.id
                 return (
-                  <div key={ev.id} className="flex flex-col rounded-xl bg-surface-secondary/40 hover:bg-surface-secondary/80 transition-colors group overflow-hidden">
+                  <div key={ev.id} className="flex flex-col rounded-xl bg-surface-secondary hover:bg-surface-tertiary transition-colors group overflow-hidden">
                     <div 
                       className="flex items-center gap-2.5 p-2.5 cursor-pointer"
                       onClick={() => setExpandedId(isExpanded ? null : ev.id)}
@@ -218,7 +218,7 @@ function UpcomingEvents({ events = [], loading = false, selectedDate }) {
                           </div>
                         )}
                         {ev.notes && (
-                          <div className="flex gap-2 flex-col mt-1 bg-surface/50 p-2 rounded-lg border border-border/50">
+                          <div className="flex gap-2 flex-col mt-1 bg-surface p-2 rounded-lg border border-border/50">
                             <span className="font-semibold text-foreground">Notes</span>
                             <span className="whitespace-pre-wrap">{ev.notes}</span>
                           </div>
@@ -287,7 +287,7 @@ function AddEventModal({ defaultDate, onSave, onClose }) {
               <p className="text-[11px] text-foreground-secondary font-medium">Create a new calendar entry or reminder</p>
             </div>
           </div>
-          <button onClick={onClose} className="rounded-lg p-1.5 text-foreground-secondary hover:text-foreground hover:bg-surface-secondary/80 transition-colors">
+          <button onClick={onClose} className="rounded-lg p-1.5 text-foreground-secondary hover:text-foreground hover:bg-surface-tertiary transition-colors">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -299,7 +299,7 @@ function AddEventModal({ defaultDate, onSave, onClose }) {
             <input
               required
               placeholder="Event title…"
-              className="w-full rounded-xl border border-transparent bg-surface-secondary text-foreground placeholder:text-muted/70 px-3.5 py-2.5 text-xs focus:bg-surface-tertiary focus:outline-none focus:ring-2 focus:ring-primary/25 transition-all"
+              className="w-full rounded-xl border border-transparent bg-surface-secondary text-foreground placeholder:text-muted px-3.5 py-2.5 text-xs focus:bg-surface-tertiary focus:outline-none focus:ring-2 focus:ring-primary transition-all"
               value={form.title}
               onChange={e => setForm({ ...form, title: e.target.value })}
             />
@@ -321,7 +321,7 @@ function AddEventModal({ defaultDate, onSave, onClose }) {
               <input
                 type="date"
                 required
-                className="w-full rounded-xl border border-transparent bg-surface-secondary text-foreground px-3.5 py-2.5 text-xs focus:bg-surface-tertiary focus:outline-none focus:ring-2 focus:ring-primary/25 transition-all"
+                className="w-full rounded-xl border border-transparent bg-surface-secondary text-foreground px-3.5 py-2.5 text-xs focus:bg-surface-tertiary focus:outline-none focus:ring-2 focus:ring-primary transition-all"
                 value={form.date}
                 onChange={e => setForm({ ...form, date: e.target.value })}
               />
@@ -332,7 +332,7 @@ function AddEventModal({ defaultDate, onSave, onClose }) {
             <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">Time (optional)</label>
             <input
               type="time"
-              className="w-full rounded-xl border border-transparent bg-surface-secondary text-foreground px-3.5 py-2.5 text-xs focus:bg-surface-tertiary focus:outline-none focus:ring-2 focus:ring-primary/25 transition-all"
+              className="w-full rounded-xl border border-transparent bg-surface-secondary text-foreground px-3.5 py-2.5 text-xs focus:bg-surface-tertiary focus:outline-none focus:ring-2 focus:ring-primary transition-all"
               value={form.time}
               onChange={e => setForm({ ...form, time: e.target.value })}
             />
@@ -343,7 +343,7 @@ function AddEventModal({ defaultDate, onSave, onClose }) {
             <textarea
               rows={2}
               placeholder="Optional notes…"
-              className="w-full rounded-xl border border-transparent bg-surface-secondary text-foreground placeholder:text-muted/70 px-3.5 py-2.5 text-xs focus:bg-surface-tertiary focus:outline-none focus:ring-2 focus:ring-primary/25 transition-all resize-none"
+              className="w-full rounded-xl border border-transparent bg-surface-secondary text-foreground placeholder:text-muted px-3.5 py-2.5 text-xs focus:bg-surface-tertiary focus:outline-none focus:ring-2 focus:ring-primary transition-all resize-none"
               value={form.notes}
               onChange={e => setForm({ ...form, notes: e.target.value })}
             />
@@ -530,7 +530,7 @@ export default function Calendar() {
                   <div className="h-5 w-32 rounded bg-surface-secondary" />
                   <div className="h-8 w-36 rounded-xl bg-surface-secondary" />
                 </div>
-                <div className="flex-1 rounded-xl bg-surface-secondary/20 mt-5 mb-2" />
+                <div className="flex-1 rounded-xl bg-surface-secondary mt-5 mb-2" />
               </div>
             </div>
 
@@ -543,7 +543,7 @@ export default function Calendar() {
                 </div>
                 <div className="grid grid-cols-7 gap-2 flex-1 pt-2">
                   {Array.from({ length: 28 }).map((_, i) => (
-                    <div key={i} className="h-6 w-full rounded bg-surface-secondary/40" />
+                    <div key={i} className="h-6 w-full rounded bg-surface-secondary" />
                   ))}
                 </div>
               </div>
@@ -551,7 +551,7 @@ export default function Calendar() {
               <div className="panel rounded-2xl border border-transparent bg-surface p-4 shadow-2xs flex-1 min-h-[320px] flex flex-col gap-3">
                 <div className="h-4 w-28 rounded bg-surface-secondary mb-2" />
                 {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="flex items-center gap-3 p-2.5 rounded-xl bg-surface-secondary/30">
+                  <div key={i} className="flex items-center gap-3 p-2.5 rounded-xl bg-surface-secondary">
                     <div className="w-7 h-7 rounded-lg bg-surface-secondary" />
                     <div className="flex-1 space-y-1.5">
                       <div className="h-3 w-32 rounded bg-surface-secondary" />

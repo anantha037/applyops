@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { authApi } from '../api/client'
-import { TrendingUp, Send, Loader2 } from 'lucide-react'
+import { TrendingUp, Send, Loader2, Eye, EyeOff } from 'lucide-react'
 
 export default function Auth({ onLoginSuccess }) {
   const [theme] = useState(() => localStorage.getItem('applyops-theme') || 'light')
@@ -15,6 +15,7 @@ export default function Auth({ onLoginSuccess }) {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -107,16 +108,25 @@ export default function Auth({ onLoginSuccess }) {
                   Password
                 </label>
               </div>
-              <input 
-                type="password" 
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                disabled={loading}
-                minLength={8}
-                className="w-full bg-surface-secondary border border-border rounded-xl px-4 py-2.5 text-sm font-medium text-foreground placeholder:text-foreground-secondary/50 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all disabled:opacity-50"
-                placeholder="••••••••"
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  disabled={loading}
+                  minLength={8}
+                  className="w-full bg-surface-secondary border border-border rounded-xl px-4 py-2.5 pr-10 text-sm font-medium text-foreground placeholder:text-foreground-secondary focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all disabled:opacity-50"
+                  placeholder="••••••••"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-foreground-secondary hover:text-foreground focus:outline-none"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
 
             <button 

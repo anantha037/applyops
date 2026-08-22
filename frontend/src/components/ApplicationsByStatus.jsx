@@ -126,7 +126,7 @@ export default function ApplicationsByStatus({ summary = {} }) {
                 className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs cursor-pointer transition-all duration-150 ${
                   isHovered 
                     ? 'bg-surface-secondary text-foreground scale-[1.02] shadow-xs' 
-                    : 'text-foreground-secondary hover:text-foreground hover:bg-surface-secondary/50'
+                    : 'text-foreground-secondary hover:text-foreground hover:bg-surface-tertiary'
                 }`}
               >
                 <div className="flex items-center gap-2.5 min-w-0">

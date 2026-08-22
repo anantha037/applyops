@@ -76,7 +76,7 @@ export default function PriorityTasksCard({ tasks: initialPropTasks, onViewAll }
             <div
               key={task.id}
               onClick={() => setExpandedId(isExpanded ? null : task.id)}
-              className="group relative flex flex-col p-3 rounded-xl bg-surface-secondary/40 hover:bg-surface-secondary/90 dark:hover:bg-surface-tertiary/60 border border-transparent hover:border-border/30 hover:translate-x-1.5 transition-all duration-200 ease-out cursor-pointer shadow-2xs hover:shadow-md overflow-hidden"
+              className="group relative flex flex-col p-3 rounded-xl bg-surface-secondary hover:bg-surface-tertiary dark:hover:bg-surface-secondary border border-transparent hover:border-border/30 hover:translate-x-1.5 transition-all duration-200 ease-out cursor-pointer shadow-2xs hover:shadow-md overflow-hidden"
             >
               {/* Left Hover Indicator Bar */}
               <div className="absolute left-0 top-2 bottom-2 w-1 bg-primary rounded-r-full opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
@@ -126,7 +126,7 @@ export default function PriorityTasksCard({ tasks: initialPropTasks, onViewAll }
 
                   <button
                     onClick={(e) => toggleComplete(task.id, e)}
-                    className="w-7 h-7 rounded-lg bg-surface-secondary/80 hover:bg-emerald-500/20 text-foreground-secondary hover:text-emerald-400 flex items-center justify-center transition-all focus:outline-none shadow-2xs active:scale-95 group-hover:bg-emerald-500/10"
+                    className="w-7 h-7 rounded-lg bg-surface-secondary hover:bg-emerald-500/20 text-foreground-secondary hover:text-emerald-400 flex items-center justify-center transition-all focus:outline-none shadow-2xs active:scale-95 group-hover:bg-emerald-500/10"
                     title="Mark as completed"
                     aria-label="Mark task completed"
                   >
@@ -146,7 +146,7 @@ export default function PriorityTasksCard({ tasks: initialPropTasks, onViewAll }
                     <span>{task.appDetails.stage}</span>
                   </div>
                   {task.appDetails.remarks && (
-                    <div className="flex gap-2 flex-col mt-1 bg-surface/50 p-2 rounded-lg border border-border/50">
+                    <div className="flex gap-2 flex-col mt-1 bg-surface p-2 rounded-lg border border-border/50">
                       <span className="font-semibold text-foreground">Remarks</span>
                       <span className="whitespace-pre-wrap">{task.appDetails.remarks}</span>
                     </div>

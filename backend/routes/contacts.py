@@ -73,3 +73,16 @@ def update_contact(
         from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Contact not found")
     return updated
+
+
+@router.delete("/{contact_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_contact(contact_id: str, request: Request, user: User = Depends(get_current_user)) -> None:
+    """Delete a contact if not referenced."""
+    from fastapi import HTTPException
+    try:
+        db_client.delete_contact(user.id, contact_id)
+    except ValueError as e:
+        if "not found" in str(e).lower():
+            raise HTTPException(status_code=404, detail="Contact not found")
+        else:
+            raise HTTPException(status_code=400, detail=str(e))
