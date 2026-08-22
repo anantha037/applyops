@@ -948,9 +948,20 @@ export default function Applications() {
 
   const handleEditClick = (app) => {
     setEditApp(app)
+
+    let method = app.application_method
+    let methodOther = ''
+    
+    if (method && !METHODS.includes(method)) {
+      methodOther = method
+      method = 'Other'
+    }
+
     setForm({
       ...EMPTY_FORM,
       ...app,
+      application_method: method,
+      application_method_other: methodOther,
       has_contact: !!(app.contact_name || app.contact_email || app.contact_phone || app.contact_linkedin)
     })
     setShowAddModal(true)
