@@ -199,3 +199,40 @@ def test_update_me(unique_email, valid_password):
     assert res.status_code == 400
     
     client.cookies.clear()
+
+
+def test_refresh_token_csrf_header(unique_email, valid_password):
+    """Regression test: ensure POST /auth/refresh requires CSRF header, mirroring production behavior."""
+    import sys
+    
+    # Ensure user is logged in (tests normally bypass CSRF, but we'll test the actual middleware)
+    client.cookies.clear()
+    
+    # We must mock pytest out of sys.modules so the middleware activates
+    pytest_mod = sys.modules.pop("pytest", None)
+    try:
+        # Since middleware is active, even login requires the header
+        res_login = client.post(
+            "/auth/login", 
+            json={"email": unique_email, "password": valid_password},
+            headers={"X-ApplyOps-Client": "1"}
+        )
+        assert res_login.status_code == 200
+        
+        # Now try to refresh WITHOUT the header (simulating the bug)
+        res_no_header = client.post("/auth/refresh", json={})
+        assert res_no_header.status_code == 403
+        assert "CSRF validation failed" in res_no_header.json()["detail"]
+        
+        # Now try to refresh WITH the header (simulating the fix)
+        res_with_header = client.post(
+            "/auth/refresh", 
+            json={}, 
+            headers={"X-ApplyOps-Client": "1"}
+        )
+        assert res_with_header.status_code == 200
+        
+    finally:
+        if pytest_mod:
+            sys.modules["pytest"] = pytest_mod
+        client.cookies.clear()
