@@ -116,7 +116,7 @@ export default function Settings() {
 
   const save = e => {
     e.preventDefault()
-    if (isTimeInvalid) return
+    if (isTimeInvalid || saving) return
 
     setSaving(true)
     setMessage('')

@@ -263,6 +263,7 @@ function AddEventModal({ defaultDate, onSave, onClose }) {
 
   const submit = async e => {
     e.preventDefault()
+    if (saving) return
     setSaving(true)
     try {
       await onSave({ ...form, time: form.time || null })
@@ -360,8 +361,9 @@ function AddEventModal({ defaultDate, onSave, onClose }) {
             <button
               type="submit"
               disabled={saving}
-              className="rounded-xl bg-primary px-5 py-2 text-xs font-semibold text-white hover:bg-primary-hover disabled:opacity-60 transition-all shadow-2xs active:scale-95"
+              className="rounded-xl bg-primary px-5 py-2 text-xs font-semibold text-white hover:bg-primary-hover disabled:opacity-60 transition-all shadow-2xs active:scale-95 flex items-center gap-2"
             >
+              {saving && <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
               {saving ? 'Saving…' : 'Save Event'}
             </button>
           </div>

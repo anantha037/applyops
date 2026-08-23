@@ -74,6 +74,7 @@ function MarkAsAppliedModal({ contact, onClose, onConfirm }) {
 
   const submit = async e => {
     e.preventDefault()
+    if (submitting) return
     setSubmitting(true)
     try {
       await onConfirm(contact.id, method)
@@ -128,8 +129,9 @@ function MarkAsAppliedModal({ contact, onClose, onConfirm }) {
             <button
               type="submit"
               disabled={submitting}
-              className="rounded-xl bg-primary px-5 py-2 text-xs font-semibold text-white hover:bg-primary-hover disabled:opacity-60 transition-all shadow-2xs active:scale-95"
+              className="rounded-xl bg-primary px-5 py-2 text-xs font-semibold text-white hover:bg-primary-hover disabled:opacity-60 transition-all shadow-2xs active:scale-95 flex items-center gap-2"
             >
+              {submitting && <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
               {submitting ? 'Confirming…' : 'Confirm Application'}
             </button>
           </div>
@@ -157,6 +159,7 @@ function ContactModal({ isEdit, onClose, onSave }) {
 
   const submit = async e => {
     e.preventDefault()
+    if (saving) return
     setSaving(true)
     try {
       const payload = {
@@ -334,8 +337,9 @@ function ContactModal({ isEdit, onClose, onSave }) {
             <button
               type="submit"
               disabled={saving}
-              className="rounded-xl bg-primary px-5 py-2 text-xs font-semibold text-white hover:bg-primary-hover disabled:opacity-60 transition-all shadow-2xs active:scale-95"
+              className="rounded-xl bg-primary px-5 py-2 text-xs font-semibold text-white hover:bg-primary-hover disabled:opacity-60 transition-all shadow-2xs active:scale-95 flex items-center gap-2"
             >
+              {saving && <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
               {saving ? 'Saving...' : (isEdit ? 'Save Changes' : 'Save Contact')}
             </button>
           </div>
