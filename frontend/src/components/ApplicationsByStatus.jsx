@@ -62,7 +62,7 @@ export default function ApplicationsByStatus({ summary = {} }) {
       </div>
 
       {/* Main Content Area: Donut Chart + Legend Grid */}
-      <div className="flex-1 flex flex-col sm:flex-row items-center justify-between gap-6 my-auto pt-2">
+      <div className="flex-1 flex flex-col xl:flex-row items-center justify-center xl:justify-between gap-6 my-auto pt-2 min-w-0">
         {/* Donut Chart Container */}
         <div className="relative w-44 h-44 flex-shrink-0 flex items-center justify-center">
           <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
