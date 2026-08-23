@@ -471,6 +471,8 @@ def create_application(
             stage=payload.get("stage", "Applied"),
             last_touch_date=payload.get("last_touch_date"),
             next_action_due=payload.get("next_action_due"),
+            next_action_type=payload.get("next_action_type"),
+            next_action_title=payload.get("next_action_title"),
             interview_date=payload.get("interview_date"),
             interview_round=payload.get("interview_round") or None,
             interview_attended=payload.get("interview_attended"),
@@ -536,8 +538,9 @@ def update_application(
         scalar_fields = (
             "date_applied", "company", "job_title", "jd_summary",
             "location", "application_method", "ctc", "status", "stage",
-            "last_touch_date", "next_action_due", "interview_date",
-            "interview_round", "interview_attended", "latest_update", "remarks",
+            "last_touch_date", "next_action_due", "next_action_type", "next_action_title",
+            "interview_date", "interview_round", "interview_attended", 
+            "latest_update", "remarks",
         )
         for field in scalar_fields:
             if field in changes:
@@ -843,27 +846,40 @@ def sync_followup_event(
     application_id: str,
     company: str,
     next_action_due: date | None,
+    next_action_type: str | None = None,
+    next_action_title: str | None = None,
     event_id_factory=lambda: str(uuid.uuid4()),
 ) -> None:
+    """Keep the auto-generated follow-up calendar event in sync."""
     with Session(engine) as session:
-        existing = _find_auto_event(session, user_id, application_id, CalendarEventType.FOLLOW_UP)
+        stmt = select(DBCalendarEvent).where(
+            DBCalendarEvent.user_id == user_id,
+            DBCalendarEvent.related_application_id == application_id,
+            DBCalendarEvent.source == CalendarEventSource.AUTO,
+            DBCalendarEvent.event_type != CalendarEventType.INTERVIEW
+        )
+        existing = session.exec(stmt).first()
+
         if next_action_due is None:
             if existing:
                 session.delete(existing)
                 session.commit()
             return
 
-        title = f"{company} - Follow-up"
+        title = next_action_title or f"{company} - Follow-up"
+        event_type = next_action_type or CalendarEventType.FOLLOW_UP
+
         if existing:
             existing.event_date = next_action_due
             existing.title = title
+            existing.event_type = event_type
             session.add(existing)
         else:
             row = DBCalendarEvent(
                 id=event_id_factory(),
                 user_id=user_id,
                 title=title,
-                event_type=CalendarEventType.FOLLOW_UP,
+                event_type=event_type,
                 event_date=next_action_due,
                 related_application_id=application_id,
                 notes=None,
