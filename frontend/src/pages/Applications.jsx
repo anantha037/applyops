@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api/client'
 import Dropdown from '../components/ui/Dropdown'
+import SearchableSelect from '../components/ui/SearchableSelect'
 import ManageResumesModal from '../components/ManageResumesModal'
 import {
   Plus, X, Search, Check, AlertCircle, Calendar, Sparkles,
@@ -549,7 +550,7 @@ function PostCreateBanner({ info, onDismiss, onEdit }) {
   )
 }
 
-function ApplicationModal({ isEdit, isOpen, onClose, onSubmit, form, setForm, resumes = [], onUploadResume, onManageResumes, isSubmitting, isUploadingResume }) {
+function ApplicationModal({ isEdit, isOpen, onClose, onSubmit, form, setForm, resumes = [], contacts = [], onUploadResume, onManageResumes, isSubmitting, isUploadingResume }) {
   if (!isOpen) return null
 
   return (
@@ -659,55 +660,86 @@ function ApplicationModal({ isEdit, isOpen, onClose, onSubmit, form, setForm, re
 
             {form.has_contact && (
               <div className="space-y-3 p-3.5 rounded-xl bg-surface-secondary border border-transparent">
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-foreground-secondary mb-1">Name</label>
-                    <input
-                      placeholder="e.g. Jane Doe"
-                      className="w-full rounded-lg border border-transparent bg-surface-secondary px-3 py-1.5 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary"
-                      value={form.contact_name}
-                      onChange={e => setForm({ ...form, contact_name: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-foreground-secondary mb-1">Role</label>
-                    <input
-                      placeholder="e.g. Recruiter"
-                      className="w-full rounded-lg border border-transparent bg-surface-secondary px-3 py-1.5 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary"
-                      value={form.contact_role}
-                      onChange={e => setForm({ ...form, contact_role: e.target.value })}
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-foreground-secondary mb-1">Email</label>
-                    <input
-                      type="email"
-                      placeholder="jane@example.com"
-                      className="w-full rounded-lg border border-transparent bg-surface-secondary px-3 py-1.5 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary"
-                      value={form.contact_email}
-                      onChange={e => setForm({ ...form, contact_email: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-foreground-secondary mb-1">Phone</label>
-                    <input
-                      placeholder="+1234567890"
-                      className="w-full rounded-lg border border-transparent bg-surface-secondary px-3 py-1.5 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary"
-                      value={form.contact_phone}
-                      onChange={e => setForm({ ...form, contact_phone: e.target.value })}
-                    />
-                  </div>
-                </div>
                 <div>
-                  <label className="block text-[11px] font-semibold text-foreground-secondary mb-1">LinkedIn Profile</label>
-                  <input
-                    placeholder="https://linkedin.com/in/..."
-                    className="w-full rounded-lg border border-transparent bg-surface-secondary px-3 py-1.5 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary"
-                    value={form.contact_linkedin}
-                    onChange={e => setForm({ ...form, contact_linkedin: e.target.value })}
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-[11px] font-semibold text-foreground-secondary">Link Existing Contact</label>
+                    {form.contact_id && (
+                      <a href={`#/contacts`} className="text-[10px] font-bold text-primary hover:text-primary-hover transition-colors">
+                        Go to Contact →
+                      </a>
+                    )}
+                  </div>
+                  <SearchableSelect
+                    options={contacts.map(c => ({
+                      value: c.id,
+                      label: c.name,
+                      sublabel: c.company ? `${c.role ? c.role + ' at ' : ''}${c.company}` : c.role
+                    }))}
+                    value={form.contact_id || null}
+                    onChange={val => setForm({ ...form, contact_id: val })}
+                    placeholder="Search and link a contact..."
                   />
+                </div>
+                
+                <div className={`space-y-3 pt-3 border-t border-white/5 transition-opacity ${form.contact_id ? 'opacity-30 pointer-events-none' : 'opacity-100'}`}>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-[11px] font-semibold text-foreground-secondary">Or create new contact inline</label>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-foreground-secondary mb-1">Name</label>
+                      <input
+                        placeholder="e.g. Jane Doe"
+                        className="w-full rounded-lg border border-transparent bg-surface-secondary px-3 py-1.5 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-surface-tertiary"
+                        value={form.contact_name}
+                        onChange={e => setForm({ ...form, contact_name: e.target.value })}
+                        disabled={!!form.contact_id}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-foreground-secondary mb-1">Role</label>
+                      <input
+                        placeholder="e.g. Recruiter"
+                        className="w-full rounded-lg border border-transparent bg-surface-secondary px-3 py-1.5 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-surface-tertiary"
+                        value={form.contact_role}
+                        onChange={e => setForm({ ...form, contact_role: e.target.value })}
+                        disabled={!!form.contact_id}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-foreground-secondary mb-1">Email</label>
+                      <input
+                        type="email"
+                        placeholder="jane@example.com"
+                        className="w-full rounded-lg border border-transparent bg-surface-secondary px-3 py-1.5 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-surface-tertiary"
+                        value={form.contact_email}
+                        onChange={e => setForm({ ...form, contact_email: e.target.value })}
+                        disabled={!!form.contact_id}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-foreground-secondary mb-1">Phone</label>
+                      <input
+                        placeholder="+1234567890"
+                        className="w-full rounded-lg border border-transparent bg-surface-secondary px-3 py-1.5 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-surface-tertiary"
+                        value={form.contact_phone}
+                        onChange={e => setForm({ ...form, contact_phone: e.target.value })}
+                        disabled={!!form.contact_id}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-foreground-secondary mb-1">LinkedIn Profile</label>
+                    <input
+                      placeholder="https://linkedin.com/in/..."
+                      className="w-full rounded-lg border border-transparent bg-surface-secondary px-3 py-1.5 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-surface-tertiary"
+                      value={form.contact_linkedin}
+                      onChange={e => setForm({ ...form, contact_linkedin: e.target.value })}
+                      disabled={!!form.contact_id}
+                    />
+                  </div>
                 </div>
               </div>
             )}
@@ -861,6 +893,7 @@ const EMPTY_FORM = {
   application_method: 'LinkedIn',
   application_method_other: '',
   has_contact: false,
+  contact_id: null,
   contact_name: '',
   contact_role: '',
   contact_email: '',
@@ -899,6 +932,8 @@ export default function Applications() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isUploadingResume, setIsUploadingResume] = useState(false)
 
+  const [contacts, setContacts] = useState([])
+
   const load = () => {
     setLoading(true)
     Promise.all([
@@ -906,10 +941,15 @@ export default function Applications() {
       api.listResumes().catch(e => {
         console.error("Failed to load resumes", e)
         return []
+      }),
+      api.contacts().catch(e => {
+        console.error("Failed to load contacts", e)
+        return []
       })
     ])
-    .then(([fetchedApps, fetchedResumes]) => {
+    .then(([fetchedApps, fetchedResumes, fetchedContacts]) => {
       setResumes(fetchedResumes)
+      setContacts(fetchedContacts)
       const appsWithResumes = fetchedApps.map(app => {
         if (app.resume_id) {
           const resObj = fetchedResumes.find(r => r.id === app.resume_id)
@@ -1343,6 +1383,7 @@ export default function Applications() {
         form={form}
         setForm={setForm}
         resumes={resumes}
+        contacts={contacts}
         onUploadResume={handleUploadResume}
         onManageResumes={() => setShowManageResumes(true)}
         isSubmitting={isSubmitting}
