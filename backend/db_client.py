@@ -131,6 +131,7 @@ def find_or_create_contact(
     linkedin_url: str | None = None,
     tags: str | None = None,
     notes: str | None = None,
+    application_id: str | None = None,
 ) -> Contact | None:
     """Find an existing contact or create a new one.
 
@@ -187,6 +188,15 @@ def find_or_create_contact(
         if notes and not existing.notes: existing.notes = notes; changed = True
         if changed:
             session.add(existing)
+            
+        if application_id:
+            if not verify_owned(session, DBApplication, application_id, user_id):
+                raise ValueError("Invalid or unauthorized application_id")
+            app = session.get(DBApplication, application_id)
+            if app:
+                app.contact_id = existing.id
+                session.add(app)
+                
         return existing
 
     # --- No match → create a new contact ---
@@ -204,8 +214,16 @@ def find_or_create_contact(
         created_at=datetime.now(timezone.utc),
     )
     session.add(contact)
-
     session.flush()   # flush so the ID is available before the caller commits
+    
+    if application_id:
+        if not verify_owned(session, DBApplication, application_id, user_id):
+            raise ValueError("Invalid or unauthorized application_id")
+        app = session.get(DBApplication, application_id)
+        if app:
+            app.contact_id = contact.id
+            session.add(app)
+            
     return contact
 
 def list_contacts(user_id: str) -> list[ContactView]:
@@ -297,6 +315,22 @@ def update_contact(user_id: str, contact_id: str, changes: dict) -> ContactView 
         # If the user manually updated the status, bump the date to today
         if "last_action_status" in changes and "last_action_date" not in changes:
             row.last_action_date = utc_now().date()
+            
+        if "application_id" in changes:
+            app_id = changes["application_id"]
+            if app_id == "":
+                # Unlink from all applications? The user didn't ask for unlinking from ContactView, but let's clear it if they send ""
+                apps = session.exec(select(DBApplication).where(DBApplication.contact_id == row.id)).all()
+                for app in apps:
+                    app.contact_id = None
+                    session.add(app)
+            elif app_id is not None:
+                if not verify_owned(session, DBApplication, app_id, user_id):
+                    raise ValueError("Invalid or unauthorized application_id")
+                app = session.get(DBApplication, app_id)
+                if app:
+                    app.contact_id = row.id
+                    session.add(app)
                 
         session.add(row)
         session.commit()
@@ -393,8 +427,16 @@ def create_application(
     reference an existing resumes row (or be None).
     """
     with Session(engine) as session:
-        contact_id: str | None = None
-        if any([contact_name, contact_email, contact_phone, contact_linkedin]):
+        contact_id: str | None = payload.get("contact_id")
+        if contact_id == "":
+            contact_id = None
+        
+        # Verify explicit contact_id ownership
+        if contact_id is not None:
+            if not verify_owned(session, Contact, contact_id, user_id):
+                raise ValueError("Invalid or unauthorized contact_id")
+
+        if not contact_id and any([contact_name, contact_email, contact_phone, contact_linkedin]):
             contact = find_or_create_contact(
                 session,
                 user_id,
@@ -459,8 +501,18 @@ def update_application(
         if row is None or row.user_id != user_id:
             return None
 
-        # Handle contact linkage
-        if any([contact_name, contact_email, contact_phone, contact_linkedin]):
+        # Handle explicit contact_id linkage
+        if "contact_id" in changes:
+            new_contact_id = changes["contact_id"]
+            if new_contact_id == "":
+                row.contact_id = None
+            else:
+                if new_contact_id is not None:
+                    if not verify_owned(session, Contact, new_contact_id, user_id):
+                        raise ValueError("Invalid or unauthorized contact_id")
+                row.contact_id = new_contact_id
+        # Handle inline contact fields linkage
+        elif any([contact_name, contact_email, contact_phone, contact_linkedin]):
             contact = find_or_create_contact(
                 session,
                 user_id,
@@ -607,6 +659,12 @@ def list_activity(user_id: str, activity_date: date | None = None) -> list[Activ
     return result
 
 
+def verify_owned(session: Session, model_class, record_id: str, user_id: str) -> bool:
+    """Verify that a given record exists and belongs to the specified user."""
+    row = session.get(model_class, record_id)
+    return row is not None and getattr(row, "user_id", None) == user_id
+
+
 # ---------------------------------------------------------------------------
 # Settings
 # ---------------------------------------------------------------------------
@@ -693,6 +751,17 @@ def get_calendar_event(user_id: str, event_id: str) -> CalendarEvent | None:
 
 def create_calendar_event(user_id: str, event: CalendarEvent) -> CalendarEvent:
     with Session(engine) as session:
+        rel_app_id = event.related_application_id if event.related_application_id != "" else None
+        if rel_app_id:
+            if not verify_owned(session, DBApplication, rel_app_id, user_id):
+                raise ValueError("Invalid or unauthorized related_application_id")
+                
+        contact_id = getattr(event, "contact_id", None)
+        contact_id = contact_id if contact_id != "" else None
+        if contact_id:
+            if not verify_owned(session, Contact, contact_id, user_id):
+                raise ValueError("Invalid or unauthorized contact_id")
+
         row = DBCalendarEvent(
             id=event.id,
             user_id=user_id,
@@ -700,7 +769,8 @@ def create_calendar_event(user_id: str, event: CalendarEvent) -> CalendarEvent:
             event_type=event.event_type,
             event_date=event.date,
             time=event.time,
-            related_application_id=event.related_application_id,
+            related_application_id=rel_app_id,
+            contact_id=contact_id,
             notes=event.notes or None,
             source=event.source,
         )
@@ -715,6 +785,24 @@ def update_calendar_event(user_id: str, event: CalendarEvent) -> CalendarEvent |
         row = session.get(DBCalendarEvent, event.id)
         if row is None or row.user_id != user_id:
             return None
+            
+        if event.related_application_id is not None and event.related_application_id != row.related_application_id:
+            if event.related_application_id == "":
+                row.related_application_id = None
+            else:
+                if not verify_owned(session, DBApplication, event.related_application_id, user_id):
+                    raise ValueError("Invalid or unauthorized related_application_id")
+                row.related_application_id = event.related_application_id
+            
+        contact_id = getattr(event, "contact_id", None)
+        if contact_id is not None and contact_id != getattr(row, "contact_id", None):
+            if contact_id == "":
+                row.contact_id = None
+            else:
+                if not verify_owned(session, Contact, contact_id, user_id):
+                    raise ValueError("Invalid or unauthorized contact_id")
+                row.contact_id = contact_id
+
         row.title = event.title
         row.event_type = event.event_type
         row.event_date = event.date
