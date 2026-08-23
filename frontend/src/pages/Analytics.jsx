@@ -194,22 +194,22 @@ export default function Analytics() {
 
   // Status donut data — straight from live snapshot
   const statusData = [
-    { name: 'In Progress',    value: inProgressCount },
-    { name: 'Interviewing',   value: interviewingCount },
+    { name: 'In Progress', value: inProgressCount },
+    { name: 'Interviewing', value: interviewingCount },
     { name: 'Offer Received', value: offerCount },
-    { name: 'Rejected',       value: rejectedCount },
-    { name: 'Ghosted',        value: ghostedCount },
-    { name: 'Not Contacted',  value: notContactedCount },
+    { name: 'Rejected', value: rejectedCount },
+    { name: 'Ghosted', value: ghostedCount },
+    { name: 'Not Contacted', value: notContactedCount },
   ]
 
   // Funnel: count with interviews_attended from snapshot; responses = calls_connected + interviews
   const responsesCount = (cur.calls_connected ?? 0) + interviewingCount + offerCount
   const pct = (n) => totalApps > 0 ? Math.round((n / totalApps) * 100) : 0
   const funnelStages = [
-    { stage: 'Applications', count: totalApps,        pct: 100,                  color: 'bg-primary/20 text-primary',      note: `${totalApps} total applications submitted` },
-    { stage: 'Responses',    count: responsesCount,   pct: pct(responsesCount),  color: 'bg-blue-500/20 text-blue-400',    note: `${responsesCount} responses received (${pct(responsesCount)}% of applications)` },
-    { stage: 'Interviews',   count: interviewingCount,pct: pct(interviewingCount),color: 'bg-indigo-500/20 text-indigo-400',note: `${interviewingCount} interview invites (${pct(interviewingCount)}% of applications)` },
-    { stage: 'Offers',       count: offerCount,       pct: pct(offerCount),      color: 'bg-emerald-500/20 text-emerald-400',note: `${offerCount} offer(s) received (${pct(offerCount)}% of applications)` },
+    { stage: 'Applications', count: totalApps, pct: 100, color: 'bg-primary/20 text-primary', note: `${totalApps} total applications submitted` },
+    { stage: 'Responses', count: responsesCount, pct: pct(responsesCount), color: 'bg-blue-500/20 text-blue-400', note: `${responsesCount} responses received (${pct(responsesCount)}% of applications)` },
+    { stage: 'Interviews', count: interviewingCount, pct: pct(interviewingCount), color: 'bg-indigo-500/20 text-indigo-400', note: `${interviewingCount} interview invites (${pct(interviewingCount)}% of applications)` },
+    { stage: 'Offers', count: offerCount, pct: pct(offerCount), color: 'bg-emerald-500/20 text-emerald-400', note: `${offerCount} offer(s) received (${pct(offerCount)}% of applications)` },
   ]
 
   // Line chart — use daily_snapshots history; fall back to today-only series
@@ -255,12 +255,12 @@ export default function Analytics() {
 
   const topChannel = methodPerformance.length > 0 ? methodPerformance[0] : null
   const momentumDelta = data?.deltas?.total_applications ?? 0
-  const momentumText = momentumDelta > 0 
-    ? `You submitted more applications this period, up ${momentumDelta}% from the previous.` 
-    : momentumDelta < 0 
-      ? `Your application volume is down ${Math.abs(momentumDelta)}% from the previous period.` 
+  const momentumText = momentumDelta > 0
+    ? `You submitted more applications this period, up ${momentumDelta}% from the previous.`
+    : momentumDelta < 0
+      ? `Your application volume is down ${Math.abs(momentumDelta)}% from the previous period.`
       : `Your application volume is perfectly steady compared to the previous period.`
-  
+
   const activeDaysCount = activeDaysData.filter(d => d.active).length
 
   const dropoffs = [
@@ -273,7 +273,7 @@ export default function Analytics() {
 
   let improvementTitle = "Focus on Consistency"
   let improvementText = `You've only tracked applications on ${activeDaysCount} out of 7 days this week. Consistency is key—try to set aside 20 minutes a day to maintain momentum.`
-  
+
   if (dropoffPct > 70 && biggestDropoff.label === 'Application to Response') {
     improvementTitle = "Refine Your Resume"
     improvementText = `Over ${dropoffPct}% of your applications don't lead to a response. Consider tailoring your resume more closely to job descriptions or utilizing ${topChannel?.method || 'referrals'} more heavily.`
@@ -497,11 +497,10 @@ export default function Analytics() {
                       key={item.name}
                       onMouseEnter={() => setHoveredSegment(index)}
                       onMouseLeave={() => setHoveredSegment(null)}
-                      className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs cursor-pointer transition-all duration-150 ${
-                        isHovered
+                      className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs cursor-pointer transition-all duration-150 ${isHovered
                           ? 'bg-surface-secondary text-foreground scale-[1.02] shadow-xs'
                           : 'text-foreground-secondary hover:text-foreground hover:bg-surface-tertiary'
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
                         <div
@@ -540,11 +539,10 @@ export default function Analytics() {
               {activeDaysData.map((d) => (
                 <div
                   key={d.day}
-                  className={`flex flex-col items-center justify-center p-2 rounded-xl text-center transition-all duration-150 ${
-                    d.active
+                  className={`flex flex-col items-center justify-center p-2 rounded-xl text-center transition-all duration-150 ${d.active
                       ? 'bg-primary/10 text-primary font-semibold'
                       : 'bg-surface-secondary text-muted'
-                  }`}
+                    }`}
                 >
                   <span className="text-[10px] uppercase font-bold tracking-wider">{d.day}</span>
                   <span className="text-xs font-black mt-0.5">{d.count > 0 ? d.count : '—'}</span>
@@ -570,11 +568,10 @@ export default function Analytics() {
                   <div
                     onMouseEnter={() => setHoveredFunnel(idx)}
                     onMouseLeave={() => setHoveredFunnel(null)}
-                    className={`relative p-3.5 rounded-xl transition-all duration-200 cursor-pointer flex items-center justify-between gap-4 ${
-                      isHovered
+                    className={`relative p-3.5 rounded-xl transition-all duration-200 cursor-pointer flex items-center justify-between gap-4 ${isHovered
                         ? 'bg-surface-secondary shadow-xs translate-x-1'
                         : 'bg-surface-secondary hover:bg-surface-tertiary'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-3">
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs ${stg.color}`}>
@@ -633,9 +630,8 @@ export default function Analytics() {
 
                 <div className="w-full h-2.5 bg-surface-secondary rounded-full overflow-hidden p-0.5">
                   <div
-                    className={`h-full rounded-full transition-all duration-500 ${
-                      item.best ? 'bg-gradient-to-r from-primary to-emerald-400' : 'bg-primary/70'
-                    }`}
+                    className={`h-full rounded-full transition-all duration-500 ${item.best ? 'bg-gradient-to-r from-primary to-emerald-400' : 'bg-primary/70'
+                      }`}
                     style={{ width: `${Math.max(item.rate, 4)}%` }}
                   />
                 </div>
@@ -724,9 +720,8 @@ export default function Analytics() {
                 {improvementText}
               </p>
             </div>
-            </div>
           </div>
-          
+
           <div className="mt-4 pt-3 flex items-center justify-between text-[11px] text-muted">
             <span>Based on {totalApps} total application records</span>
             <span className="font-semibold text-primary">Updated today</span>
