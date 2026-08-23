@@ -141,6 +141,8 @@ class ApplicationFields(BaseModel):
 class ApplicationCreate(ApplicationFields):
     """Payload for a new application."""
     next_action_due: date | None = None
+    next_action_type: str | None = None
+    next_action_title: str | None = None
     contact_name: str | None = None
     contact_email: str | None = None
     contact_phone: str | None = None
@@ -181,6 +183,8 @@ class ApplicationUpdate(BaseModel):
     latest_update: str | None = None
     remarks: str | None = None
     next_action_due: date | None = None
+    next_action_type: str | None = None
+    next_action_title: str | None = None
     contact_name: str | None = None
     contact_email: str | None = None
     contact_phone: str | None = None
@@ -195,6 +199,8 @@ class Application(ApplicationFields):
 
     id: str
     next_action_due: date | None = None
+    next_action_type: str | None = None
+    next_action_title: str | None = None
     contact_id: str | None = None
     resume_id: str | None = None
 
