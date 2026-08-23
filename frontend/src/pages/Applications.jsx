@@ -1112,6 +1112,8 @@ export default function Applications() {
       application_method: form.application_method === 'Other' ? form.application_method_other : form.application_method,
       next_action: nextActionObj,
       next_action_due: nextActionObj?.date || null,
+      next_action_type: nextActionObj?.type || null,
+      next_action_title: nextActionObj?.title || null,
       ...(form.has_contact ? {
         contact_name: form.contact_name,
         contact_role: form.contact_role,
@@ -1651,7 +1653,7 @@ export default function Applications() {
 
                       <td className="px-5 py-4">
                         <NextActionCell
-                          action={app.next_action || (app.next_action_due ? { date: app.next_action_due, title: 'Follow up' } : null)}
+                          action={app.next_action || (app.next_action_due ? { date: app.next_action_due, title: app.next_action_title || 'Follow up', type: app.next_action_type || 'Follow-up' } : null)}
                           onClick={() => setEditActionApp(app)}
                         />
                       </td>
