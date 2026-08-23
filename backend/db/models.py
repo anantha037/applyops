@@ -188,6 +188,8 @@ class Application(SQLModel, table=True):
     stage:               str           = Field(default=ApplicationStage.APPLIED)
     last_touch_date:     Optional[date] = Field(default=None)
     next_action_due:     Optional[date] = Field(default=None)
+    next_action_type:    Optional[str]  = Field(default=None)
+    next_action_title:   Optional[str]  = Field(default=None)
     interview_date:      Optional[date] = Field(default=None)
     interview_round:     Optional[str]  = Field(default=None)
     interview_attended:  Optional[bool] = Field(default=None)
