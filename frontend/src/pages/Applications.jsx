@@ -550,7 +550,7 @@ function PostCreateBanner({ info, onDismiss, onEdit }) {
   )
 }
 
-function ApplicationModal({ isEdit, isOpen, onClose, onSubmit, form, setForm, resumes = [], contacts = [], onUploadResume, onManageResumes, isSubmitting, isUploadingResume }) {
+function ApplicationModal({ isEdit, isOpen, onClose, onSubmit, onDelete, form, setForm, resumes = [], contacts = [], onUploadResume, onManageResumes, isSubmitting, isUploadingResume }) {
   if (!isOpen) return null
 
   return (
@@ -862,22 +862,35 @@ function ApplicationModal({ isEdit, isOpen, onClose, onSubmit, form, setForm, re
             )}
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-xl px-4 py-2 text-xs font-semibold text-foreground-secondary hover:bg-surface-tertiary transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="rounded-xl bg-primary px-5 py-2 text-xs font-semibold text-white hover:bg-primary-hover transition-all shadow-2xs active:scale-95 disabled:opacity-60 flex items-center gap-2"
-            >
-              {isSubmitting && <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
-              {isSubmitting ? 'Saving...' : (isEdit ? 'Save Changes' : 'Create Application')}
-            </button>
+          <div className={`flex items-center pt-3 ${isEdit ? 'justify-between' : 'justify-end'}`}>
+            {isEdit && (
+              <button
+                type="button"
+                onClick={onDelete}
+                className="rounded-xl p-2 text-rose-400 hover:text-white hover:bg-rose-500 transition-colors flex items-center gap-1.5"
+                title="Delete Application"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span className="text-xs font-semibold">Delete</span>
+              </button>
+            )}
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-xl px-4 py-2 text-xs font-semibold text-foreground-secondary hover:bg-surface-tertiary transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="rounded-xl bg-primary px-5 py-2 text-xs font-semibold text-white hover:bg-primary-hover transition-all shadow-2xs active:scale-95 disabled:opacity-60 flex items-center gap-2"
+              >
+                {isSubmitting && <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                {isSubmitting ? 'Saving...' : (isEdit ? 'Save Changes' : 'Create Application')}
+              </button>
+            </div>
           </div>
         </form>
       </div>
@@ -1382,6 +1395,7 @@ export default function Applications() {
           setEditApp(null)
         }}
         onSubmit={submit}
+        onDelete={() => setDeleteAppId(editApp?.id)}
         form={form}
         setForm={setForm}
         resumes={resumes}
@@ -1533,23 +1547,9 @@ export default function Applications() {
                 <th className="px-5 py-3.5 font-extrabold">Next Action</th>
                 <th className="px-5 py-3.5 font-extrabold">Remarks</th>
                 <th className="px-5 py-3.5 font-extrabold">Resume</th>
-                  <th className="px-5 py-3.5 font-extrabold text-right">Actions</th>
-
-                      <td className="px-5 py-4">
-                        <div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => handleEditClick(app)} className="p-1.5 text-foreground-secondary hover:text-primary hover:bg-surface-secondary rounded-lg transition-colors" title="Edit Application">
-                            <Edit className="w-4 h-4" />
-                          </button>
-                          <button onClick={() => setDeleteAppId(app.id)} className="p-1.5 text-foreground-secondary hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors" title="Delete Application">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                      <td className="px-5 py-4"><div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity"><button onClick={() => handleEditClick(app)} className="p-1.5 text-foreground-secondary hover:text-primary hover:bg-surface-secondary rounded-lg transition-colors" title="Edit Application"><Edit className="w-4 h-4" /></button><button onClick={() => setDeleteAppId(app.id)} className="p-1.5 text-foreground-secondary hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors" title="Delete Application"><Trash2 className="w-4 h-4" /></button></div></td>
-                    </tr>
-
+              </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-white/5">
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i} className="animate-pulse">
@@ -1580,7 +1580,9 @@ export default function Applications() {
                     <td className="px-5 py-4">
                       <div className="h-5 w-16 rounded bg-surface-secondary" />
                     </td>
-                    <td className="px-5 py-4"><div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity"><button onClick={() => handleEditClick(app)} className="p-1.5 text-foreground-secondary hover:text-primary hover:bg-surface-secondary rounded-lg transition-colors" title="Edit Application"><Edit className="w-4 h-4" /></button><button onClick={() => setDeleteAppId(app.id)} className="p-1.5 text-foreground-secondary hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors" title="Delete Application"><Trash2 className="w-4 h-4" /></button></div></td>
+                    <td className="px-5 py-4">
+                      <div className="h-4 w-12 rounded bg-surface-secondary" />
+                    </td>
                   </tr>
                 ))
               ) : filtered.length === 0 ? (
@@ -1588,13 +1590,19 @@ export default function Applications() {
                   <td colSpan={9} className="py-16 text-center text-xs text-muted">
                     No applications match the current filter parameters.
                   </td>
-                  <td className="px-5 py-4"><div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity"><button onClick={() => handleEditClick(app)} className="p-1.5 text-foreground-secondary hover:text-primary hover:bg-surface-secondary rounded-lg transition-colors" title="Edit Application"><Edit className="w-4 h-4" /></button><button onClick={() => setDeleteAppId(app.id)} className="p-1.5 text-foreground-secondary hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors" title="Delete Application"><Trash2 className="w-4 h-4" /></button></div></td>
                 </tr>
               ) : (
                 visible.map(app => {
                   const res = app.resume
                   return (
-                    <tr key={app.id} className="group hover:bg-surface-tertiary transition-colors duration-150">
+                    <tr 
+                      key={app.id} 
+                      onClick={(e) => {
+                        if (e.target.closest('button, input, select, a, [role="button"], .dropdown-trigger')) return;
+                        handleEditClick(app);
+                      }}
+                      className="group hover:bg-surface-tertiary transition-colors duration-150 cursor-pointer"
+                    >
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
                           <ApplicationStatusIcon status={app.status} />
@@ -1702,7 +1710,6 @@ export default function Applications() {
                           <span className="text-xs font-medium text-foreground-secondary/50">No resume</span>
                         )}
                       </td>
-                      <td className="px-5 py-4"><div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity"><button onClick={() => handleEditClick(app)} className="p-1.5 text-foreground-secondary hover:text-primary hover:bg-surface-secondary rounded-lg transition-colors" title="Edit Application"><Edit className="w-4 h-4" /></button><button onClick={() => setDeleteAppId(app.id)} className="p-1.5 text-foreground-secondary hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors" title="Delete Application"><Trash2 className="w-4 h-4" /></button></div></td>
                     </tr>
                   )
                 })
