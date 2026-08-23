@@ -253,6 +253,41 @@ export default function Analytics() {
 
   const totalStatusApplications = statusData.reduce((acc, item) => acc + item.value, 0)
 
+  const topChannel = methodPerformance.length > 0 ? methodPerformance[0] : null
+  const momentumDelta = data?.deltas?.total_applications ?? 0
+  const momentumText = momentumDelta > 0 
+    ? `You submitted more applications this period, up ${momentumDelta}% from the previous.` 
+    : momentumDelta < 0 
+      ? `Your application volume is down ${Math.abs(momentumDelta)}% from the previous period.` 
+      : `Your application volume is perfectly steady compared to the previous period.`
+  
+  const activeDaysCount = activeDaysData.filter(d => d.active).length
+
+  const dropoffs = [
+    { label: 'Application to Response', rate: totalApps > 0 ? (totalApps - responsesCount) / totalApps : 0 },
+    { label: 'Response to Interview', rate: responsesCount > 0 ? (responsesCount - interviewingCount) / responsesCount : 0 },
+    { label: 'Interview to Offer', rate: interviewingCount > 0 ? (interviewingCount - offerCount) / interviewingCount : 0 }
+  ]
+  const biggestDropoff = dropoffs.reduce((prev, curr) => curr.rate > prev.rate ? curr : prev, dropoffs[0])
+  const dropoffPct = Math.round(biggestDropoff.rate * 100)
+
+  let improvementTitle = "Focus on Consistency"
+  let improvementText = `You've only tracked applications on ${activeDaysCount} out of 7 days this week. Consistency is key—try to set aside 20 minutes a day to maintain momentum.`
+  
+  if (dropoffPct > 70 && biggestDropoff.label === 'Application to Response') {
+    improvementTitle = "Refine Your Resume"
+    improvementText = `Over ${dropoffPct}% of your applications don't lead to a response. Consider tailoring your resume more closely to job descriptions or utilizing ${topChannel?.method || 'referrals'} more heavily.`
+  } else if (dropoffPct > 50 && biggestDropoff.label === 'Response to Interview') {
+    improvementTitle = "Strengthen Initial Screens"
+    improvementText = `You are getting responses, but ${dropoffPct}% don't convert to formal interviews. Focus on your phone screen pitch and quick follow-ups.`
+  } else if (dropoffPct > 50 && biggestDropoff.label === 'Interview to Offer') {
+    improvementTitle = "Focus on Closing"
+    improvementText = `You're successfully securing interviews, but losing ${dropoffPct}% before the offer stage. Consider doing mock interviews and focusing on closing techniques.`
+  } else if (activeDaysCount >= 5) {
+    improvementTitle = "Double Down on Winners"
+    improvementText = `Your metrics show strong, consistent momentum. Keep up the great work and consider doubling down on ${topChannel?.method || 'your primary channels'} to maximize results.`
+  }
+
   if (loading && !data) {
     return (
       <div className="h-full flex items-center justify-center text-sm font-semibold text-muted animate-pulse">
@@ -454,7 +489,7 @@ export default function Analytics() {
               <div className="flex-1 w-full space-y-1.5">
                 {statusData.map((item, index) => {
                   const isHovered = hoveredSegment === index
-                  const pct = Math.round((item.value / totalStatusApplications) * 100)
+                  const pct = Math.round((item.value / totalStatusApplications) * 100) || 0
                   const color = statusColors[item.name] || '#64748B'
 
                   return (
@@ -493,11 +528,11 @@ export default function Analytics() {
             <div className="flex items-center justify-between mb-3">
               <div>
                 <h4 className="text-xs font-bold text-foreground">Application Consistency</h4>
-                <p className="text-[11px] text-foreground-secondary font-medium">{totalApps} total applications · {activeDaysData.filter(d => d.active).length} active days tracked</p>
+                <p className="text-[11px] text-foreground-secondary font-medium">{totalApps} total applications · {activeDaysCount} active days tracked</p>
               </div>
               <div className="flex items-center gap-1 text-[11px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-md">
                 <Flame className="w-3 h-3 text-primary" />
-                <span>{activeDaysData.filter(d => d.active).length} Day Streak</span>
+                <span>{activeDaysCount} Day Streak</span>
               </div>
             </div>
 
@@ -626,7 +661,7 @@ export default function Analytics() {
                 <h4 className="text-xs font-bold text-foreground">Strongest Channel</h4>
               </div>
               <p className="text-xs text-foreground-secondary font-medium leading-relaxed">
-                Employee referrals have your highest response rate at 57%.
+                {topChannel ? `You've submitted the most applications via ${topChannel.method} (${topChannel.apps} apps).` : 'No channel data available yet.'}
               </p>
             </div>
 
@@ -638,7 +673,7 @@ export default function Analytics() {
                 <h4 className="text-xs font-bold text-foreground">Momentum</h4>
               </div>
               <p className="text-xs text-foreground-secondary font-medium leading-relaxed">
-                You submitted 12 applications this week, 20% more than the previous period.
+                {momentumText}
               </p>
             </div>
 
@@ -650,7 +685,7 @@ export default function Analytics() {
                 <h4 className="text-xs font-bold text-foreground">Biggest Drop-off</h4>
               </div>
               <p className="text-xs text-foreground-secondary font-medium leading-relaxed">
-                Most applications drop between recruiter screening and technical interviews.
+                {dropoffPct > 0 ? `Most applications drop between ${biggestDropoff.label} (${dropoffPct}% drop-off).` : 'No significant drop-offs detected yet.'}
               </p>
             </div>
 
@@ -659,10 +694,10 @@ export default function Analytics() {
                 <div className="w-6 h-6 rounded-md bg-blue-500/15 text-blue-500 flex items-center justify-center">
                   <Clock className="w-3.5 h-3.5" />
                 </div>
-                <h4 className="text-xs font-bold text-foreground">Response Speed</h4>
+                <h4 className="text-xs font-bold text-foreground">Consistency</h4>
               </div>
               <p className="text-xs text-foreground-secondary font-medium leading-relaxed">
-                Companies respond in an average of 4.2 days to first contact.
+                You have been active on {activeDaysCount} out of the last 7 days.
               </p>
             </div>
           </div>
@@ -683,14 +718,15 @@ export default function Analytics() {
             <div className="p-4 rounded-xl bg-primary/5 mt-3 space-y-2">
               <div className="flex items-center gap-2 text-xs font-bold text-primary">
                 <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-                <span>Focus on High-Yield Channels</span>
+                <span>{improvementTitle}</span>
               </div>
               <p className="text-xs text-foreground-secondary font-medium leading-relaxed">
-                Your response rate from employee referrals (57%) is significantly higher than LinkedIn Easy Apply (28%). Consider prioritizing referrals and direct recruiter outreach for your next applications.
+                {improvementText}
               </p>
             </div>
+            </div>
           </div>
-
+          
           <div className="mt-4 pt-3 flex items-center justify-between text-[11px] text-muted">
             <span>Based on {totalApps} total application records</span>
             <span className="font-semibold text-primary">Updated today</span>
