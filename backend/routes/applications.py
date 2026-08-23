@@ -71,7 +71,13 @@ def create_application(payload: ApplicationCreate, request: Request, user: User 
     
     # Auto-sync calendar events
     db_client.sync_followup_event(
-        user.id, application.id, application.company, application.next_action_due, lambda: str(uuid4())
+        user.id, 
+        application.id, 
+        application.company, 
+        application.next_action_due, 
+        next_action_type=application.next_action_type,
+        next_action_title=application.next_action_title,
+        event_id_factory=lambda: str(uuid4())
     )
     if application.interview_date:
         db_client.sync_interview_event(
@@ -138,9 +144,15 @@ def update_application(
         _not_found()
         
     # Auto-sync calendar events whenever relevant fields change
-    if {"stage", "last_touch_date", "status", "next_action_due", "interview_date", "interview_round"} & changes.keys():
+    if {"stage", "last_touch_date", "status", "next_action_due", "next_action_type", "next_action_title", "interview_date", "interview_round"} & changes.keys():
         db_client.sync_followup_event(
-            user.id, result.id, result.company, result.next_action_due, lambda: str(uuid4())
+            user.id, 
+            result.id, 
+            result.company, 
+            result.next_action_due, 
+            next_action_type=result.next_action_type,
+            next_action_title=result.next_action_title,
+            event_id_factory=lambda: str(uuid4())
         )
         db_client.sync_interview_event(
             user.id, result.id, result.company,
