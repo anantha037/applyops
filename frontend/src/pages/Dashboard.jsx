@@ -101,7 +101,7 @@ export default function Dashboard() {
           tasks={data.due?.map(app => ({
             id: app.id,
             company: app.company,
-            taskTitle: `Follow-up: ${app.job_title}`,
+            taskTitle: `${app.next_action_title || app.next_action_type || 'Follow-up'}: ${app.job_title}`,
             dueDate: app.next_action_due,
             priority: 'high',
             completed: false,
