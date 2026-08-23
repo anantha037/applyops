@@ -53,16 +53,21 @@ def create_application(payload: ApplicationCreate, request: Request, user: User 
 
     application_data["id"] = str(uuid4())
     
-    application = db_client.create_application(
-        user.id,
-        application_data,
-        contact_name=payload.contact_name,
-        contact_email=payload.contact_email,
-        contact_phone=payload.contact_phone,
-        contact_role=payload.contact_role,
-        contact_linkedin=payload.contact_linkedin,
-        resume_id=payload.resume_id,
-    )
+    try:
+        application = db_client.create_application(
+            user.id,
+            application_data,
+            contact_name=payload.contact_name,
+            contact_email=payload.contact_email,
+            contact_phone=payload.contact_phone,
+            contact_role=payload.contact_role,
+            contact_linkedin=payload.contact_linkedin,
+            resume_id=payload.resume_id,
+        )
+    except ValueError as e:
+        if "unauthorized" in str(e).lower():
+            raise HTTPException(status_code=403, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e))
     
     # Auto-sync calendar events
     db_client.sync_followup_event(
@@ -112,17 +117,23 @@ def update_application(
     contact_linkedin = changes.pop("contact_linkedin", None)
     resume_id = changes.pop("resume_id", None)
 
-    result = db_client.update_application(
-        user.id,
-        application_id, 
-        changes,
-        contact_name=contact_name,
-        contact_email=contact_email,
-        contact_phone=contact_phone,
-        contact_role=contact_role,
-        contact_linkedin=contact_linkedin,
-        resume_id=resume_id,
-    )
+    try:
+        result = db_client.update_application(
+            user.id,
+            application_id, 
+            changes,
+            contact_name=contact_name,
+            contact_email=contact_email,
+            contact_phone=contact_phone,
+            contact_role=contact_role,
+            contact_linkedin=contact_linkedin,
+            resume_id=resume_id,
+        )
+    except ValueError as e:
+        if "unauthorized" in str(e).lower():
+            raise HTTPException(status_code=403, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e))
+
     if result is None:
         _not_found()
         
