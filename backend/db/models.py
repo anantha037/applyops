@@ -230,6 +230,7 @@ class CalendarEvent(SQLModel, table=True):
     event_date:             date
     time:                   Optional[str] = Field(default=None)
     related_application_id: Optional[str] = Field(default=None, foreign_key="applications.id")
+    contact_id:             Optional[str] = Field(default=None, foreign_key="contacts.id")
     notes:                  Optional[str] = Field(default=None)
     source:                 str           = Field(default=CalendarEventSource.MANUAL)
 
