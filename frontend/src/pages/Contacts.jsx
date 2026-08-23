@@ -87,7 +87,7 @@ function MarkAsAppliedModal({ contact, onClose, onConfirm }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in-80 duration-150" onClick={e => e.target === e.currentTarget && onClose()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in-80 duration-150" onMouseDown={e => e.target === e.currentTarget && onClose()}>
       <div className="bg-surface rounded-2xl border border-transparent shadow-2xl w-full max-w-md overflow-hidden select-none">
         <div className="flex items-center justify-between px-6 pt-5 pb-2">
           <div>
@@ -177,7 +177,7 @@ function ContactModal({ isEdit, onClose, onSave }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in-80 duration-150" onClick={e => e.target === e.currentTarget && onClose()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in-80 duration-150" onMouseDown={e => e.target === e.currentTarget && onClose()}>
       <div className="bg-surface rounded-2xl border border-transparent shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto scrollbar-none select-none">
         <div className="flex items-center justify-between px-6 pt-5 pb-2">
           <div className="flex items-center gap-2.5">
@@ -463,7 +463,7 @@ export default function Contacts() {
   const handleSaveContact = async (payload) => {
     const formatted = {
       ...payload,
-      tags: typeof payload.tags === 'string' ? payload.tags.split(',').map(t => t.trim()).filter(Boolean) : payload.tags
+      tags: Array.isArray(payload.tags) ? payload.tags.join(', ') : payload.tags
     }
     if (editContact) {
       await api.updateContact(editContact.id, formatted)
@@ -477,7 +477,7 @@ export default function Contacts() {
   const handleAdd = async (payload) => {
     const formatted = {
       ...payload,
-      tags: payload.tags ? payload.tags.split(',').map(t => t.trim()).filter(Boolean) : []
+      tags: Array.isArray(payload.tags) ? payload.tags.join(', ') : payload.tags
     }
     await api.createContact(formatted)
     load()
