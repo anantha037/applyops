@@ -42,7 +42,12 @@ def create_event(payload: CalendarEventCreate, request: Request, user: User = De
     )
     # Override source to MANUAL — this endpoint is only for manual events.
     event = event.model_copy(update={"source": CalendarEventSource.MANUAL})
-    return db_client.create_calendar_event(user.id, event)
+    try:
+        return db_client.create_calendar_event(user.id, event)
+    except ValueError as e:
+        if "unauthorized" in str(e).lower():
+            raise HTTPException(status_code=403, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.patch("/events/{event_id}", response_model=CalendarEvent)
@@ -58,7 +63,14 @@ def update_event(
     if "event_date" in changes:
         changes["date"] = changes.pop("event_date")
     updated = existing.model_copy(update=changes)
-    result = db_client.update_calendar_event(user.id, updated)
+    
+    try:
+        result = db_client.update_calendar_event(user.id, updated)
+    except ValueError as e:
+        if "unauthorized" in str(e).lower():
+            raise HTTPException(status_code=403, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e))
+        
     if result is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Calendar event not found")
     return result
