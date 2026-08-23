@@ -2,6 +2,7 @@ import { Edit, Trash2 } from 'lucide-react'
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import { api } from '../api/client'
 import Dropdown from '../components/ui/Dropdown'
+import SearchableSelect from '../components/ui/SearchableSelect'
 
 const MailIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 7.00005L10.2 11.65C11.2667 12.45 12.7333 12.45 13.8 11.65L20 7" /><rect x="3" y="5" width="18" height="14" rx="2" /></svg>
 const PhoneIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
@@ -141,7 +142,7 @@ function MarkAsAppliedModal({ contact, onClose, onConfirm }) {
   )
 }
 
-function ContactModal({ isEdit, onClose, onSave }) {
+function ContactModal({ isEdit, onClose, onSave, apps = [] }) {
   const [form, setForm] = useState(arguments[0].initialData || {
     name: '',
     company: '',
@@ -152,7 +153,8 @@ function ContactModal({ isEdit, onClose, onSave }) {
     application_method: 'LinkedIn Easy Apply',
     tags: '',
     notes: '',
-    linkedin_url: ''
+    linkedin_url: '',
+    application_id: null
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -249,6 +251,20 @@ function ContactModal({ isEdit, onClose, onSave }) {
                 onChange={e => setForm({ ...form, phone: e.target.value })}
               />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">Link Application (Optional)</label>
+            <SearchableSelect
+              options={apps.map(a => ({
+                value: a.id,
+                label: a.company,
+                sublabel: a.job_title
+              }))}
+              value={form.application_id || null}
+              onChange={val => setForm({ ...form, application_id: val })}
+              placeholder="Search and link an application..."
+            />
           </div>
 
           <div className="pt-1">
@@ -418,11 +434,17 @@ export default function Contacts() {
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 10
 
+  const [apps, setApps] = useState([])
+
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await api.contacts()
+      const [res, appsRes] = await Promise.all([
+        api.contacts(),
+        api.applications().catch(() => [])
+      ])
       setContacts(res || [])
+      setApps(appsRes || [])
       setError('')
     } catch (err) {
       setError(err.message)
@@ -675,22 +697,19 @@ export default function Contacts() {
                       <InlineLinkedinEdit contact={c} onSave={handleUpdateLinkedin} />
                     </td>
                     <td className="py-3.5 px-3.5">
-                      {c.applications && c.applications.length > 0 ? (
+                      {c.application_id ? (
                         <div className="flex flex-col gap-1.5">
-                          {c.applications.map(app => (
-                            <button
-                              key={app.id}
-                              onClick={() => handleJumpToApplication(app.id)}
-                              className="text-left group/app flex flex-col hover:bg-surface-tertiary p-1.5 -ml-1.5 rounded-lg transition-colors"
-                            >
-                              <span className="text-xs font-bold text-primary group-hover/app:underline decoration-primary/50">
-                                {app.company || 'Unknown Company'}
-                              </span>
-                              <span className="text-[10px] text-foreground-secondary font-medium">
-                                {app.job_title || 'Unknown Role'}
-                              </span>
-                            </button>
-                          ))}
+                          <button
+                            onClick={() => handleJumpToApplication(c.application_id)}
+                            className="text-left group/app flex flex-col hover:bg-surface-tertiary p-1.5 -ml-1.5 rounded-lg transition-colors"
+                          >
+                            <span className="text-xs font-bold text-primary group-hover/app:underline decoration-primary/50">
+                              {apps.find(a => a.id === c.application_id)?.company || 'View Application'}
+                            </span>
+                            <span className="text-[10px] text-foreground-secondary font-medium">
+                              {apps.find(a => a.id === c.application_id)?.job_title || ''}
+                            </span>
+                          </button>
                         </div>
                       ) : isApplied ? (
                         <div className="flex flex-col">
@@ -842,10 +861,12 @@ export default function Contacts() {
             application_method: 'LinkedIn Easy Apply',
             tags: editContact.tags ? (Array.isArray(editContact.tags) ? editContact.tags.join(', ') : editContact.tags) : '',
             notes: editContact.notes || '',
-            linkedin_url: editContact.linkedin_url || ''
+            linkedin_url: editContact.linkedin_url || '',
+            application_id: editContact.application_id || null
           } : undefined}
           onClose={() => setShowAddModal(false)}
           onSave={handleSaveContact}
+          apps={apps}
         />
       )}
 
