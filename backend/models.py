@@ -24,22 +24,25 @@ class CalendarEventSource(StrEnum):
 
 class CalendarEventCreate(BaseModel):
     """Payload for a new calendar event (manual creation only)."""
-    title:                  str
+    title:                  str = Field(min_length=1)
     event_type:             CalendarEventType
     date:                   date
     time:                   str | None = None
     related_application_id: str | None = None
-    notes:                  str        = ""
+    contact_id:             str | None = None
+    notes:                  str | None = None
     source:                 CalendarEventSource = CalendarEventSource.MANUAL
 
 
 class CalendarEventUpdate(BaseModel):
     """Partial update payload for a calendar event."""
-    title:      str | None = None
-    event_type: CalendarEventType | None = None
-    event_date: date | None = None   # renamed from `date` to avoid shadowing the type
-    time:       str  | None = None
-    notes:      str  | None = None
+    title:                  str | None = Field(default=None, min_length=1)
+    event_type:             CalendarEventType | None = None
+    event_date:             date | None = None
+    time:                   str  | None = None
+    notes:                  str  | None = None
+    related_application_id: str  | None = None
+    contact_id:             str  | None = None
 
 
 class CalendarEvent(CalendarEventCreate):
@@ -143,6 +146,7 @@ class ApplicationCreate(ApplicationFields):
     contact_phone: str | None = None
     contact_role: str | None = None
     contact_linkedin: str | None = None
+    contact_id: str | None = None
     resume_id: str | None = None
 
 
@@ -182,6 +186,7 @@ class ApplicationUpdate(BaseModel):
     contact_phone: str | None = None
     contact_role: str | None = None
     contact_linkedin: str | None = None
+    contact_id: str | None = None
     resume_id: str | None = None
 
 
@@ -273,6 +278,7 @@ class ContactCreate(BaseModel):
     tags:    str = ""   # comma-separated: Recruiter, HR Manager, Referrer, Other
     notes:   str = ""
     linkedin_url: str = ""
+    application_id: str | None = None
 
 
 class ContactManual(ContactCreate):
@@ -322,6 +328,7 @@ class ContactUpdate(BaseModel):
     linkedin_url:       str | None = None
     last_action_status: str | None = None
     last_action_date:   date | None = None
+    application_id:     str | None = None
 
 
 # ── Analytics ────────────────────────────────────────────────────────────────
