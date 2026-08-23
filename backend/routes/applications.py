@@ -38,9 +38,19 @@ def create_application(payload: ApplicationCreate, request: Request, user: User 
     last_touch_date = payload.last_touch_date or payload.date_applied
     application_data = payload.model_dump()
     application_data["last_touch_date"] = last_touch_date
-    application_data["next_action_due"] = calculate_next_action_due(
-        ApplicationStage(payload.stage), last_touch_date, payload.status
-    )
+
+    if payload.next_action_due is not None:
+        if payload.next_action_due < date.today():
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Next action date cannot be in the past"
+            )
+        application_data["next_action_due"] = payload.next_action_due
+    else:
+        application_data["next_action_due"] = calculate_next_action_due(
+            ApplicationStage(payload.stage), last_touch_date, payload.status
+        )
+
     application_data["id"] = str(uuid4())
     
     application = db_client.create_application(
@@ -78,6 +88,15 @@ def update_application(
     changes = payload.model_dump(exclude_unset=True)
     print("PATCH changes:", changes)
     
+    # Validate next_action_due only if it's explicitly being changed to a new past date
+    if "next_action_due" in changes:
+        new_val = changes["next_action_due"]
+        if new_val is not None and new_val < date.today() and new_val != existing.next_action_due:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Next action date cannot be in the past"
+            )
+
     # We must calculate next_action_due if relevant fields changed
     if {"stage", "last_touch_date", "status"} & changes.keys():
         stage = ApplicationStage(changes.get("stage", existing.stage))
