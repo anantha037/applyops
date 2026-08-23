@@ -1,4 +1,4 @@
-export const baseUrl = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
+export const baseUrl = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 const isBrowser = typeof window !== 'undefined' && typeof localStorage !== 'undefined';
 
@@ -8,14 +8,14 @@ async function _doRefresh() {
   try {
     const refreshRes = await fetch(`${baseUrl}/auth/refresh`, {
       method: 'POST',
-      headers: { 
+      headers: {
         'Content-Type': 'application/json',
         'X-ApplyOps-Client': '1'
       },
       credentials: 'include',
       body: JSON.stringify({})
     })
-    
+
     // 409 means backend grace period caught a concurrent refresh and didn't revoke family.
     // The other tab handled the actual rotation, so we treat 409 as success here.
     if (refreshRes.ok || refreshRes.status === 409) {
@@ -38,11 +38,11 @@ async function _doRefresh() {
 async function request(path, options = {}, isRetry = false) {
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), 30_000)
-  
-  const headers = { 
-    'Content-Type': 'application/json', 
+
+  const headers = {
+    'Content-Type': 'application/json',
     'X-ApplyOps-Client': '1',
-    ...(options.headers || {}) 
+    ...(options.headers || {})
   }
 
   try {
@@ -53,13 +53,13 @@ async function request(path, options = {}, isRetry = false) {
       credentials: 'include',
       signal: controller.signal,
     })
-    
+
     // Auto-refresh logic on 401
     const isLoggedIn = isBrowser && localStorage.getItem('applyops_is_logged_in') === '1';
     if (response.status === 401 && !isRetry && isLoggedIn && !path.startsWith('/auth/')) {
       try {
         let success = false;
-        
+
         if (isBrowser && navigator.locks) {
           success = await navigator.locks.request('applyops_refresh', { mode: 'exclusive' }, async () => {
             let retry = await fetch(`${baseUrl}${path}`, {
@@ -213,7 +213,7 @@ export const authApi = {
     return res
   },
   logout: () => {
-    request('/auth/logout', { method: 'POST', body: JSON.stringify({}) }).catch(() => {})
+    request('/auth/logout', { method: 'POST', body: JSON.stringify({}) }).catch(() => { })
     if (isBrowser) localStorage.removeItem('applyops_is_logged_in')
   },
   isAuthenticated: () => isBrowser && localStorage.getItem('applyops_is_logged_in') === '1',
