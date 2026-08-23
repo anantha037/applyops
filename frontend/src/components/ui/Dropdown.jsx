@@ -108,19 +108,22 @@ export default function Dropdown({
       </button>
 
       {isOpen && createPortal(
-        <div 
-          ref={menuRef}
-          className="fixed rounded-xl bg-surface shadow-2xl p-1.5"
-          style={{
-            zIndex: 100,
-            ...(pos
-              ? { top: pos.top, left: pos.left, minWidth: pos.minWidth }
-              : { top: -9999, left: -9999, opacity: 0, pointerEvents: 'none' }
-            ),
-          }}
-          role="listbox"
-        >
-          {options.map((option) => {
+        <>
+          {/* Invisible overlay to catch outside clicks and prevent bubbling to modal backdrop */}
+          <div className="fixed inset-0 z-[99]" onClick={(e) => { e.stopPropagation(); setIsOpen(false); }} onMouseDown={(e) => { e.stopPropagation(); setIsOpen(false); }} />
+          <div 
+            ref={menuRef}
+            className="fixed rounded-xl bg-surface shadow-2xl p-1.5"
+            style={{
+              zIndex: 100,
+              ...(pos
+                ? { top: pos.top, left: pos.left, minWidth: pos.minWidth }
+                : { top: -9999, left: -9999, opacity: 0, pointerEvents: 'none' }
+              ),
+            }}
+            role="listbox"
+          >
+            {options.map((option) => {
             const isSelected = option.value === value
             return (
               <button
@@ -150,7 +153,8 @@ export default function Dropdown({
               </button>
             )
           })}
-        </div>,
+          </div>
+        </>,
         document.body
       )}
     </div>
