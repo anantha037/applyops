@@ -11,6 +11,7 @@ import 'react-big-calendar/lib/css/react-big-calendar.css'
 import { api, activityApi } from '../api/client'
 import ActivityHeatmap from '../components/ActivityHeatmap'
 import Dropdown from '../components/ui/Dropdown'
+import SearchableSelect from '../components/ui/SearchableSelect'
 import {
   Plus, X, ChevronLeft, ChevronRight, RefreshCw,
   Calendar as CalendarIcon, Phone, Target, ClipboardList, Bell, Sparkles, Filter
@@ -228,11 +229,26 @@ function UpcomingEvents({ events = [], loading = false, selectedDate }) {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation()
+                                sessionStorage.setItem('applyops_pending_action', JSON.stringify({ type: 'edit_app', appId: ev.related_application_id }))
                                 window.location.hash = `#/applications`
                               }}
                               className="text-primary hover:underline font-semibold"
                             >
                               View related application &rarr;
+                            </button>
+                          </div>
+                        )}
+                        {ev.contact_id && (
+                          <div className={ev.related_application_id ? "mt-1" : "mt-2 pt-2 border-t border-border/50"}>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                sessionStorage.setItem('applyops_pending_action', JSON.stringify({ type: 'edit_contact', contactId: ev.contact_id }))
+                                window.location.hash = `#/contacts`
+                              }}
+                              className="text-cyan-400 hover:underline font-semibold"
+                            >
+                              View related contact &rarr;
                             </button>
                           </div>
                         )}
@@ -250,13 +266,15 @@ function UpcomingEvents({ events = [], loading = false, selectedDate }) {
 }
 
 // ── Add Event Modal ──────────────────────────────────────────────────────────
-function AddEventModal({ defaultDate, onSave, onClose }) {
+function AddEventModal({ defaultDate, onSave, onClose, apps = [], contacts = [] }) {
   const [form, setForm] = useState({
     title: '',
     event_type: 'Reminder',
     date: defaultDate ? fmtDate(defaultDate) : fmtDate(new Date()),
     time: '',
     notes: '',
+    related_application_id: null,
+    contact_id: null,
   })
   const [saving, setSaving] = useState(false)
   const [error, setError]   = useState('')
@@ -350,6 +368,35 @@ function AddEventModal({ defaultDate, onSave, onClose }) {
             />
           </div>
 
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">Link Application (Optional)</label>
+              <SearchableSelect
+                options={apps.map(a => ({
+                  value: a.id,
+                  label: a.company,
+                  sublabel: a.job_title
+                }))}
+                value={form.related_application_id || null}
+                onChange={val => setForm({ ...form, related_application_id: val })}
+                placeholder="Search apps..."
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">Link Contact (Optional)</label>
+              <SearchableSelect
+                options={contacts.map(c => ({
+                  value: c.id,
+                  label: c.name,
+                  sublabel: c.company ? `${c.role ? c.role + ' at ' : ''}${c.company}` : c.role
+                }))}
+                value={form.contact_id || null}
+                onChange={val => setForm({ ...form, contact_id: val })}
+                placeholder="Search contacts..."
+              />
+            </div>
+          </div>
+
           <div className="flex items-center justify-end gap-3 pt-2">
             <button
               type="button"
@@ -405,14 +452,21 @@ export default function Calendar() {
   const [loading, setLoading]           = useState(false)
   const [streakData, setStreakData]     = useState(null)
 
+  const [apps, setApps] = useState([])
+  const [contacts, setContacts] = useState([])
+
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const [data, sData] = await Promise.all([
+      const [data, sData, appsData, contactsData] = await Promise.all([
         api.calendarEvents(),
-        activityApi.getStreak()
+        activityApi.getStreak(),
+        api.applications().catch(() => []),
+        api.contacts().catch(() => [])
       ])
       setStreakData(sData)
+      setApps(appsData)
+      setContacts(contactsData)
       const normalized = (data || []).map(ev => {
         const dStr = ev.date || (ev.start ? String(ev.start).split('T')[0] : null) || fmtDate(new Date())
         const tStr = ev.event_type || ev.type || 'Reminder'
@@ -722,6 +776,8 @@ export default function Calendar() {
           defaultDate={modalDate}
           onSave={saveEvent}
           onClose={() => setShowModal(false)}
+          apps={apps}
+          contacts={contacts}
         />
       )}
     </section>
