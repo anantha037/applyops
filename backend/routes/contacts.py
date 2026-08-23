@@ -43,6 +43,9 @@ def create_contact(payload: ContactCreate, request: Request, user: User = Depend
             phone=payload.phone,
             role=payload.role,
             company=payload.company,
+            linkedin_url=payload.linkedin_url,
+            tags=payload.tags,
+            notes=payload.notes,
         )
         session.commit()
         session.refresh(contact)
@@ -53,8 +56,9 @@ def create_contact(payload: ContactCreate, request: Request, user: User = Depend
             role=contact.role or "",
             email=contact.email or "",
             phone=contact.phone or "",
-            tags="",
-            notes="",
+            linkedin_url=contact.linkedin_url or "",
+            tags=contact.tags or "",
+            notes=contact.notes or "",
             last_action_status="Not Contacted",
             last_action_date=None,
         )
