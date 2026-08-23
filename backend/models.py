@@ -6,7 +6,7 @@ from datetime import date, datetime, timedelta, timezone
 from enum import StrEnum
 from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class CalendarEventType(StrEnum):
@@ -109,6 +109,13 @@ class ApplicationFields(BaseModel):
     model_config = ConfigDict(use_enum_values=True)
 
     date_applied: date = Field(default_factory=date.today)
+
+    @field_validator("date_applied", mode="after")
+    @classmethod
+    def validate_date_applied(cls, v: date) -> date:
+        if v > date.today():
+            raise ValueError("Application date cannot be in the future")
+        return v
     company: Annotated[str, Field(min_length=1)]
     job_title: Annotated[str, Field(min_length=1)]
     jd_summary: str = ""
@@ -130,6 +137,7 @@ class ApplicationFields(BaseModel):
 
 class ApplicationCreate(ApplicationFields):
     """Payload for a new application."""
+    next_action_due: date | None = None
     contact_name: str | None = None
     contact_email: str | None = None
     contact_phone: str | None = None
@@ -144,6 +152,13 @@ class ApplicationUpdate(BaseModel):
     model_config = ConfigDict(use_enum_values=True)
 
     date_applied: date | None = None
+
+    @field_validator("date_applied", mode="after")
+    @classmethod
+    def validate_date_applied(cls, v: date | None) -> date | None:
+        if v is not None and v > date.today():
+            raise ValueError("Application date cannot be in the future")
+        return v
     company: Annotated[str | None, Field(min_length=1)] = None
     job_title: Annotated[str | None, Field(min_length=1)] = None
     jd_summary: str | None = None
