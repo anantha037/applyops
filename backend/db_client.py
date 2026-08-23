@@ -129,6 +129,8 @@ def find_or_create_contact(
     role: str | None = None,
     company: str | None = None,
     linkedin_url: str | None = None,
+    tags: str | None = None,
+    notes: str | None = None,
 ) -> Contact | None:
     """Find an existing contact or create a new one.
 
@@ -181,6 +183,8 @@ def find_or_create_contact(
         if norm_role    and not existing.role:    existing.role    = norm_role;    changed = True
         if norm_company and not existing.company: existing.company = norm_company; changed = True
         if linkedin_url and not existing.linkedin_url: existing.linkedin_url = linkedin_url; changed = True
+        if tags and not existing.tags: existing.tags = tags; changed = True
+        if notes and not existing.notes: existing.notes = notes; changed = True
         if changed:
             session.add(existing)
         return existing
@@ -195,9 +199,12 @@ def find_or_create_contact(
         role=norm_role,
         company=norm_company,
         linkedin_url=linkedin_url,
+        tags=tags,
+        notes=notes,
         created_at=datetime.now(timezone.utc),
     )
     session.add(contact)
+
     session.flush()   # flush so the ID is available before the caller commits
     return contact
 
