@@ -101,7 +101,22 @@ async function request(path, options = {}, isRetry = false) {
         if (isBrowser) localStorage.removeItem('applyops_is_logged_in')
         window.dispatchEvent(new Event('auth:unauthorized'))
       }
-      throw new Error(errorBody.detail ?? `Request failed with status ${response.status}`)
+      let errorMsg = `Request failed with status ${response.status}`
+      if (errorBody.detail) {
+        if (typeof errorBody.detail === 'string') {
+          errorMsg = errorBody.detail
+        } else if (Array.isArray(errorBody.detail)) {
+          errorMsg = errorBody.detail.map(err => {
+            const field = err.loc && err.loc.length > 1 ? err.loc[err.loc.length - 1] : 'Field'
+            return `${field}: ${err.msg}`
+          }).join(', ')
+        } else if (typeof errorBody.detail === 'object' && errorBody.detail.message) {
+          errorMsg = errorBody.detail.message
+        } else {
+          errorMsg = JSON.stringify(errorBody.detail)
+        }
+      }
+      throw new Error(errorMsg)
     }
     return response.status === 204 ? null : await response.json()
   } catch (err) {
@@ -154,7 +169,21 @@ export const resumesApi = {
         err.status = response.status
         throw err
       }
-      throw new Error(errorBody.detail ?? `Upload failed with status ${response.status}`)
+      
+      let errorMsg = `Upload failed with status ${response.status}`
+      if (errorBody.detail) {
+        if (typeof errorBody.detail === 'string') {
+          errorMsg = errorBody.detail
+        } else if (Array.isArray(errorBody.detail)) {
+          errorMsg = errorBody.detail.map(err => {
+            const field = err.loc && err.loc.length > 1 ? err.loc[err.loc.length - 1] : 'Field'
+            return `${field}: ${err.msg}`
+          }).join(', ')
+        } else {
+          errorMsg = JSON.stringify(errorBody.detail)
+        }
+      }
+      throw new Error(errorMsg)
     }
     return response.json()
   },
