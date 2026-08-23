@@ -35,18 +35,24 @@ def create_contact(payload: ContactCreate, request: Request, user: User = Depend
     already exists via an application.
     """
     with Session(engine) as session:
-        contact = db_client.find_or_create_contact(
-            session,
-            user.id,
-            name=payload.name,
-            email=payload.email,
-            phone=payload.phone,
-            role=payload.role,
-            company=payload.company,
-            linkedin_url=payload.linkedin_url,
-            tags=payload.tags,
-            notes=payload.notes,
-        )
+        try:
+            contact = db_client.find_or_create_contact(
+                session,
+                user.id,
+                name=payload.name,
+                email=payload.email,
+                phone=payload.phone,
+                role=payload.role,
+                company=payload.company,
+                linkedin_url=payload.linkedin_url,
+                tags=payload.tags,
+                notes=payload.notes,
+                application_id=payload.application_id,
+            )
+        except ValueError as e:
+            if "unauthorized" in str(e).lower():
+                raise HTTPException(status_code=403, detail=str(e))
+            raise HTTPException(status_code=400, detail=str(e))
         session.commit()
         session.refresh(contact)
         return ContactManual(
@@ -72,7 +78,14 @@ def update_contact(
     user: User = Depends(get_current_user)
 ) -> ContactView:
     """Update a contact's fields."""
-    updated = db_client.update_contact(user.id, contact_id, payload)
+    try:
+        updated = db_client.update_contact(user.id, contact_id, payload)
+    except ValueError as e:
+        from fastapi import HTTPException
+        if "unauthorized" in str(e).lower():
+            raise HTTPException(status_code=403, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e))
+        
     if not updated:
         from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Contact not found")
