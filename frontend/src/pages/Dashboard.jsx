@@ -13,10 +13,18 @@ import { Send, TrendingUp, CalendarCheck, Trophy, Ghost, ArrowUpRight, ArrowDown
 export default function Dashboard() {
   const [data, setData] = useState({})
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(true)
 
-  const load = () => Promise.all([api.summary(), api.dueToday(), api.report(), activityApi.getStreak(), api.me()])
-    .then(([summary, due, report, streak, me]) => setData({ summary, due, report, streak, me }))
-    .catch(e => setError(e.message))
+  const load = () => {
+    setLoading(true)
+    Promise.all([api.summary(), api.dueToday(), api.report(), activityApi.getStreak(), api.me()])
+      .then(([summary, due, report, streak, me]) => {
+        setData({ summary, due, report, streak, me })
+        setError('')
+      })
+      .catch(e => setError(e.message))
+      .finally(() => setLoading(false))
+  }
 
   useEffect(() => { 
     load() 
@@ -29,6 +37,10 @@ export default function Dashboard() {
   }, [])
 
   const summary = data.summary || {}
+
+  const SkeletonCard = ({ className = '' }) => (
+    <div className={`panel rounded-2xl bg-surface-secondary border border-border/50 animate-pulse ${className}`} />
+  )
 
   return (
     <section className="animate-fade-in pb-10 select-none max-w-full">
@@ -43,10 +55,11 @@ export default function Dashboard() {
         </div>
         <button 
           onClick={load} 
-          className="self-start sm:self-auto flex items-center gap-1.5 rounded-lg bg-surface-secondary px-3 py-1.5 text-xs font-semibold text-foreground-secondary border border-border hover:bg-surface-tertiary hover:text-foreground transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 shadow-xs active:scale-95"
+          disabled={loading}
+          className="self-start sm:self-auto flex items-center gap-1.5 rounded-lg bg-surface-secondary px-3 py-1.5 text-xs font-semibold text-foreground-secondary border border-border hover:bg-surface-tertiary hover:text-foreground transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 shadow-xs active:scale-95 disabled:opacity-50"
         >
           <span>Refresh</span>
-          <span className="text-xs">↻</span>
+          <span className={`text-xs ${loading ? 'animate-spin' : ''}`}>↻</span>
         </button>
       </div>
 
@@ -63,6 +76,7 @@ export default function Dashboard() {
           icon={Send}
           gradient="from-indigo-600/20 via-primary/10 to-transparent" 
           iconColor="text-primary bg-primary/15"
+          loading={loading}
         />
         <StatCard 
           title="Response Rate" 
@@ -70,6 +84,7 @@ export default function Dashboard() {
           icon={TrendingUp}
           gradient="from-emerald-600/20 via-teal-500/10 to-transparent" 
           iconColor="text-emerald-400 bg-emerald-500/15"
+          loading={loading}
         />
         <StatCard 
           title="Interviews" 
@@ -77,6 +92,7 @@ export default function Dashboard() {
           icon={CalendarCheck}
           gradient="from-blue-600/20 via-indigo-500/10 to-transparent" 
           iconColor="text-blue-400 bg-blue-500/15"
+          loading={loading}
         />
         <StatCard 
           title="Offers" 
@@ -84,6 +100,7 @@ export default function Dashboard() {
           icon={Trophy}
           gradient="from-amber-600/20 via-orange-500/10 to-transparent" 
           iconColor="text-amber-400 bg-amber-500/15"
+          loading={loading}
         />
         <StatCard 
           title="Ghosted" 
@@ -91,75 +108,114 @@ export default function Dashboard() {
           icon={Ghost}
           gradient="from-rose-600/20 via-pink-500/10 to-transparent" 
           iconColor="text-rose-400 bg-rose-500/15"
+          loading={loading}
         />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <ApplicationFunnel summary={summary} />
-        <ApplicationsByStatus summary={summary} />
-        <PriorityTasksCard 
-          tasks={data.due?.map(app => ({
-            id: app.id,
-            company: app.company,
-            taskTitle: `${app.next_action_title || app.next_action_type || 'Follow-up'}: ${app.job_title}`,
-            dueDate: app.next_action_due,
-            priority: 'high',
-            completed: false,
-            domain: `${app.company.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`,
-            appDetails: app
-          })) || []}
-        />
+        {loading ? (
+          <>
+            <SkeletonCard className="h-[280px]" />
+            <SkeletonCard className="h-[280px]" />
+            <SkeletonCard className="h-[280px]" />
+          </>
+        ) : (
+          <>
+            <ApplicationFunnel summary={summary} />
+            <ApplicationsByStatus summary={summary} />
+            <PriorityTasksCard 
+              tasks={data.due?.map(app => ({
+                id: app.id,
+                company: app.company,
+                taskTitle: `${app.next_action_title || app.next_action_type || 'Follow-up'}: ${app.job_title}`,
+                dueDate: app.next_action_due,
+                priority: 'high',
+                completed: false,
+                domain: `${app.company.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`,
+                appDetails: app
+              })) || []}
+            />
+          </>
+        )}
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 flex flex-col gap-6">
-          <DailyProgressCard />
-          <RecentActivityCard />
+          {loading ? (
+            <>
+              <SkeletonCard className="h-[240px]" />
+              <SkeletonCard className="h-[320px] flex-1" />
+            </>
+          ) : (
+            <>
+              <DailyProgressCard />
+              <RecentActivityCard />
+            </>
+          )}
         </div>
         <div className="flex flex-col gap-6">
-          <CallsProgressCard summary={summary} />
-          <div className="panel rounded-2xl p-5 border border-border bg-surface shadow-xs flex flex-col justify-between">
-            <h3 className="text-sm font-bold text-foreground mb-4">Quick Actions</h3>
-            <div className="grid grid-cols-2 gap-3 flex-1">
-              <button 
-                onClick={() => window.location.hash = '#/applications'} 
-                className="flex flex-col items-center justify-center gap-2.5 rounded-xl bg-surface-secondary border border-transparent hover:border-primary/40 hover:bg-surface-secondary p-4 transition-all group focus:outline-none focus:ring-2 focus:ring-primary/40"
-              >
-                <span className="text-2xl text-primary group-hover:scale-110 transition-transform">+</span>
-                <span className="text-[11px] font-semibold text-foreground-secondary group-hover:text-foreground">Add Application</span>
-              </button>
-              <button 
-                onClick={() => window.location.hash = '#/calendar'} 
-                className="flex flex-col items-center justify-center gap-2.5 rounded-xl bg-surface-secondary border border-transparent hover:border-emerald-500/40 hover:bg-surface-secondary p-4 transition-all group focus:outline-none focus:ring-2 focus:ring-primary/40"
-              >
-                <span className="text-2xl text-emerald-400 group-hover:scale-110 transition-transform">📅</span>
-                <span className="text-[11px] font-semibold text-foreground-secondary group-hover:text-foreground">Schedule</span>
-              </button>
-              <button 
-                onClick={() => window.location.hash = '#/analytics'} 
-                className="flex flex-col items-center justify-center gap-2.5 rounded-xl bg-surface-secondary border border-transparent hover:border-blue-500/40 hover:bg-surface-secondary p-4 transition-all group focus:outline-none focus:ring-2 focus:ring-primary/40"
-              >
-                <span className="text-2xl text-blue-400 group-hover:scale-110 transition-transform">📊</span>
-                <span className="text-[11px] font-semibold text-foreground-secondary group-hover:text-foreground">View Analytics</span>
-              </button>
-              <button 
-                onClick={() => window.open(`${baseUrl}/reports/export?type=full`, '_blank')} 
-                className="flex flex-col items-center justify-center gap-2.5 rounded-xl bg-surface-secondary border border-transparent hover:border-amber-500/40 hover:bg-surface-secondary p-4 transition-all group focus:outline-none focus:ring-2 focus:ring-primary/40"
-              >
-                <span className="text-2xl text-amber-400 group-hover:scale-110 transition-transform">📥</span>
-                <span className="text-[11px] font-semibold text-foreground-secondary group-hover:text-foreground">Export Report</span>
-              </button>
-            </div>
-          </div>
-          <ApplicationStreakCard data={data.streak} />
-          <MiniCalendarCard onViewFullCalendar={() => window.location.hash = '#/calendar'} />
+          {loading ? (
+            <>
+              <SkeletonCard className="h-[200px]" />
+              <div className="panel rounded-2xl p-5 border border-border bg-surface shadow-xs flex flex-col justify-between opacity-50 pointer-events-none transition-opacity">
+                <h3 className="text-sm font-bold text-foreground mb-4">Quick Actions</h3>
+                <div className="grid grid-cols-2 gap-3 flex-1">
+                  <div className="rounded-xl bg-surface-secondary p-4 h-24" />
+                  <div className="rounded-xl bg-surface-secondary p-4 h-24" />
+                  <div className="rounded-xl bg-surface-secondary p-4 h-24" />
+                  <div className="rounded-xl bg-surface-secondary p-4 h-24" />
+                </div>
+              </div>
+              <SkeletonCard className="h-[140px]" />
+              <SkeletonCard className="h-[300px]" />
+            </>
+          ) : (
+            <>
+              <CallsProgressCard summary={summary} />
+              <div className="panel rounded-2xl p-5 border border-border bg-surface shadow-xs flex flex-col justify-between">
+                <h3 className="text-sm font-bold text-foreground mb-4">Quick Actions</h3>
+                <div className="grid grid-cols-2 gap-3 flex-1">
+                  <button 
+                    onClick={() => window.location.hash = '#/applications'} 
+                    className="flex flex-col items-center justify-center gap-2.5 rounded-xl bg-surface-secondary border border-transparent hover:border-primary/40 hover:bg-surface-secondary p-4 transition-all group focus:outline-none focus:ring-2 focus:ring-primary/40"
+                  >
+                    <span className="text-2xl text-primary group-hover:scale-110 transition-transform">+</span>
+                    <span className="text-[11px] font-semibold text-foreground-secondary group-hover:text-foreground">Add Application</span>
+                  </button>
+                  <button 
+                    onClick={() => window.location.hash = '#/calendar'} 
+                    className="flex flex-col items-center justify-center gap-2.5 rounded-xl bg-surface-secondary border border-transparent hover:border-emerald-500/40 hover:bg-surface-secondary p-4 transition-all group focus:outline-none focus:ring-2 focus:ring-primary/40"
+                  >
+                    <span className="text-2xl text-emerald-400 group-hover:scale-110 transition-transform">📅</span>
+                    <span className="text-[11px] font-semibold text-foreground-secondary group-hover:text-foreground">Schedule</span>
+                  </button>
+                  <button 
+                    onClick={() => window.location.hash = '#/analytics'} 
+                    className="flex flex-col items-center justify-center gap-2.5 rounded-xl bg-surface-secondary border border-transparent hover:border-blue-500/40 hover:bg-surface-secondary p-4 transition-all group focus:outline-none focus:ring-2 focus:ring-primary/40"
+                  >
+                    <span className="text-2xl text-blue-400 group-hover:scale-110 transition-transform">📊</span>
+                    <span className="text-[11px] font-semibold text-foreground-secondary group-hover:text-foreground">View Analytics</span>
+                  </button>
+                  <button 
+                    onClick={() => window.open(`${baseUrl}/reports/export?type=full`, '_blank')} 
+                    className="flex flex-col items-center justify-center gap-2.5 rounded-xl bg-surface-secondary border border-transparent hover:border-amber-500/40 hover:bg-surface-secondary p-4 transition-all group focus:outline-none focus:ring-2 focus:ring-primary/40"
+                  >
+                    <span className="text-2xl text-amber-400 group-hover:scale-110 transition-transform">📥</span>
+                    <span className="text-[11px] font-semibold text-foreground-secondary group-hover:text-foreground">Export Report</span>
+                  </button>
+                </div>
+              </div>
+              <ApplicationStreakCard data={data.streak} />
+              <MiniCalendarCard onViewFullCalendar={() => window.location.hash = '#/calendar'} />
+            </>
+          )}
         </div>
       </div>
     </section>
   )
 }
 
- function StatCard({ title, value, icon: Icon, gradient, iconColor, badge, badgePositive }) {
+ function StatCard({ title, value, icon: Icon, gradient, iconColor, badge, badgePositive, loading }) {
    return (
      <div className="group relative overflow-hidden rounded-2xl p-4 bg-surface-secondary hover:bg-surface-tertiary shadow-sm hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 hover:scale-[1.02] transition-all duration-300 ease-out cursor-pointer flex flex-col justify-between h-[124px]">
        {/* Ambient Subtle Radial Gradient Overlay */}
@@ -179,9 +235,13 @@ export default function Dashboard() {
 
        {/* Tier 2: Large Prominent Metric Number */}
        <div className="relative z-10 my-0.5">
-         <span className="text-2xl lg:text-3xl font-extrabold text-foreground tracking-tight leading-none group-hover:translate-x-0.5 transition-transform duration-200 block">
-           {value}
-         </span>
+         {loading ? (
+           <div className="h-8 w-16 bg-foreground-secondary/20 rounded-md animate-pulse mt-1" />
+         ) : (
+           <span className="text-2xl lg:text-3xl font-extrabold text-foreground tracking-tight leading-none group-hover:translate-x-0.5 transition-transform duration-200 block">
+             {value}
+           </span>
+         )}
        </div>
 
        {/* Tier 3: Styled Trend Badge Pill */}
