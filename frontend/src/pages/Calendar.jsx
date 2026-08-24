@@ -229,7 +229,7 @@ function UpcomingEvents({ events = [], loading = false, selectedDate }) {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation()
-                                sessionStorage.setItem('applyops_pending_action', JSON.stringify({ type: 'edit_app', appId: ev.related_application_id }))
+                                sessionStorage.setItem('applyops_pending_action', JSON.stringify({ type: 'details_app', appId: ev.related_application_id }))
                                 window.location.hash = `#/applications`
                               }}
                               className="text-primary hover:underline font-semibold"

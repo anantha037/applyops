@@ -456,7 +456,7 @@ export default function Contacts() {
   useEffect(() => { load() }, [load])
 
   const handleJumpToApplication = (appId) => {
-    sessionStorage.setItem('applyops_pending_action', JSON.stringify({ type: 'edit_app', appId }))
+    sessionStorage.setItem('applyops_pending_action', JSON.stringify({ type: 'details_app', appId }))
     window.location.hash = '#/applications'
   }
 
@@ -509,16 +509,15 @@ export default function Contacts() {
     try {
       await api.contactsApi?.markAsApplied ? api.contactsApi.markAsApplied(contactId, { application_method: method }) : Promise.resolve()
     } catch (e) {
-      setError(e.message || 'Failed to mark contact as applied')
       throw e
     }
     await load()
   }
 
   const handleUpdateLinkedin = async (contactId, newUrl) => {
-    setContacts(prev => prev.map(c => c.id === contactId ? { ...c, linkedin_url: newUrl } : c))
     try {
       await api.updateContact(contactId, { linkedin_url: newUrl })
+      setContacts(prev => prev.map(c => c.id === contactId ? { ...c, linkedin_url: newUrl } : c))
     } catch (e) {
       console.error('Failed to update linkedin', e)
     }

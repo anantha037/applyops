@@ -166,7 +166,7 @@ function NextActionCell({ action, onClick }) {
   }
 
   return (
-    <div onClick={onClick} className="inline-block cursor-pointer hover:opacity-90 transition-opacity">
+    <div onClick={(e) => { e.stopPropagation(); onClick(); }} className="inline-block cursor-pointer hover:opacity-90 transition-opacity">
       {statusBadge}
     </div>
   )
@@ -270,11 +270,13 @@ function EditNextActionModal({ app, onClose, onSave, onRemove }) {
     completed: existing.completed || false
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState('')
 
   const submit = async e => {
     e.preventDefault()
     if (isSubmitting) return
     setIsSubmitting(true)
+    setError('')
     try {
       await onSave(app.id, {
         ...existing,
@@ -282,6 +284,22 @@ function EditNextActionModal({ app, onClose, onSave, onRemove }) {
         title: form.title || form.type
       })
       onClose()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleRemove = async () => {
+    if (isSubmitting) return
+    setIsSubmitting(true)
+    setError('')
+    try {
+      await onRemove(app.id)
+      onClose()
+    } catch (err) {
+      setError(err.message)
     } finally {
       setIsSubmitting(false)
     }
@@ -319,6 +337,7 @@ function EditNextActionModal({ app, onClose, onSave, onRemove }) {
         </div>
 
         <form onSubmit={submit} className="px-6 py-4 space-y-4">
+          {error && <p className="text-xs text-rose-400 bg-rose-500/10 rounded-xl p-3 border border-rose-500/20">{error}</p>}
           <div>
             <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">Action Type</label>
             <Dropdown
@@ -381,8 +400,9 @@ function EditNextActionModal({ app, onClose, onSave, onRemove }) {
             {app.next_action ? (
               <button
                 type="button"
-                onClick={() => { onRemove(app.id); onClose() }}
-                className="text-xs font-semibold text-rose-400 hover:underline focus:outline-none"
+                disabled={isSubmitting}
+                onClick={handleRemove}
+                className="text-xs font-semibold text-rose-400 hover:underline focus:outline-none disabled:opacity-60"
               >
                 Remove Action
               </button>
@@ -413,9 +433,26 @@ function EditNextActionModal({ app, onClose, onSave, onRemove }) {
 }
 
 function StatusSuggestionModal({ prompt, onClose, onAccept, onKeep, onRemove, onCustomize }) {
+  const [localError, setLocalError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+
   if (!prompt) return null
 
   const { app, newStatus, suggestedAction, isRejectedPrompt, isOfferPrompt } = prompt
+
+  const handleAction = async (actionFn) => {
+    if (submitting) return
+    setSubmitting(true)
+    setLocalError('')
+    try {
+      await actionFn()
+      onClose()
+    } catch (e) {
+      setLocalError(e.message)
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   if (isRejectedPrompt || isOfferPrompt) {
     const isOffer = isOfferPrompt
@@ -432,6 +469,7 @@ function StatusSuggestionModal({ prompt, onClose, onAccept, onKeep, onRemove, on
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in-80 duration-150" onMouseDown={e => e.target === e.currentTarget && onClose()}>
         <div className="bg-surface rounded-2xl border border-white/5 shadow-2xl w-full max-w-md p-6 select-none">
+          {localError && <p className="mb-4 text-xs text-rose-400 bg-rose-500/10 rounded-xl p-3 border border-rose-500/20">{localError}</p>}
           <div className="flex items-center gap-3 mb-3">
             <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${iconStyle}`}>
               <Icon className="w-5 h-5" />
@@ -448,14 +486,16 @@ function StatusSuggestionModal({ prompt, onClose, onAccept, onKeep, onRemove, on
 
           <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/5">
             <button
-              onClick={() => { onKeep(); onClose() }}
-              className="rounded-xl px-4 py-2 text-xs font-semibold text-foreground-secondary hover:bg-surface-tertiary transition-colors"
+              disabled={submitting}
+              onClick={() => handleAction(onKeep)}
+              className="rounded-xl px-4 py-2 text-xs font-semibold text-foreground-secondary hover:bg-surface-tertiary transition-colors disabled:opacity-60"
             >
               Keep Completed
             </button>
             <button
-              onClick={() => { onRemove(); onClose() }}
-              className={`rounded-xl px-4 py-2 text-xs font-semibold text-white transition-all shadow-2xs active:scale-95 ${removeBtnStyle}`}
+              disabled={submitting}
+              onClick={() => handleAction(onRemove)}
+              className={`rounded-xl px-4 py-2 text-xs font-semibold text-white transition-all shadow-2xs active:scale-95 disabled:opacity-60 ${removeBtnStyle}`}
             >
               Remove Reminder
             </button>
@@ -468,6 +508,7 @@ function StatusSuggestionModal({ prompt, onClose, onAccept, onKeep, onRemove, on
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in-80 duration-150" onMouseDown={e => e.target === e.currentTarget && onClose()}>
       <div className="bg-surface rounded-2xl border border-white/5 shadow-2xl w-full max-w-md p-6 select-none">
+        {localError && <p className="mb-4 text-xs text-rose-400 bg-rose-500/10 rounded-xl p-3 border border-rose-500/20">{localError}</p>}
         <div className="flex items-center gap-3 mb-3">
           <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
             <Sparkles className="w-5 h-5" />
@@ -488,8 +529,9 @@ function StatusSuggestionModal({ prompt, onClose, onAccept, onKeep, onRemove, on
 
         <div className="flex flex-col gap-2 pt-2">
           <button
-            onClick={() => { onAccept(suggestedAction); onClose() }}
-            className="w-full rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-white hover:bg-primary-hover transition-all shadow-2xs active:scale-95 flex items-center justify-center gap-1.5"
+            disabled={submitting}
+            onClick={() => handleAction(() => onAccept(suggestedAction))}
+            className="w-full rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-white hover:bg-primary-hover transition-all shadow-2xs active:scale-95 flex items-center justify-center gap-1.5 disabled:opacity-60"
           >
             <Check className="w-3.5 h-3.5" />
             <span>Use Suggested Action</span>
@@ -497,14 +539,16 @@ function StatusSuggestionModal({ prompt, onClose, onAccept, onKeep, onRemove, on
           
           <div className="grid grid-cols-2 gap-2 mt-1">
             <button
-              onClick={() => { onKeep(); onClose() }}
-              className="rounded-xl px-3 py-2 text-xs font-semibold text-foreground-secondary bg-surface-secondary hover:bg-surface-secondary transition-colors"
+              disabled={submitting}
+              onClick={() => handleAction(onKeep)}
+              className="rounded-xl px-3 py-2 text-xs font-semibold text-foreground-secondary bg-surface-secondary hover:bg-surface-secondary transition-colors disabled:opacity-60"
             >
               Keep Current Action
             </button>
             <button
-              onClick={() => { onCustomize(suggestedAction); onClose() }}
-              className="rounded-xl px-3 py-2 text-xs font-semibold text-primary bg-primary/10 hover:bg-primary/20 transition-colors"
+              disabled={submitting}
+              onClick={() => handleAction(() => onCustomize(suggestedAction))}
+              className="rounded-xl px-3 py-2 text-xs font-semibold text-primary bg-primary/10 hover:bg-primary/20 transition-colors disabled:opacity-60"
             >
               Customize
             </button>
@@ -551,6 +595,22 @@ function PostCreateBanner({ info, onDismiss, onEdit }) {
 }
 
 function ApplicationModal({ isEdit, isOpen, onClose, onSubmit, onDelete, form, setForm, resumes = [], contacts = [], onUploadResume, onManageResumes, isSubmitting, isUploadingResume }) {
+  const [localError, setLocalError] = useState('')
+
+  useEffect(() => {
+    if (isOpen) setLocalError('')
+  }, [isOpen])
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setLocalError('')
+    try {
+      await onSubmit(e)
+    } catch (err) {
+      setLocalError(err.message)
+    }
+  }
+
   if (!isOpen) return null
 
   return (
@@ -577,7 +637,8 @@ function ApplicationModal({ isEdit, isOpen, onClose, onSubmit, onDelete, form, s
           </button>
         </div>
 
-        <form onSubmit={onSubmit} className="px-6 py-4 space-y-4">
+        <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4">
+          {localError && <p className="text-xs text-rose-400 bg-rose-500/10 rounded-xl p-3 border border-rose-500/20">{localError}</p>}
           <div>
             <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">Company Name *</label>
             <input
@@ -898,6 +959,106 @@ function ApplicationModal({ isEdit, isOpen, onClose, onSubmit, onDelete, form, s
   )
 }
 
+function ApplicationDetailsModal({ app, onClose, onEdit, onDelete }) {
+  if (!app) return null
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in-80 duration-150" onMouseDown={e => e.target === e.currentTarget && onClose()}>
+      <div className="bg-surface rounded-2xl border border-white/5 shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto scrollbar-none select-none">
+        <div className="flex items-center justify-between px-6 pt-5 pb-2">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+              <Briefcase className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-foreground">Application Details</h3>
+              <p className="text-[11px] text-foreground-secondary font-medium">Read-only view</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="rounded-lg p-1.5 text-foreground-secondary hover:text-foreground hover:bg-surface-tertiary transition-colors">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="px-6 py-4 space-y-6">
+          <div>
+            <h4 className="text-xl font-bold text-foreground">{app.job_title}</h4>
+            <p className="text-sm text-foreground-secondary">{app.company} {app.location ? `· ${app.location}` : ''}</p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-[11px] font-bold text-foreground-secondary uppercase tracking-wider mb-1">Status</p>
+              <div className="flex items-center gap-2">
+                <ApplicationStatusIcon status={app.status} />
+                <span className="text-xs font-semibold text-foreground">{app.status}</span>
+              </div>
+            </div>
+            <div>
+              <p className="text-[11px] font-bold text-foreground-secondary uppercase tracking-wider mb-1">Stage</p>
+              <span className="text-xs font-semibold text-foreground">{app.stage}</span>
+            </div>
+            <div>
+              <p className="text-[11px] font-bold text-foreground-secondary uppercase tracking-wider mb-1">Applied On</p>
+              <span className="text-xs font-semibold text-foreground">{app.date_applied || '—'}</span>
+            </div>
+            <div>
+              <p className="text-[11px] font-bold text-foreground-secondary uppercase tracking-wider mb-1">Method</p>
+              <span className="text-xs font-semibold text-foreground">{app.application_method || '—'}</span>
+            </div>
+          </div>
+
+          {app.next_action && (
+            <div className="p-3.5 rounded-xl bg-surface-secondary border border-transparent space-y-1">
+              <p className="text-[11px] font-bold text-primary uppercase tracking-wider">Next Action</p>
+              <p className="font-bold text-foreground text-sm">{app.next_action.title}</p>
+              <p className="text-foreground-secondary font-medium text-xs">
+                {formatDateDisplay(app.next_action.date)} {app.next_action.time ? `· ${app.next_action.time}` : ''}
+                {app.next_action.completed ? ' (Completed)' : ''}
+              </p>
+            </div>
+          )}
+
+          {app.remarks && (
+            <div>
+              <p className="text-[11px] font-bold text-foreground-secondary uppercase tracking-wider mb-1">Remarks</p>
+              <p className="text-xs text-foreground bg-surface-secondary p-3 rounded-xl">{app.remarks}</p>
+            </div>
+          )}
+
+          <div className="pt-4 border-t border-white/5 flex items-center justify-between">
+            <button
+              type="button"
+              onClick={() => { onClose(); onDelete(); }}
+              className="rounded-xl px-4 py-2 text-xs font-semibold text-rose-400 hover:text-white hover:bg-rose-500 transition-colors flex items-center gap-1.5"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span>Delete</span>
+            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-xl px-4 py-2 text-xs font-semibold text-foreground-secondary hover:bg-surface-tertiary transition-colors"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={() => { onClose(); onEdit(); }}
+                className="rounded-xl bg-primary px-5 py-2 text-xs font-semibold text-white hover:bg-primary-hover transition-all shadow-2xs active:scale-95 flex items-center gap-1.5"
+              >
+                <Edit className="w-4 h-4" />
+                <span>Edit</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 const EMPTY_FORM = {
   date_applied: new Date().toISOString().split('T')[0],
   company: '',
@@ -928,6 +1089,7 @@ export default function Applications() {
   const [loading, setLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
   const [editApp, setEditApp] = useState(null)
+  const [detailsApp, setDetailsApp] = useState(null)
   const [deleteAppId, setDeleteAppId] = useState(null)
   const [previewResume, setPreviewResume] = useState(null)
   const [editActionApp, setEditActionApp] = useState(null)
@@ -994,6 +1156,11 @@ export default function Applications() {
                 has_contact: !!(targetApp.contact_name || targetApp.contact_email || targetApp.contact_phone || targetApp.contact_linkedin)
               })
               setShowAddModal(true)
+            }
+          } else if (pendingAction.type === 'details_app') {
+            const targetApp = appsWithResumes.find(a => a.id === pendingAction.appId)
+            if (targetApp) {
+              setDetailsApp(targetApp)
             }
           } else if (pendingAction.type === 'new_from_contact') {
             const contact = pendingAction.contact
@@ -1091,7 +1258,7 @@ export default function Applications() {
   }
 
   const submit = async e => {
-    e.preventDefault()
+    e?.preventDefault?.()
     if (isSubmitting) return
     
     const isDuplicate = apps.find(a => 
@@ -1162,31 +1329,35 @@ export default function Applications() {
         load()
       }
     } catch (e) {
-      setError(e.message)
+      throw e
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  const saveNextAction = (appId, actionObj) => {
+  const saveNextAction = async (appId, actionObj) => {
     const updates = {
       next_action: actionObj,
       next_action_due: actionObj?.date || null
     }
+    await api.updateApplication(appId, updates)
     setApps(prev => prev.map(a => a.id === appId ? { ...a, ...updates } : a))
-    return api.updateApplication(appId, updates).catch(e => setError(e.message))
   }
 
-  const removeNextAction = (appId) => {
+  const removeNextAction = async (appId) => {
     const updates = {
       next_action: null,
       next_action_due: null
     }
-    setApps(prev => prev.map(a => a.id === appId ? { ...a, ...updates } : a))
-    api.updateApplication(appId, updates).catch(e => setError(e.message))
+    try {
+      await api.updateApplication(appId, updates)
+      setApps(prev => prev.map(a => a.id === appId ? { ...a, ...updates } : a))
+    } catch (e) {
+      throw e
+    }
   }
 
-  const updateAppStatus = (appId, newStatus) => {
+  const updateAppStatus = async (appId, newStatus) => {
     const targetApp = apps.find(a => a.id === appId)
     if (!targetApp) return
 
@@ -1203,8 +1374,13 @@ export default function Applications() {
       }
     }
 
-    setApps(prev => prev.map(a => a.id === appId ? { ...a, ...updates } : a))
-    api.updateApplication(appId, updates).catch(e => setError(e.message))
+    try {
+      await api.updateApplication(appId, updates)
+      setApps(prev => prev.map(a => a.id === appId ? { ...a, ...updates } : a))
+    } catch (e) {
+      setError(e.message)
+      return
+    }
 
     if (newStatus === 'Interviewing' && targetApp.status !== 'Interviewing') {
       setStatusPrompt({
@@ -1249,20 +1425,32 @@ export default function Applications() {
     }
   }
 
-  const updateAppRemarks = (appId, newRemarks) => {
-    setApps(prev => prev.map(a => a.id === appId ? { ...a, remarks: newRemarks } : a))
-    api.updateApplication(appId, { remarks: newRemarks }).catch(e => setError(e.message))
+  const updateAppRemarks = async (appId, newRemarks) => {
+    try {
+      await api.updateApplication(appId, { remarks: newRemarks })
+      setApps(prev => prev.map(a => a.id === appId ? { ...a, remarks: newRemarks } : a))
+    } catch (e) {
+      setError(e.message)
+    }
   }
 
-  const updateAppLocation = (appId, newLocation) => {
-    setApps(prev => prev.map(a => a.id === appId ? { ...a, location: newLocation } : a))
-    api.updateApplication(appId, { location: newLocation }).catch(e => setError(e.message))
+  const updateAppLocation = async (appId, newLocation) => {
+    try {
+      await api.updateApplication(appId, { location: newLocation })
+      setApps(prev => prev.map(a => a.id === appId ? { ...a, location: newLocation } : a))
+    } catch (e) {
+      setError(e.message)
+    }
   }
 
-  const updateAppStage = (appId, newStage) => {
+  const updateAppStage = async (appId, newStage) => {
     const updates = { stage: newStage }
-    setApps(prev => prev.map(a => a.id === appId ? { ...a, ...updates } : a))
-    api.updateApplication(appId, updates).catch(e => setError(e.message))
+    try {
+      await api.updateApplication(appId, updates)
+      setApps(prev => prev.map(a => a.id === appId ? { ...a, ...updates } : a))
+    } catch (e) {
+      setError(e.message)
+    }
   }
 
   const handleDownloadResume = async (res) => {
@@ -1370,7 +1558,7 @@ export default function Applications() {
 
 
       {deleteAppId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in-80 duration-150" onClick={(e) => e.target === e.currentTarget && setDeleteAppId(null)}>
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in-80 duration-150" onClick={(e) => e.target === e.currentTarget && setDeleteAppId(null)}>
           <div className="bg-surface rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden select-none border border-transparent">
             <div className="p-6">
               <h3 className="text-base font-bold text-foreground mb-2">Delete Application</h3>
@@ -1414,6 +1602,21 @@ export default function Applications() {
         onResumeDeleted={handleResumeDeleted}
       />
 
+      {detailsApp && (
+        <ApplicationDetailsModal
+          app={detailsApp}
+          onClose={() => setDetailsApp(null)}
+          onEdit={() => {
+            handleEditClick(detailsApp);
+            setDetailsApp(null);
+          }}
+          onDelete={() => {
+            setDeleteAppId(detailsApp.id);
+            setDetailsApp(null);
+          }}
+        />
+      )}
+
       {editActionApp && (
         <EditNextActionModal
           app={editActionApp}
@@ -1427,22 +1630,24 @@ export default function Applications() {
         <StatusSuggestionModal
           prompt={statusPrompt}
           onClose={() => setStatusPrompt(null)}
-          onAccept={(action, customizedObj) => {
+          onAccept={async (action, customizedObj) => {
             if (action === 'customize') {
               setEditActionApp({
                 ...statusPrompt.app,
                 next_action: customizedObj
               })
             } else {
-              saveNextAction(statusPrompt.app.id, action)
+              await saveNextAction(statusPrompt.app.id, action)
             }
           }}
-          onKeep={() => {}}
-          onRemove={() => removeNextAction(statusPrompt.app.id)}
-          onCustomize={(actionObj) => {
+          onKeep={async () => {}}
+          onRemove={async () => {
+            await removeNextAction(statusPrompt.app.id)
+          }}
+          onCustomize={(suggestedAction) => {
             setEditActionApp({
               ...statusPrompt.app,
-              next_action: actionObj
+              next_action: suggestedAction
             })
           }}
         />
@@ -1599,7 +1804,7 @@ export default function Applications() {
                       key={app.id} 
                       onClick={(e) => {
                         if (e.target.closest('button, input, select, a, [role="button"], .dropdown-trigger')) return;
-                        handleEditClick(app);
+                        setDetailsApp(app);
                       }}
                       className="group hover:bg-surface-tertiary transition-colors duration-150 cursor-pointer"
                     >
