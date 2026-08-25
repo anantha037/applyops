@@ -255,8 +255,8 @@ function EditNextActionModal({ app, onClose, onSave, onRemove }) {
 
   const existing = app.next_action || {
     id: `act_${Date.now()}`,
-    type: 'Follow Up',
-    title: 'Follow up with recruiter',
+    type: app.next_action_type || 'Follow Up',
+    title: app.next_action_title || 'Follow up with recruiter',
     date: app.next_action_due || getFutureDateStr(2),
     time: '10:00 AM',
     completed: false
@@ -1377,7 +1377,9 @@ export default function Applications() {
   const saveNextAction = async (appId, actionObj) => {
     const updates = {
       next_action: actionObj,
-      next_action_due: actionObj?.date || null
+      next_action_due: actionObj?.date || null,
+      next_action_type: actionObj?.type || null,
+      next_action_title: actionObj?.title || null
     }
     await api.updateApplication(appId, updates)
     setApps(prev => prev.map(a => a.id === appId ? { ...a, ...updates } : a))
@@ -1386,7 +1388,9 @@ export default function Applications() {
   const removeNextAction = async (appId) => {
     const updates = {
       next_action: null,
-      next_action_due: null
+      next_action_due: null,
+      next_action_type: null,
+      next_action_title: null
     }
     try {
       await api.updateApplication(appId, updates)
