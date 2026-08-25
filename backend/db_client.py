@@ -892,7 +892,27 @@ def sync_followup_event(
             return
 
         title = next_action_title or f"{company} - Follow-up"
-        event_type = next_action_type or CalendarEventType.FOLLOW_UP
+
+        # Coerce frontend action-type strings to valid CalendarEventType values.
+        # The frontend uses human labels ('Follow Up', 'Recruiter Call', …) that
+        # don't match the DB enum.  Map anything that isn't already a valid type
+        # to the nearest sensible CalendarEventType.
+        _TYPE_MAP: dict[str, str] = {
+            "follow up":              CalendarEventType.FOLLOW_UP,
+            "follow-up":              CalendarEventType.FOLLOW_UP,
+            "recruiter call":         CalendarEventType.FOLLOW_UP,
+            "send email":             CalendarEventType.FOLLOW_UP,
+            "send thank-you":         CalendarEventType.FOLLOW_UP,
+            "prepare for interview":  CalendarEventType.REMINDER,
+            "review offer":           CalendarEventType.REMINDER,
+            "custom":                 CalendarEventType.FOLLOW_UP,
+        }
+        valid_types = {e.value for e in CalendarEventType}
+        raw_type = (next_action_type or "").strip()
+        if raw_type in valid_types:
+            event_type: str = raw_type
+        else:
+            event_type = _TYPE_MAP.get(raw_type.lower(), CalendarEventType.FOLLOW_UP)
 
         if existing:
             existing.event_date = next_action_due
