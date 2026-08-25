@@ -140,6 +140,7 @@ class Contact(SQLModel, table=True):
     linkedin_url:       Optional[str] = Field(default=None)
     last_action_status: str           = Field(default="Not Contacted")
     last_action_date:   Optional[date] = Field(default=None)
+    manual_last_contact_date: Optional[date] = Field(default=None)
     created_at:         datetime      = Field(default_factory=_utc_now)
 
 
