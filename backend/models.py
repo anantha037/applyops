@@ -15,6 +15,12 @@ class CalendarEventType(StrEnum):
     APPLICATION_DEADLINE = "Application Deadline"
     REMINDER             = "Reminder"
     PERSONAL             = "Personal"
+    RECRUITER_CALL       = "Recruiter Call"
+    SEND_EMAIL           = "Send Email"
+    PREPARE_FOR_INTERVIEW = "Prepare for Interview"
+    SEND_THANK_YOU       = "Send Thank-you"
+    REVIEW_OFFER         = "Review Offer"
+    CUSTOM               = "Custom"
 
 
 class CalendarEventSource(StrEnum):

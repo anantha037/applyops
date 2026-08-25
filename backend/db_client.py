@@ -902,12 +902,12 @@ def sync_followup_event(
         _TYPE_MAP: dict[str, str] = {
             "follow up":              CalendarEventType.FOLLOW_UP,
             "follow-up":              CalendarEventType.FOLLOW_UP,
-            "recruiter call":         CalendarEventType.FOLLOW_UP,
-            "send email":             CalendarEventType.FOLLOW_UP,
-            "send thank-you":         CalendarEventType.FOLLOW_UP,
-            "prepare for interview":  CalendarEventType.REMINDER,
-            "review offer":           CalendarEventType.REMINDER,
-            "custom":                 CalendarEventType.FOLLOW_UP,
+            "recruiter call":         CalendarEventType.RECRUITER_CALL,
+            "send email":             CalendarEventType.SEND_EMAIL,
+            "send thank-you":         CalendarEventType.SEND_THANK_YOU,
+            "prepare for interview":  CalendarEventType.PREPARE_FOR_INTERVIEW,
+            "review offer":           CalendarEventType.REVIEW_OFFER,
+            "custom":                 CalendarEventType.CUSTOM,
         }
         valid_types = {e.value for e in CalendarEventType}
         raw_type = (next_action_type or "").strip()

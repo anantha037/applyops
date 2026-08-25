@@ -14,7 +14,8 @@ import Dropdown from '../components/ui/Dropdown'
 import SearchableSelect from '../components/ui/SearchableSelect'
 import {
   Plus, X, ChevronLeft, ChevronRight, RefreshCw,
-  Calendar as CalendarIcon, Phone, Target, ClipboardList, Bell, Sparkles, Filter
+  Calendar as CalendarIcon, Phone, Target, ClipboardList, Bell, Sparkles, Filter,
+  Send, FileText, Heart, Trophy
 } from 'lucide-react'
 
 // ── Localizer ────────────────────────────────────────────────────────────────
@@ -22,7 +23,10 @@ const locales = { 'en-US': enUS }
 const localizer = dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales })
 
 // ── Constants & Config ───────────────────────────────────────────────────────
-const EVENT_TYPES = ['Follow-up', 'Interview', 'Application Deadline', 'Reminder', 'Personal']
+const EVENT_TYPES = [
+  'Follow-up', 'Interview', 'Application Deadline', 'Reminder', 'Personal',
+  'Recruiter Call', 'Send Email', 'Prepare for Interview', 'Send Thank-you', 'Review Offer', 'Custom'
+]
 
 const TYPE_CONFIG = {
   'Follow-up':            { color: '#6366F1', bg: 'rgba(99, 102, 241, 0.14)',  dotColor: '#818CF8', label: 'Follow-up',      Icon: Phone },
@@ -30,6 +34,12 @@ const TYPE_CONFIG = {
   'Application Deadline': { color: '#F97316', bg: 'rgba(249, 115, 22, 0.14)',  dotColor: '#FB923C', label: 'App Deadline',    Icon: ClipboardList },
   'Reminder':             { color: '#0EA5E9', bg: 'rgba(14, 165, 233, 0.14)',  dotColor: '#38BDF8', label: 'Reminder',        Icon: Bell },
   'Personal':             { color: '#10B981', bg: 'rgba(16, 185, 129, 0.14)',  dotColor: '#34D399', label: 'Personal',        Icon: Sparkles },
+  'Recruiter Call':       { color: '#8B5CF6', bg: 'rgba(139, 92, 246, 0.14)',  dotColor: '#A78BFA', label: 'Recruiter Call',  Icon: Phone },
+  'Send Email':           { color: '#3B82F6', bg: 'rgba(59, 130, 246, 0.14)',  dotColor: '#60A5FA', label: 'Send Email',      Icon: Send },
+  'Prepare for Interview':{ color: '#EC4899', bg: 'rgba(236, 72, 153, 0.14)',  dotColor: '#F472B6', label: 'Prep Interview',  Icon: FileText },
+  'Send Thank-you':       { color: '#F43F5E', bg: 'rgba(244, 63, 94, 0.14)',   dotColor: '#FB7185', label: 'Thank You',       Icon: Heart },
+  'Review Offer':         { color: '#EAB308', bg: 'rgba(234, 179, 8, 0.14)',   dotColor: '#FDE047', label: 'Review Offer',    Icon: Trophy },
+  'Custom':               { color: '#64748B', bg: 'rgba(100, 116, 139, 0.14)', dotColor: '#94A3B8', label: 'Custom',          Icon: CalendarIcon },
 }
 
 const CATEGORY_OPTIONS = [
