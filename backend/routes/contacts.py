@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, Request, status
 from backend.auth import get_current_user
 from backend.db.models import User
 
-from backend.models import ContactCreate, ContactManual, ContactView
+from backend.models import ContactCreate, ContactManual, ContactView, ContactUpdate
 from backend import db_client
 from backend.db.session import engine
 from sqlmodel import Session
@@ -73,13 +73,13 @@ def create_contact(payload: ContactCreate, request: Request, user: User = Depend
 @router.patch("/{contact_id}", response_model=ContactView)
 def update_contact(
     contact_id: str,
-    payload: dict,
+    payload: ContactUpdate,
     request: Request,
     user: User = Depends(get_current_user)
 ) -> ContactView:
     """Update a contact's fields."""
     try:
-        updated = db_client.update_contact(user.id, contact_id, payload)
+        updated = db_client.update_contact(user.id, contact_id, payload.model_dump(exclude_unset=True))
     except ValueError as e:
         from fastapi import HTTPException
         if "unauthorized" in str(e).lower():
