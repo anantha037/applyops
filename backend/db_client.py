@@ -292,6 +292,7 @@ def list_contacts(user_id: str) -> list[ContactView]:
                 responded=responded,
                 last_action_status=c.last_action_status,
                 last_action_date=c.last_action_date.isoformat() if c.last_action_date else None,
+                manual_last_contact_date=c.manual_last_contact_date.isoformat() if c.manual_last_contact_date else None,
             ))
             
         return results
@@ -306,7 +307,7 @@ def update_contact(user_id: str, contact_id: str, changes: dict) -> ContactView 
             
         scalar_fields = (
             "name", "company", "role", "email", "phone", "tags", "notes",
-            "linkedin_url", "last_action_status", "last_action_date"
+            "linkedin_url", "last_action_status", "last_action_date", "manual_last_contact_date"
         )
         for field in scalar_fields:
             if field in changes:
@@ -365,6 +366,7 @@ def update_contact(user_id: str, contact_id: str, changes: dict) -> ContactView 
             responded=responded,
             last_action_status=row.last_action_status,
             last_action_date=row.last_action_date.isoformat() if row.last_action_date else None,
+            manual_last_contact_date=row.manual_last_contact_date.isoformat() if row.manual_last_contact_date else None,
         )
 
 
