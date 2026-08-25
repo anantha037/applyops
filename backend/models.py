@@ -320,6 +320,7 @@ class ContactView(BaseModel):
     responded:             bool = False
     last_action_status:    str = "Not Contacted"
     last_action_date:      str | None = None  # ISO date string or None
+    manual_last_contact_date: str | None = None
 
 
 class ContactUpdate(BaseModel):
@@ -334,7 +335,15 @@ class ContactUpdate(BaseModel):
     linkedin_url:       str | None = None
     last_action_status: str | None = None
     last_action_date:   date | None = None
+    manual_last_contact_date: date | None = None
     application_id:     str | None = None
+
+    @field_validator("manual_last_contact_date")
+    @classmethod
+    def validate_past_date(cls, v: date | None) -> date | None:
+        if v and v > datetime.now(timezone.utc).date():
+            raise ValueError("Last contact date cannot be in the future")
+        return v
 
 
 # ── Analytics ────────────────────────────────────────────────────────────────
