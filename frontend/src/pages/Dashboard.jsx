@@ -113,102 +113,64 @@ export default function Dashboard() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        {loading ? (
-          <>
-            <SkeletonCard className="h-[280px]" />
-            <SkeletonCard className="h-[280px]" />
-            <SkeletonCard className="h-[280px]" />
-          </>
-        ) : (
-          <>
-            <ApplicationFunnel summary={summary} />
-            <ApplicationsByStatus summary={summary} />
-            <PriorityTasksCard 
-              tasks={data.due?.map(app => ({
-                id: app.id,
-                company: app.company,
-                taskTitle: `${app.next_action_title || app.next_action_type || 'Follow-up'}: ${app.job_title}`,
-                dueDate: app.next_action_due,
-                priority: 'high',
-                completed: false,
-                domain: `${app.company.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`,
-                appDetails: app
-              })) || []}
-            />
-          </>
-        )}
+        <ApplicationFunnel summary={summary} />
+        <ApplicationsByStatus summary={summary} />
+        <PriorityTasksCard
+          tasks={data.due?.map(app => ({
+            id: app.id,
+            company: app.company,
+            taskTitle: `${app.next_action_title || app.next_action_type || 'Follow-up'}: ${app.job_title}`,
+            dueDate: app.next_action_due,
+            priority: 'high',
+            completed: false,
+            domain: `${app.company.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`,
+            appDetails: app
+          })) || []}
+        />
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 flex flex-col gap-6">
-          {loading ? (
-            <>
-              <SkeletonCard className="h-[240px]" />
-              <SkeletonCard className="h-[320px] flex-1" />
-            </>
-          ) : (
-            <>
-              <DailyProgressCard />
-              <RecentActivityCard />
-            </>
-          )}
+          <DailyProgressCard />
+          <RecentActivityCard />
         </div>
         <div className="flex flex-col gap-6">
-          {loading ? (
-            <>
-              <SkeletonCard className="h-[200px]" />
-              <div className="panel rounded-2xl p-5 border border-border bg-surface shadow-xs flex flex-col justify-between opacity-50 pointer-events-none transition-opacity">
-                <h3 className="text-sm font-bold text-foreground mb-4">Quick Actions</h3>
-                <div className="grid grid-cols-2 gap-3 flex-1">
-                  <div className="rounded-xl bg-surface-secondary p-4 h-24" />
-                  <div className="rounded-xl bg-surface-secondary p-4 h-24" />
-                  <div className="rounded-xl bg-surface-secondary p-4 h-24" />
-                  <div className="rounded-xl bg-surface-secondary p-4 h-24" />
-                </div>
-              </div>
-              <SkeletonCard className="h-[140px]" />
-              <SkeletonCard className="h-[300px]" />
-            </>
-          ) : (
-            <>
-              <CallsProgressCard summary={summary} />
-              <div className="panel rounded-2xl p-5 border border-border bg-surface shadow-xs flex flex-col justify-between">
-                <h3 className="text-sm font-bold text-foreground mb-4">Quick Actions</h3>
-                <div className="grid grid-cols-2 gap-3 flex-1">
-                  <button 
-                    onClick={() => window.location.hash = '#/applications'} 
-                    className="flex flex-col items-center justify-center gap-2.5 rounded-xl bg-surface-secondary border border-transparent hover:border-primary/40 hover:bg-surface-secondary p-4 transition-all group focus:outline-none focus:ring-2 focus:ring-primary/40"
-                  >
-                    <span className="text-2xl text-primary group-hover:scale-110 transition-transform">+</span>
-                    <span className="text-[11px] font-semibold text-foreground-secondary group-hover:text-foreground">Add Application</span>
-                  </button>
-                  <button 
-                    onClick={() => window.location.hash = '#/calendar'} 
-                    className="flex flex-col items-center justify-center gap-2.5 rounded-xl bg-surface-secondary border border-transparent hover:border-emerald-500/40 hover:bg-surface-secondary p-4 transition-all group focus:outline-none focus:ring-2 focus:ring-primary/40"
-                  >
-                    <span className="text-2xl text-emerald-400 group-hover:scale-110 transition-transform">📅</span>
-                    <span className="text-[11px] font-semibold text-foreground-secondary group-hover:text-foreground">Schedule</span>
-                  </button>
-                  <button 
-                    onClick={() => window.location.hash = '#/analytics'} 
-                    className="flex flex-col items-center justify-center gap-2.5 rounded-xl bg-surface-secondary border border-transparent hover:border-blue-500/40 hover:bg-surface-secondary p-4 transition-all group focus:outline-none focus:ring-2 focus:ring-primary/40"
-                  >
-                    <span className="text-2xl text-blue-400 group-hover:scale-110 transition-transform">📊</span>
-                    <span className="text-[11px] font-semibold text-foreground-secondary group-hover:text-foreground">View Analytics</span>
-                  </button>
-                  <button 
-                    onClick={() => window.open(`${baseUrl}/reports/export?type=full`, '_blank')} 
-                    className="flex flex-col items-center justify-center gap-2.5 rounded-xl bg-surface-secondary border border-transparent hover:border-amber-500/40 hover:bg-surface-secondary p-4 transition-all group focus:outline-none focus:ring-2 focus:ring-primary/40"
-                  >
-                    <span className="text-2xl text-amber-400 group-hover:scale-110 transition-transform">📥</span>
-                    <span className="text-[11px] font-semibold text-foreground-secondary group-hover:text-foreground">Export Report</span>
-                  </button>
-                </div>
-              </div>
-              <ApplicationStreakCard data={data.streak} />
-              <MiniCalendarCard onViewFullCalendar={() => window.location.hash = '#/calendar'} />
-            </>
-          )}
+          <CallsProgressCard summary={summary} />
+          <div className="panel rounded-2xl p-5 border border-border bg-surface shadow-xs flex flex-col justify-between">
+            <h3 className="text-sm font-bold text-foreground mb-4">Quick Actions</h3>
+            <div className="grid grid-cols-2 gap-3 flex-1">
+              <button 
+                onClick={() => window.location.hash = '#/applications'} 
+                className="flex flex-col items-center justify-center gap-2.5 rounded-xl bg-surface-secondary border border-transparent hover:border-primary/40 hover:bg-surface-secondary p-4 transition-all group focus:outline-none focus:ring-2 focus:ring-primary/40"
+              >
+                <span className="text-2xl text-primary group-hover:scale-110 transition-transform">+</span>
+                <span className="text-[11px] font-semibold text-foreground-secondary group-hover:text-foreground">Add Application</span>
+              </button>
+              <button 
+                onClick={() => window.location.hash = '#/calendar'} 
+                className="flex flex-col items-center justify-center gap-2.5 rounded-xl bg-surface-secondary border border-transparent hover:border-emerald-500/40 hover:bg-surface-secondary p-4 transition-all group focus:outline-none focus:ring-2 focus:ring-primary/40"
+              >
+                <span className="text-2xl text-emerald-400 group-hover:scale-110 transition-transform">📅</span>
+                <span className="text-[11px] font-semibold text-foreground-secondary group-hover:text-foreground">Schedule</span>
+              </button>
+              <button 
+                onClick={() => window.location.hash = '#/analytics'} 
+                className="flex flex-col items-center justify-center gap-2.5 rounded-xl bg-surface-secondary border border-transparent hover:border-blue-500/40 hover:bg-surface-secondary p-4 transition-all group focus:outline-none focus:ring-2 focus:ring-primary/40"
+              >
+                <span className="text-2xl text-blue-400 group-hover:scale-110 transition-transform">📊</span>
+                <span className="text-[11px] font-semibold text-foreground-secondary group-hover:text-foreground">View Analytics</span>
+              </button>
+              <button 
+                onClick={() => window.open(`${baseUrl}/reports/export?type=full`, '_blank')} 
+                className="flex flex-col items-center justify-center gap-2.5 rounded-xl bg-surface-secondary border border-transparent hover:border-amber-500/40 hover:bg-surface-secondary p-4 transition-all group focus:outline-none focus:ring-2 focus:ring-primary/40"
+              >
+                <span className="text-2xl text-amber-400 group-hover:scale-110 transition-transform">📥</span>
+                <span className="text-[11px] font-semibold text-foreground-secondary group-hover:text-foreground">Export Report</span>
+              </button>
+            </div>
+          </div>
+          <ApplicationStreakCard data={data.streak} />
+          <MiniCalendarCard onViewFullCalendar={() => window.location.hash = '#/calendar'} />
         </div>
       </div>
     </section>
