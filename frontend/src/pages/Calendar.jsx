@@ -15,7 +15,7 @@ import SearchableSelect from '../components/ui/SearchableSelect'
 import {
   Plus, X, ChevronLeft, ChevronRight, RefreshCw,
   Calendar as CalendarIcon, Phone, Target, ClipboardList, Bell, Sparkles, Filter,
-  Send, FileText, Heart, Trophy
+  Send, FileText, Heart, Trophy, Trash2, Edit
 } from 'lucide-react'
 
 // ── Localizer ────────────────────────────────────────────────────────────────
@@ -134,7 +134,7 @@ function MiniCalendar({ selected, onSelect, eventDates = [] }) {
   )
 }
 
-function UpcomingEvents({ events = [], loading = false, selectedDate }) {
+function UpcomingEvents({ events = [], loading = false, selectedDate, onEditEvent, onDeleteEvent }) {
   const [expandedId, setExpandedId] = useState(null)
 
   if (loading) {
@@ -262,6 +262,28 @@ function UpcomingEvents({ events = [], loading = false, selectedDate }) {
                             </button>
                           </div>
                         )}
+                        {ev.source === 'Manual' && (
+                          <div className="mt-2 pt-2 border-t border-border/50 flex items-center justify-end gap-3">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                onDeleteEvent(ev)
+                              }}
+                              className="text-rose-400 hover:text-rose-300 font-semibold flex items-center gap-1"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" /> Remove
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                onEditEvent(ev)
+                              }}
+                              className="text-primary hover:text-primary-hover font-semibold flex items-center gap-1"
+                            >
+                              <Edit className="w-3.5 h-3.5" /> Edit
+                            </button>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -275,9 +297,16 @@ function UpcomingEvents({ events = [], loading = false, selectedDate }) {
   )
 }
 
-// ── Add Event Modal ──────────────────────────────────────────────────────────
-function AddEventModal({ defaultDate, onSave, onClose, apps = [], contacts = [] }) {
-  const [form, setForm] = useState({
+function EventModal({ defaultDate, editEvent, onSave, onClose, apps = [], contacts = [] }) {
+  const [form, setForm] = useState(editEvent ? {
+    title: editEvent.title,
+    event_type: editEvent.event_type || 'Reminder',
+    date: editEvent.date || fmtDate(new Date()),
+    time: editEvent.time || '',
+    notes: editEvent.notes || '',
+    related_application_id: editEvent.related_application_id || null,
+    contact_id: editEvent.contact_id || null,
+  } : {
     title: '',
     event_type: 'Reminder',
     date: defaultDate ? fmtDate(defaultDate) : fmtDate(new Date()),
@@ -312,8 +341,8 @@ function AddEventModal({ defaultDate, onSave, onClose, apps = [], contacts = [] 
               <CalendarIcon className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-foreground">Add Event</h3>
-              <p className="text-[11px] text-foreground-secondary font-medium">Create a new calendar entry or reminder</p>
+              <h3 className="text-base font-bold text-foreground">{editEvent ? 'Edit Event' : 'Add Event'}</h3>
+              <p className="text-[11px] text-foreground-secondary font-medium">{editEvent ? 'Update your calendar event' : 'Create a new calendar entry or reminder'}</p>
             </div>
           </div>
           <button onClick={onClose} className="rounded-lg p-1.5 text-foreground-secondary hover:text-foreground hover:bg-surface-tertiary transition-colors">
@@ -457,6 +486,7 @@ export default function Calendar() {
   const [selectedDate, setSelectedDate] = useState(null)
   const [selectedCategory, setSelectedCategory] = useState('All Events')
   const [showModal, setShowModal]       = useState(false)
+  const [editEventState, setEditEventState] = useState(null)
   const [modalDate, setModalDate]       = useState(null)
   const [error, setError]               = useState('')
   const [loading, setLoading]           = useState(false)
@@ -500,8 +530,28 @@ export default function Calendar() {
   useEffect(() => { load() }, [load])
 
   const saveEvent = async payload => {
-    await api.createCalendarEvent(payload)
+    if (editEventState) {
+      await api.updateCalendarEvent(editEventState.id, payload)
+    } else {
+      await api.createCalendarEvent(payload)
+    }
     await load()
+  }
+
+  const handleDeleteEvent = async (ev) => {
+    if (!window.confirm(`Are you sure you want to delete "${ev.title}"?`)) return
+    try {
+      await api.deleteCalendarEvent(ev.id)
+      await load()
+    } catch (e) {
+      setError(e.message)
+    }
+  }
+
+  const handleEditEvent = (ev) => {
+    setEditEventState(ev)
+    setModalDate(safeParseDate(ev.date) || new Date())
+    setShowModal(true)
   }
 
   const filteredEvents = events.filter(ev => selectedCategory === 'All Events' || ev.event_type === selectedCategory)
@@ -762,14 +812,19 @@ export default function Calendar() {
                       </button>
                     )}
                     <button
-                      onClick={() => { setModalDate(selectedDate || new Date()); setShowModal(true) }}
+                      onClick={() => { setEditEventState(null); setModalDate(selectedDate || new Date()); setShowModal(true) }}
                       className="text-[10px] text-primary hover:underline font-bold"
                     >
                       + Add
                     </button>
                   </div>
                 </div>
-                <UpcomingEvents events={filteredEvents} selectedDate={selectedDate} />
+                <UpcomingEvents 
+                  events={filteredEvents} 
+                  selectedDate={selectedDate} 
+                  onEditEvent={handleEditEvent}
+                  onDeleteEvent={handleDeleteEvent}
+                />
               </div>
             </div>
           </div>
@@ -782,10 +837,11 @@ export default function Calendar() {
       )}
 
       {showModal && (
-        <AddEventModal
+        <EventModal
           defaultDate={modalDate}
+          editEvent={editEventState}
           onSave={saveEvent}
-          onClose={() => setShowModal(false)}
+          onClose={() => { setShowModal(false); setEditEventState(null) }}
           apps={apps}
           contacts={contacts}
         />

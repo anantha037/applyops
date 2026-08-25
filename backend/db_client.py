@@ -589,7 +589,11 @@ def delete_application(user_id: str, application_id: str) -> bool:
         # and prevent leaving orphaned records.
         events = session.exec(select(DBCalendarEvent).where(DBCalendarEvent.related_application_id == application_id)).all()
         for ev in events:
-            session.delete(ev)
+            if ev.source == "Auto":
+                session.delete(ev)
+            else:
+                ev.related_application_id = None
+                session.add(ev)
 
         activities = session.exec(select(ActivityLog).where(ActivityLog.application_id == application_id)).all()
         for act in activities:
