@@ -371,18 +371,41 @@ def update_contact(user_id: str, contact_id: str, changes: dict) -> ContactView 
 
 
 def delete_contact(user_id: str, contact_id: str) -> None:
-    """Delete a contact if not referenced by applications."""
+    """Delete a contact, unlinking it from any applications first.
+
+    Contacts and applications are independent entities.  Deleting a contact
+    must never cascade-delete an application.  Instead we null out the
+    application.contact_id FK before removing the contact row.  The
+    application's own calendar_events and activity_logs are left untouched.
+    """
     with Session(engine) as session:
         contact = session.exec(select(Contact).where(Contact.user_id == user_id, Contact.id == contact_id)).first()
         if not contact:
             raise ValueError("Contact not found")
 
-        apps_count = session.exec(select(func.count(DBApplication.id)).where(DBApplication.contact_id == contact_id)).one()
-        if apps_count > 0:
-            raise ValueError(f"Cannot delete this contact because it is attached to {apps_count} application(s).")
+        # Unlink — set contact_id = null on every application that points here
+        linked_apps = session.exec(select(DBApplication).where(DBApplication.contact_id == contact_id)).all()
+        for app in linked_apps:
+            app.contact_id = None
+            session.add(app)
+
+        # Null out contact_id on activity_log rows that reference this contact.
+        # These records belong to the application context and must survive.
+        linked_acts = session.exec(select(ActivityLog).where(ActivityLog.contact_id == contact_id)).all()
+        for act in linked_acts:
+            act.contact_id = None
+            session.add(act)
+
+        # Same for calendar_events — a follow-up tied to an application may also
+        # carry contact_id; null it out rather than delete the event.
+        linked_evts = session.exec(select(DBCalendarEvent).where(DBCalendarEvent.contact_id == contact_id)).all()
+        for evt in linked_evts:
+            evt.contact_id = None
+            session.add(evt)
 
         session.delete(contact)
         session.commit()
+
 
 
 # ---------------------------------------------------------------------------
