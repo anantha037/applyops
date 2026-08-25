@@ -68,76 +68,24 @@ function getAvatarColor(name) {
   return colors[sum % colors.length]
 }
 
-function MarkAsAppliedModal({ contact, onClose, onConfirm }) {
-  const [method, setMethod] = useState('LinkedIn Easy Apply')
-  const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState('')
-
-  const submit = async e => {
-    e.preventDefault()
-    if (submitting) return
-    setSubmitting(true)
-    try {
-      await onConfirm(contact.id, method)
-      onClose()
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setSubmitting(false)
-    }
+function CopyableText({ text, children }) {
+  const [copied, setCopied] = useState(false)
+  const copy = (e) => {
+    e.stopPropagation()
+    navigator.clipboard.writeText(text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in-80 duration-150" onMouseDown={e => e.target === e.currentTarget && onClose()}>
-      <div className="bg-surface rounded-2xl border border-transparent shadow-2xl w-full max-w-md overflow-hidden select-none">
-        <div className="flex items-center justify-between px-6 pt-5 pb-2">
-          <div>
-            <h3 className="text-base font-bold text-foreground">Mark as Applied</h3>
-            <p className="text-[11px] text-foreground-secondary font-medium">Confirm that you applied for a role through this contact.</p>
-          </div>
-          <button onClick={onClose} className="rounded-lg p-1.5 text-foreground-secondary hover:text-foreground hover:bg-surface-tertiary transition-colors">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
-          </button>
-        </div>
-
-        <form onSubmit={submit} className="px-6 py-4 space-y-4">
-          {error && <p className="text-xs text-rose-400 bg-rose-500/10 rounded-xl p-3 border border-rose-500/20">{error}</p>}
-
-          <div className="p-3 rounded-xl bg-surface-secondary border border-transparent">
-            <p className="text-xs font-bold text-foreground">{contact.name}</p>
-            <p className="text-[11px] text-foreground-secondary font-medium">{contact.role || 'Contact'} {contact.company ? `· ${contact.company}` : ''}</p>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">How did you apply? *</label>
-            <Dropdown
-              options={APPLICATION_METHOD_OPTIONS}
-              value={method}
-              onChange={setMethod}
-              className="w-full"
-              align="left"
-            />
-          </div>
-
-          <div className="flex items-center justify-end gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-xl px-4 py-2 text-xs font-semibold text-foreground-secondary hover:bg-surface-tertiary transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="rounded-xl bg-primary px-5 py-2 text-xs font-semibold text-white hover:bg-primary-hover disabled:opacity-60 transition-all shadow-2xs active:scale-95 flex items-center gap-2"
-            >
-              {submitting && <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
-              {submitting ? 'Confirming…' : 'Confirm Application'}
-            </button>
-          </div>
-        </form>
-      </div>
+    <div className="flex items-center gap-2 group/copy cursor-pointer" onClick={copy} title="Click to copy">
+      <span className="truncate">{children}</span>
+      <span className="opacity-0 group-hover/copy:opacity-100 transition-opacity">
+        {copied ? (
+          <svg className="w-3.5 h-3.5 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6L9 17l-5-5"/></svg>
+        ) : (
+          <svg className="w-3.5 h-3.5 text-muted hover:text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        )}
+      </span>
     </div>
   )
 }
@@ -149,8 +97,6 @@ function ContactModal({ isEdit, onClose, onSave, apps = [] }) {
     role: '',
     email: '',
     phone: '',
-    mark_applied: false,
-    application_method: 'LinkedIn Easy Apply',
     tags: '',
     notes: '',
     linkedin_url: '',
@@ -165,9 +111,7 @@ function ContactModal({ isEdit, onClose, onSave, apps = [] }) {
     setSaving(true)
     try {
       const payload = {
-        ...form,
-        applied: form.mark_applied,
-        application_method: form.mark_applied ? form.application_method : null
+        ...form
       }
       await onSave(payload)
       onClose()
@@ -267,48 +211,6 @@ function ContactModal({ isEdit, onClose, onSave, apps = [] }) {
             />
           </div>
 
-          <div className="pt-1">
-            <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">
-              Do you want to mark this contact as applied?
-            </label>
-            <div className="flex rounded-xl bg-surface-secondary p-1 gap-1 w-full sm:w-auto">
-              <button
-                type="button"
-                onClick={() => setForm({ ...form, mark_applied: false })}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all focus:outline-none flex-1 sm:flex-initial ${
-                  !form.mark_applied
-                    ? 'bg-surface text-primary shadow-2xs'
-                    : 'text-foreground-secondary hover:text-foreground'
-                }`}
-              >
-                Not applied
-              </button>
-              <button
-                type="button"
-                onClick={() => setForm({ ...form, mark_applied: true })}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all focus:outline-none flex-1 sm:flex-initial ${
-                  form.mark_applied
-                    ? 'bg-surface text-primary shadow-2xs'
-                    : 'text-foreground-secondary hover:text-foreground'
-                }`}
-              >
-                Mark as applied
-              </button>
-            </div>
-
-            {form.mark_applied && (
-              <div className="mt-3.5 space-y-1.5 animate-in fade-in-50 duration-150">
-                <label className="block text-xs font-semibold text-foreground-secondary">How did you apply? *</label>
-                <Dropdown
-                  options={APPLICATION_METHOD_OPTIONS}
-                  value={form.application_method}
-                  onChange={val => setForm({ ...form, application_method: val })}
-                  className="w-full"
-                  align="left"
-                />
-              </div>
-            )}
-          </div>
 
           <div>
             <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">Tags (comma-separated)</label>
@@ -430,7 +332,6 @@ export default function Contacts() {
   const [editContact, setEditContact] = useState(null)
   const [deleteContactId, setDeleteContactId] = useState(null)
   const [deleteError, setDeleteError] = useState('')
-  const [applyTargetContact, setApplyTargetContact] = useState(null)
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 10
 
@@ -503,15 +404,6 @@ export default function Contacts() {
     }
     await api.createContact(formatted)
     load()
-  }
-
-  const handleConfirmMarkApplied = async (contactId, method) => {
-    try {
-      await api.contactsApi?.markAsApplied ? api.contactsApi.markAsApplied(contactId, { application_method: method }) : Promise.resolve()
-    } catch (e) {
-      throw e
-    }
-    await load()
   }
 
   const handleUpdateLinkedin = async (contactId, newUrl) => {
@@ -690,8 +582,12 @@ export default function Contacts() {
                     </td>
                     <td className="py-3.5 px-3.5 text-foreground-secondary font-medium">{c.company || '—'}</td>
                     <td className="py-3.5 px-3.5 text-foreground-secondary font-medium">{c.role || '—'}</td>
-                    <td className="py-3.5 px-3.5 text-foreground-secondary font-medium">{c.email || '—'}</td>
-                    <td className="py-3.5 px-3.5 text-foreground-secondary font-medium">{c.phone || '—'}</td>
+                    <td className="py-3.5 px-3.5 text-foreground-secondary font-medium">
+                      {c.email ? <CopyableText text={c.email}>{c.email}</CopyableText> : '—'}
+                    </td>
+                    <td className="py-3.5 px-3.5 text-foreground-secondary font-medium">
+                      {c.phone ? <CopyableText text={c.phone}>{c.phone}</CopyableText> : '—'}
+                    </td>
                     <td className="py-3.5 px-3.5 text-foreground-secondary font-medium">
                       <InlineLinkedinEdit contact={c} onSave={handleUpdateLinkedin} />
                     </td>
@@ -710,25 +606,26 @@ export default function Contacts() {
                             </span>
                           </button>
                         </div>
-                      ) : isApplied ? (
-                        <div className="flex flex-col">
-                          <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                            Applied
-                          </span>
-                          <span className="text-[10px] text-foreground-secondary opacity-70 font-medium pl-3">
-                            {c.application_method || 'LinkedIn Easy Apply'}
-                          </span>
-                        </div>
                       ) : (
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-medium text-foreground-secondary opacity-50">Not applied</span>
-                          <button
-                            onClick={() => setApplyTargetContact(c)}
-                            className="text-[11px] font-semibold text-primary hover:underline focus:outline-none opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            Mark as applied
-                          </button>
+                        <div className="w-[180px]">
+                          <SearchableSelect
+                            options={apps.map(a => ({
+                              value: a.id,
+                              label: a.company,
+                              sublabel: a.job_title
+                            }))}
+                            value={null}
+                            onChange={val => {
+                              if (val) {
+                                api.updateContact(c.id, { application_id: val }).then(() => {
+                                  setContacts(prev => prev.map(contact => contact.id === c.id ? { ...contact, application_id: val } : contact))
+                                }).catch(err => {
+                                  console.error(err)
+                                })
+                              }
+                            }}
+                            placeholder="Link application..."
+                          />
                         </div>
                       )}
                     </td>
@@ -757,9 +654,21 @@ export default function Contacts() {
                       </div>
                     </td>
                     <td className="py-3.5 px-3.5">
-                      <div className="flex flex-col">
-                        <span className="text-foreground-secondary font-medium">{formatDate(c.last_contacted)}</span>
-                        <span className="text-[10px] text-muted">{getDaysAgo(c.last_contacted)}</span>
+                      <div className="flex flex-col gap-1 max-w-[120px]">
+                        <input
+                          type="date"
+                          max={new Date().toISOString().split('T')[0]}
+                          className="bg-transparent border-none text-foreground-secondary font-medium text-xs focus:ring-0 p-0 hover:text-primary cursor-pointer transition-colors"
+                          value={c.manual_last_contact_date ? c.manual_last_contact_date : (c.last_contacted || '')}
+                          onChange={(e) => {
+                            const newDate = e.target.value || null
+                            setContacts(prev => prev.map(contact => contact.id === c.id ? { ...contact, manual_last_contact_date: newDate } : contact))
+                            api.updateContact(c.id, { manual_last_contact_date: newDate }).catch(err => console.error(err))
+                          }}
+                        />
+                        <span className="text-[10px] text-muted">
+                          {c.manual_last_contact_date || c.last_contacted ? getDaysAgo(c.manual_last_contact_date || c.last_contacted) : 'No activity'}
+                        </span>
                       </div>
                     </td>
                     <td className="py-3.5 px-3.5 text-right">
@@ -869,13 +778,6 @@ export default function Contacts() {
         />
       )}
 
-      {applyTargetContact && (
-        <MarkAsAppliedModal
-          contact={applyTargetContact}
-          onClose={() => setApplyTargetContact(null)}
-          onConfirm={handleConfirmMarkApplied}
-        />
-      )}
     </section>
   )
 }
