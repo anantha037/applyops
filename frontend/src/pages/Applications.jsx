@@ -307,7 +307,16 @@ function EditNextActionModal({ app, onClose, onSave, onRemove }) {
 
   const handleTypeChange = (newType) => {
     let suggestedTitle = form.title
-    if (!form.title || form.title === form.type || form.title === 'Follow up with recruiter') {
+    const knownDefaults = [
+      'Follow up with recruiter',
+      'Recruiter introductory call',
+      'Send status check email',
+      'Prepare for interview',
+      'Send thank-you email',
+      'Review offer details',
+      form.type
+    ]
+    if (!form.title || knownDefaults.includes(form.title)) {
       if (newType === 'Follow Up') suggestedTitle = 'Follow up with recruiter'
       else if (newType === 'Recruiter Call') suggestedTitle = 'Recruiter introductory call'
       else if (newType === 'Send Email') suggestedTitle = 'Send status check email'
@@ -876,9 +885,23 @@ function ApplicationModal({ isEdit, isOpen, onClose, onSubmit, onDelete, form, s
                     value={form.next_action_type}
                     onChange={val => {
                       let title = form.next_action_title
-                      if (val === 'Follow Up') title = 'Follow up with recruiter'
-                      else if (val === 'Prepare for Interview') title = 'Prepare for interview'
-                      else if (val === 'Review Offer') title = 'Review offer details'
+                      const knownDefaults = [
+                        'Follow up with recruiter',
+                        'Recruiter introductory call',
+                        'Send status check email',
+                        'Prepare for interview',
+                        'Send thank-you email',
+                        'Review offer details',
+                        form.next_action_type
+                      ]
+                      if (!title || knownDefaults.includes(title)) {
+                        if (val === 'Follow Up') title = 'Follow up with recruiter'
+                        else if (val === 'Recruiter Call') title = 'Recruiter introductory call'
+                        else if (val === 'Send Email') title = 'Send status check email'
+                        else if (val === 'Prepare for Interview') title = 'Prepare for interview'
+                        else if (val === 'Send Thank-you') title = 'Send thank-you email'
+                        else if (val === 'Review Offer') title = 'Review offer details'
+                      }
                       setForm({ ...form, next_action_type: val, next_action_title: title })
                     }}
                     className="w-full"
