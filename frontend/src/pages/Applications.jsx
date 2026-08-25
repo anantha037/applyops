@@ -1019,12 +1019,49 @@ function ApplicationDetailsModal({ app, onClose, onEdit, onDelete }) {
             </div>
           )}
 
+          {(app.contact_name || app.contact_email || app.contact_id) && (
+            <div className="p-3.5 rounded-xl bg-surface-secondary border border-transparent space-y-2">
+              <p className="text-[11px] font-bold text-foreground-secondary uppercase tracking-wider">Contact</p>
+              {app.contact_name && (
+                <p className="text-sm font-bold text-foreground">
+                  {app.contact_name}
+                  {app.contact_role && <span className="text-xs font-medium text-foreground-secondary ml-1.5">· {app.contact_role}</span>}
+                </p>
+              )}
+              <div className="flex flex-col gap-1">
+                {app.contact_email && (
+                  <a href={`mailto:${app.contact_email}`} className="text-xs text-primary hover:underline font-medium">{app.contact_email}</a>
+                )}
+                {app.contact_phone && (
+                  <a href={`tel:${app.contact_phone}`} className="text-xs text-foreground-secondary hover:text-foreground font-medium">{app.contact_phone}</a>
+                )}
+                {app.contact_linkedin && (
+                  <a href={app.contact_linkedin} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline font-medium">LinkedIn ↗</a>
+                )}
+              </div>
+              {app.contact_id && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    sessionStorage.setItem('applyops_pending_action', JSON.stringify({ type: 'scroll_contact', contactId: app.contact_id }))
+                    window.location.hash = '#/contacts'
+                    onClose()
+                  }}
+                  className="text-[11px] font-semibold text-primary hover:underline flex items-center gap-1"
+                >
+                  View in Contacts ↗
+                </button>
+              )}
+            </div>
+          )}
+
           {app.remarks && (
             <div>
               <p className="text-[11px] font-bold text-foreground-secondary uppercase tracking-wider mb-1">Remarks</p>
               <p className="text-xs text-foreground bg-surface-secondary p-3 rounded-xl">{app.remarks}</p>
             </div>
           )}
+
 
           <div className="pt-4 border-t border-white/5 flex items-center justify-between">
             <button
