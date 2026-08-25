@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { createPortal } from 'react-dom'
-import { ChevronDown, Check } from 'lucide-react'
+import { ChevronDown, Check, Search, X } from 'lucide-react'
 
 export default function Dropdown({ 
   options = [], 
@@ -12,14 +12,27 @@ export default function Dropdown({
   className = '',
   triggerClassName = '',
   size = 'md',
-  align = 'left'
+  align = 'left',
+  searchable = false,
+  clearable = false
 }) {
   const [isOpen, setIsOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
   const triggerRef = useRef(null)
   const menuRef = useRef(null)
+  const searchInputRef = useRef(null)
   const [pos, setPos] = useState(null)
 
   const selectedOption = options.find(opt => opt.value === value) || (value !== undefined && value !== null && value !== '' ? options[0] : null)
+
+  const filteredOptions = useMemo(() => {
+    if (!searchable || !searchQuery.trim()) return options
+    const lower = searchQuery.toLowerCase()
+    return options.filter(opt => 
+      opt.label.toLowerCase().includes(lower) || 
+      (opt.sublabel && opt.sublabel.toLowerCase().includes(lower))
+    )
+  }, [options, searchQuery, searchable])
 
   const reposition = useCallback(() => {
     const trig = triggerRef.current
@@ -47,9 +60,17 @@ export default function Dropdown({
   }, [align])
 
   useEffect(() => {
-    if (!isOpen) return
+    if (!isOpen) {
+      setSearchQuery('')
+      return
+    }
 
-    requestAnimationFrame(reposition)
+    requestAnimationFrame(() => {
+      reposition()
+      if (searchable && searchInputRef.current) {
+        searchInputRef.current.focus()
+      }
+    })
 
     const onClickOut = (e) => {
       if (triggerRef.current?.contains(e.target)) return
@@ -100,11 +121,25 @@ export default function Dropdown({
           )}
           <span className="truncate">{triggerLabel}</span>
         </div>
-        <ChevronDown 
-          className={`w-3 h-3 flex-shrink-0 opacity-70 group-hover:opacity-100 transition-transform duration-200 ${
-            isOpen ? 'rotate-180 text-primary' : ''
-          }`} 
-        />
+        <div className="flex items-center gap-1.5">
+          {clearable && selectedOption && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                onChange(null)
+              }}
+              className="p-0.5 text-foreground-secondary hover:text-foreground hover:bg-surface-tertiary rounded-md transition-colors"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+          <ChevronDown 
+            className={`w-3 h-3 flex-shrink-0 opacity-70 group-hover:opacity-100 transition-transform duration-200 ${
+              isOpen ? 'rotate-180 text-primary' : ''
+            }`} 
+          />
+        </div>
       </button>
 
       {isOpen && createPortal(
@@ -123,36 +158,75 @@ export default function Dropdown({
             }}
             role="listbox"
           >
-            {options.map((option) => {
-            const isSelected = option.value === value
-            return (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => {
-                  onChange(option.value)
-                  setIsOpen(false)
-                }}
-                className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-left transition-colors duration-150 ${
-                  isSelected
-                    ? 'bg-primary/10 text-primary font-semibold'
-                    : 'text-foreground-secondary hover:bg-surface-secondary hover:text-foreground'
-                }`}
-                role="option"
-                aria-selected={isSelected}
-              >
-                <div className="flex items-center gap-2">
-                  {option.dotColor && (
-                    <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${option.dotColor}`} />
-                  )}
-                  <span>{option.label}</span>
+            {searchable && (
+              <div className="px-2 pb-2 mb-1.5 border-b border-white/5 relative">
+                <Search className="w-3.5 h-3.5 text-foreground-secondary absolute left-4 top-2.5 pointer-events-none" />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  placeholder="Search..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  onClick={e => e.stopPropagation()}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      if (filteredOptions.length > 0) {
+                        onChange(filteredOptions[0].value)
+                        setIsOpen(false)
+                      }
+                    }
+                  }}
+                  className="w-full bg-surface-secondary border border-transparent hover:bg-surface-tertiary focus:bg-surface-tertiary rounded-lg pl-8 pr-3 py-1.5 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                />
+              </div>
+            )}
+            
+            <div className={`${searchable ? 'max-h-48 overflow-y-auto overflow-x-hidden scrollbar-none' : ''}`}>
+              {filteredOptions.length === 0 ? (
+                <div className="px-3 py-3 text-xs text-center text-foreground-secondary">
+                  No results found
                 </div>
-                {isSelected && (
-                  <Check className="w-3.5 h-3.5 text-primary ml-3 flex-shrink-0" />
-                )}
-              </button>
-            )
-          })}
+              ) : (
+                filteredOptions.map((option) => {
+                  const isSelected = option.value === value
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => {
+                        onChange(option.value)
+                        setIsOpen(false)
+                      }}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-left transition-colors duration-150 ${
+                        isSelected
+                          ? 'bg-primary/10 text-primary font-semibold'
+                          : 'text-foreground-secondary hover:bg-surface-secondary hover:text-foreground'
+                      }`}
+                      role="option"
+                      aria-selected={isSelected}
+                    >
+                      <div className="flex flex-col gap-0.5 truncate">
+                        <div className="flex items-center gap-2">
+                          {option.dotColor && (
+                            <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${option.dotColor}`} />
+                          )}
+                          <span className="truncate">{option.label}</span>
+                        </div>
+                        {option.sublabel && (
+                          <span className="text-[10px] text-foreground-tertiary font-normal truncate pl-3.5">
+                            {option.sublabel}
+                          </span>
+                        )}
+                      </div>
+                      {isSelected && (
+                        <Check className="w-3.5 h-3.5 text-primary ml-3 flex-shrink-0" />
+                      )}
+                    </button>
+                  )
+                })
+              )}
+            </div>
           </div>
         </>,
         document.body

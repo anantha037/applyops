@@ -1294,13 +1294,15 @@ export default function Applications() {
       next_action_due: nextActionObj?.date || null,
       next_action_type: nextActionObj?.type || null,
       next_action_title: nextActionObj?.title || null,
-      ...(form.has_contact ? {
-        contact_name: form.contact_name,
-        contact_role: form.contact_role,
-        contact_email: form.contact_email,
-        contact_phone: form.contact_phone,
-        contact_linkedin: form.contact_linkedin
-      } : {}),
+      ...(form.has_contact ? (
+        form.contact_id ? { contact_id: form.contact_id } : {
+          contact_name: form.contact_name,
+          contact_role: form.contact_role,
+          contact_email: form.contact_email,
+          contact_phone: form.contact_phone,
+          contact_linkedin: form.contact_linkedin
+        }
+      ) : { contact_id: null }),
       ...(form.resume_id ? { resume_id: form.resume_id } : {})
     }
 
