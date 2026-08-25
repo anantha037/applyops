@@ -92,6 +92,8 @@ def _app_to_pydantic(row: DBApplication) -> Application:
         stage=row.stage,
         last_touch_date=row.last_touch_date,
         next_action_due=row.next_action_due,
+        next_action_type=row.next_action_type,
+        next_action_title=row.next_action_title,
         interview_date=row.interview_date,
         interview_round=row.interview_round or "",
         interview_attended=row.interview_attended,
