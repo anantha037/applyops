@@ -1271,7 +1271,7 @@ def delete_resume(user_id: str, resume_id: str) -> None:
         if not resume:
             raise ValueError("Resume not found")
             
-        apps_count = session.exec(select(func.count(Application.id)).where(Application.resume_id == resume_id)).one()
+        apps_count = session.exec(select(func.count(DBApplication.id)).where(DBApplication.resume_id == resume_id)).one()
         if apps_count > 0:
             raise ValueError(f"Cannot delete this resume because it is attached to {apps_count} application(s).")
             
