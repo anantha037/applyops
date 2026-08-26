@@ -11,6 +11,8 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 
 from backend.auth import get_current_user
 from backend.db.models import User
+from backend.db.session import get_session
+from sqlmodel import Session
 from backend.models import (
     Application,
     ApplicationCreate,
@@ -29,12 +31,13 @@ def list_applications(
     user: User = Depends(get_current_user),
     status: str | None = Query(default=None),
     stage: str | None = Query(default=None),
+    session: Session = Depends(get_session),
 ) -> list[Application]:
-    return db_client.list_applications(user.id, status=status, stage=stage)
+    return db_client.list_applications(user.id, status=status, stage=stage, session=session)
 
 
 @router.post("/applications", status_code=status.HTTP_201_CREATED)
-def create_application(payload: ApplicationCreate, request: Request, response: Response, user: User = Depends(get_current_user)):
+def create_application(payload: ApplicationCreate, request: Request, response: Response, user: User = Depends(get_current_user), session: Session = Depends(get_session)):
     last_touch_date = payload.last_touch_date or payload.date_applied
     application_data = payload.model_dump()
     application_data["last_touch_date"] = last_touch_date
@@ -42,14 +45,12 @@ def create_application(payload: ApplicationCreate, request: Request, response: R
     # Check if we are about to reuse an existing contact by email
     reused_contact_name = None
     if payload.contact_email and payload.contact_email.strip():
-        from sqlmodel import Session, select, col
-        from backend.db.session import engine
+        from sqlmodel import select, col
         from backend.db.models import Contact
-        with Session(engine) as session:
-            norm_email = payload.contact_email.strip().lower()
-            existing = session.exec(select(Contact).where(Contact.user_id == user.id, col(Contact.email).ilike(norm_email))).first()
-            if existing:
-                reused_contact_name = existing.name
+        norm_email = payload.contact_email.strip().lower()
+        existing = session.exec(select(Contact).where(Contact.user_id == user.id, col(Contact.email).ilike(norm_email))).first()
+        if existing:
+            reused_contact_name = existing.name
 
     if payload.next_action_due is not None:
         if payload.next_action_due < date.today():
@@ -75,6 +76,7 @@ def create_application(payload: ApplicationCreate, request: Request, response: R
             contact_role=payload.contact_role,
             contact_linkedin=payload.contact_linkedin,
             resume_id=payload.resume_id,
+            session=session,
         )
     except ValueError as e:
         if "unauthorized" in str(e).lower():
@@ -89,13 +91,15 @@ def create_application(payload: ApplicationCreate, request: Request, response: R
         application.next_action_due, 
         next_action_type=application.next_action_type,
         next_action_title=application.next_action_title,
-        event_id_factory=lambda: str(uuid4())
+        event_id_factory=lambda: str(uuid4()),
+        session=session,
     )
     if application.interview_date:
         db_client.sync_interview_event(
             user.id, application.id, application.company,
             application.interview_date, application.interview_round,
             lambda: str(uuid4()),
+            session=session,
         )
         
     ret = application.model_dump()
@@ -107,9 +111,9 @@ def create_application(payload: ApplicationCreate, request: Request, response: R
 
 @router.patch("/applications/{application_id}", response_model=Application)
 def update_application(
-    application_id: str, payload: ApplicationUpdate, request: Request, user: User = Depends(get_current_user)
+    application_id: str, payload: ApplicationUpdate, request: Request, user: User = Depends(get_current_user), session: Session = Depends(get_session)
 ) -> Application:
-    existing = db_client.get_application(user.id, application_id)
+    existing = db_client.get_application(user.id, application_id, session=session)
     if existing is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Application not found")
 
@@ -151,6 +155,7 @@ def update_application(
             contact_role=contact_role,
             contact_linkedin=contact_linkedin,
             resume_id=resume_id,
+            session=session,
         )
     except ValueError as e:
         if "unauthorized" in str(e).lower():
@@ -169,19 +174,21 @@ def update_application(
             result.next_action_due, 
             next_action_type=result.next_action_type,
             next_action_title=result.next_action_title,
-            event_id_factory=lambda: str(uuid4())
+            event_id_factory=lambda: str(uuid4()),
+            session=session
         )
         db_client.sync_interview_event(
             user.id, result.id, result.company,
             result.interview_date, result.interview_round or "",
             lambda: str(uuid4()),
+            session=session
         )
     return result
 
 
 @router.delete("/applications/{application_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_application(application_id: str, request: Request, user: User = Depends(get_current_user)) -> None:
-    if not db_client.delete_application(user.id, application_id):
+def delete_application(application_id: str, request: Request, user: User = Depends(get_current_user), session: Session = Depends(get_session)) -> None:
+    if not db_client.delete_application(user.id, application_id, session=session):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Application not found")
 
 
