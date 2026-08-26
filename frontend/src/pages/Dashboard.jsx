@@ -9,6 +9,7 @@ import RecentActivityCard from '../components/RecentActivityCard'
 import MiniCalendarCard from '../components/MiniCalendarCard'
 import ApplicationStreakCard from '../components/ApplicationStreakCard'
 import CountUp from '../components/ui/CountUp'
+import DataSkeleton from '../components/ui/DataSkeleton'
 import { Send, TrendingUp, CalendarCheck, Trophy, Ghost, ArrowUpRight, ArrowDownRight } from 'lucide-react'
 
 export default function Dashboard() {
@@ -200,7 +201,7 @@ function StatCard({ title, value, icon: Icon, gradient, iconColor, badge, badgeP
        {/* Tier 2: Large Prominent Metric Number */}
        <div className="relative z-10 my-0.5">
          {loading ? (
-           <div className="h-8 w-16 bg-foreground-secondary/20 rounded-md animate-pulse mt-1" />
+           <DataSkeleton className="h-8 w-16 mt-1 mb-1" />
          ) : (
            <span className="text-2xl lg:text-3xl font-extrabold text-foreground tracking-tight leading-none group-hover:translate-x-0.5 transition-transform duration-200 block">
              <CountUp value={value} />
