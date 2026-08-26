@@ -717,6 +717,31 @@ function ApplicationModal({ isEdit, isOpen, onClose, onSubmit, onDelete, form, s
             </div>
           </div>
 
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">Status</label>
+              <Dropdown
+                options={STATUS_DROPDOWN_OPTIONS}
+                value={form.status || 'Not Contacted'}
+                onChange={val => setForm({ ...form, status: val })}
+                className="w-full"
+                align="left"
+                triggerClassName="bg-surface-secondary text-foreground hover:bg-surface-tertiary border border-transparent"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">Stage</label>
+              <Dropdown
+                options={STAGE_DROPDOWN_OPTIONS}
+                value={form.stage || 'Applied'}
+                onChange={val => setForm({ ...form, stage: val })}
+                className="w-full"
+                align="left"
+                triggerClassName="bg-surface-secondary text-foreground hover:bg-surface-tertiary border border-transparent"
+              />
+            </div>
+          </div>
+
           <div>
             <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">Application Method</label>
             <div className="w-full">
@@ -737,6 +762,16 @@ function ApplicationModal({ isEdit, isOpen, onClose, onSubmit, onDelete, form, s
                 onChange={e => setForm({ ...form, application_method_other: e.target.value })}
               />
             )}
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">Remarks (Optional)</label>
+            <textarea
+              placeholder="Any notes about this application..."
+              className="w-full rounded-xl border border-transparent bg-surface-secondary hover:bg-surface-tertiary px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary transition-all min-h-[60px]"
+              value={form.remarks || ''}
+              onChange={e => setForm({ ...form, remarks: e.target.value })}
+            />
           </div>
 
           <div className="pt-2 border-t border-white/5 space-y-3">
@@ -1194,7 +1229,10 @@ const EMPTY_FORM = {
   next_action_type: 'Follow Up',
   next_action_title: 'Follow up with recruiter',
   next_action_date: getFutureDateStr(2),
-  next_action_time: '10:00 AM'
+  next_action_time: '10:00 AM',
+  status: 'Not Contacted',
+  stage: 'Applied',
+  remarks: ''
 }
 const INITIAL_LIMIT = 5
 
@@ -1323,7 +1361,10 @@ export default function Applications() {
       ...app,
       application_method: method,
       application_method_other: methodOther,
-      has_contact: !!(app.contact_name || app.contact_email || app.contact_phone || app.contact_linkedin)
+      has_contact: !!(app.contact_name || app.contact_email || app.contact_phone || app.contact_linkedin),
+      status: app.status || 'Not Contacted',
+      stage: app.stage || 'Applied',
+      remarks: app.remarks || ''
     })
     setShowAddModal(true)
   }
@@ -1482,7 +1523,10 @@ export default function Applications() {
           contact_linkedin: form.contact_linkedin
         }
       ) : { contact_id: null }),
-      ...(form.resume_id ? { resume_id: form.resume_id } : {})
+      ...(form.resume_id ? { resume_id: form.resume_id } : {}),
+      status: form.status,
+      stage: form.stage,
+      remarks: form.remarks
     }
 
     try {
@@ -1939,12 +1983,8 @@ export default function Applications() {
           <table className="w-full text-left text-xs">
             <thead>
               <tr className="text-[10px] font-extrabold uppercase tracking-wider text-foreground-secondary">
-                <th className="px-5 py-3.5 font-extrabold">Company</th>
-                <th className="px-5 py-3.5 font-extrabold">Role</th>
-                <th className="px-5 py-3.5 font-extrabold">Location</th>
+                <th className="px-5 py-3.5 font-extrabold">Application</th>
                 <th className="px-5 py-3.5 font-extrabold">Status</th>
-                <th className="px-5 py-3.5 font-extrabold">Stage</th>
-                <th className="px-5 py-3.5 font-extrabold">Applied On</th>
                 <th className="px-5 py-3.5 font-extrabold">Next Action</th>
                 <th className="px-5 py-3.5 font-extrabold">Remarks</th>
                 <th className="px-5 py-3.5 font-extrabold">Resume</th>
@@ -1956,39 +1996,30 @@ export default function Applications() {
                   <tr key={i} className="animate-pulse">
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-xl bg-surface-secondary" />
-                        <div className="h-3 w-24 rounded bg-surface-secondary" />
+                        <div className="w-8 h-8 rounded-xl bg-surface-secondary flex-shrink-0" />
+                        <div className="flex flex-col gap-2">
+                          <div className="h-3 w-32 rounded bg-surface-secondary" />
+                          <div className="h-2 w-24 rounded bg-surface-secondary" />
+                        </div>
                       </div>
                     </td>
                     <td className="px-5 py-4">
-                      <div className="h-3 w-32 rounded bg-surface-secondary" />
+                      <div className="h-6 w-24 rounded-full bg-surface-secondary" />
                     </td>
                     <td className="px-5 py-4">
-                      <div className="h-3 w-20 rounded bg-surface-secondary" />
+                      <div className="h-5 w-24 rounded bg-surface-secondary" />
                     </td>
                     <td className="px-5 py-4">
-                      <div className="h-5 w-20 rounded-full bg-surface-secondary" />
+                      <div className="h-5 w-32 rounded bg-surface-secondary" />
                     </td>
                     <td className="px-5 py-4">
-                      <div className="h-3 w-16 rounded bg-surface-secondary" />
-                    </td>
-                    <td className="px-5 py-4">
-                      <div className="h-3 w-20 rounded bg-surface-secondary" />
-                    </td>
-                    <td className="px-5 py-4">
-                      <div className="h-4 w-24 rounded bg-surface-secondary" />
-                    </td>
-                    <td className="px-5 py-4">
-                      <div className="h-5 w-16 rounded bg-surface-secondary" />
-                    </td>
-                    <td className="px-5 py-4">
-                      <div className="h-4 w-12 rounded bg-surface-secondary" />
+                      <div className="h-4 w-16 rounded bg-surface-secondary" />
                     </td>
                   </tr>
                 ))
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-16 text-center text-xs text-muted">
+                  <td colSpan={5} className="py-16 text-center text-xs text-muted">
                     No applications match the current filter parameters.
                   </td>
                 </tr>
@@ -2005,35 +2036,23 @@ export default function Applications() {
                       className={`group hover:bg-surface-tertiary transition-all duration-200 cursor-pointer ${deletingIds.includes(app.id) ? 'opacity-0 scale-95 -translate-y-2 pointer-events-none' : ''}`}
                     >
                       <td className="px-5 py-4">
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-start gap-3">
                           <ApplicationStatusIcon status={app.status} />
-                          <span className="font-bold text-foreground text-xs">{app.company}</span>
+                          <div className="flex flex-col gap-1 mt-0.5">
+                            <span className="font-bold text-foreground text-sm leading-none">{app.company}</span>
+                            <div className="flex flex-wrap items-center gap-1.5 text-xs text-foreground-secondary font-medium">
+                              <span className="text-foreground">{app.job_title}</span>
+                              {app.location && (
+                                <>
+                                  <span className="opacity-40">•</span>
+                                  <span>{app.location}</span>
+                                </>
+                              )}
+                              <span className="opacity-40">•</span>
+                              <span title={`Applied on ${app.date_applied || 'Unknown'}`}>{formatDateDisplay(app.date_applied) || 'No date'}</span>
+                            </div>
+                          </div>
                         </div>
-                      </td>
-
-                      <td className="px-5 py-4">
-                        <div className="flex flex-col gap-0.5">
-                          <span className="font-medium text-foreground">{app.job_title}</span>
-                          {app.application_method && (
-                            <span className="text-[10px] text-foreground-secondary/70">{app.application_method}</span>
-                          )}
-                        </div>
-                      </td>
-
-                      <td className="px-5 py-4">
-                        <input
-                          className="bg-transparent text-xs font-medium text-foreground placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-primary rounded px-2 py-1 w-full max-w-[120px] transition-all hover:bg-surface-tertiary"
-                          placeholder="Add location..."
-                          defaultValue={app.location || ''}
-                          onBlur={e => {
-                            if (e.target.value !== (app.location || '')) {
-                              updateAppLocation(app.id, e.target.value)
-                            }
-                          }}
-                          onKeyDown={e => {
-                            if (e.key === 'Enter') e.target.blur()
-                          }}
-                        />
                       </td>
 
                       <td className="px-5 py-4">
@@ -2046,19 +2065,6 @@ export default function Applications() {
                           align="left"
                         />
                       </td>
-
-                      <td className="px-5 py-4">
-                        <Dropdown
-                          size="sm"
-                          options={STAGE_DROPDOWN_OPTIONS}
-                          value={app.stage}
-                          triggerClassName="bg-surface-secondary text-foreground-secondary hover:text-foreground hover:bg-surface-secondary"
-                          onChange={val => updateAppStage(app.id, val)}
-                          align="left"
-                        />
-                      </td>
-
-                      <td className="px-5 py-4 text-foreground-secondary font-medium">{app.date_applied ?? '—'}</td>
 
                       <td className="px-5 py-4">
                         <NextActionCell
