@@ -4,6 +4,13 @@ import Dropdown from './ui/Dropdown'
 import ValueLoader from './ui/ValueLoader'
 import { useGoalContext } from '../context/GoalContext'
 
+function getLocalDayStr(d) {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export default function DailyProgressCard({ data: propData, loading = false }) {
   const { weeklyGoal, weeklyApplications, weeklyProgress, applications } = useGoalContext()
   const [timeframe, setTimeframe] = useState('7d')
@@ -26,7 +33,7 @@ export default function DailyProgressCard({ data: propData, loading = false }) {
     for (let i = days - 1; i >= 0; i--) {
       const d = new Date(today)
       d.setDate(d.getDate() - i)
-      const dateStr = d.toISOString().split('T')[0]
+      const dateStr = getLocalDayStr(d)
       const count = applications.filter(a => a.date_applied === dateStr).length
       res.push({
         date: dateStr,
