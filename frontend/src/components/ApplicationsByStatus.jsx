@@ -66,7 +66,7 @@ export default function ApplicationsByStatus({ summary = {}, loading = false }) 
       <div className="flex-1 flex flex-col xl:flex-row items-center justify-center xl:justify-between gap-6 my-auto pt-2 min-w-0">
         {/* Donut Chart Container */}
         <div className="relative w-44 h-44 flex-shrink-0 flex items-center justify-center">
-          <svg viewBox="0 0 100 100" className={`w-full h-full transform -rotate-90 ${loading ? 'animate-spin transition-opacity duration-300' : ''}`}>
+          <svg viewBox="0 0 100 100" className={`w-full h-full transform -rotate-90 ${loading ? 'animate-[spin_1.5s_linear_infinite] transition-opacity duration-300' : ''}`}>
             {/* Background track circle */}
             <circle
               cx="50"

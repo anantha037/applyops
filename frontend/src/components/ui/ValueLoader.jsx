@@ -14,7 +14,7 @@ export default function ValueLoader({
         className={`absolute inset-0 flex items-center justify-center transition-opacity duration-150 ${loading ? 'opacity-100' : 'opacity-0'}`}
         aria-hidden="true"
       >
-        <div className={`animate-spin rounded-full border-surface-tertiary border-t-foreground-secondary ${spinnerClass}`} />
+        <div className={`flex-shrink-0 animate-[spin_1.5s_linear_infinite] rounded-full border-surface-tertiary border-t-foreground-secondary ${spinnerClass}`} />
       </span>
       
       {/* Value Layer */}

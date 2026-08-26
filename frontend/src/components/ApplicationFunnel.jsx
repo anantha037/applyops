@@ -140,7 +140,7 @@ export default function ApplicationFunnel({ summary = {}, loading = false }) {
                     fill="none"
                     stroke="var(--foreground-secondary)"
                     strokeWidth="3"
-                    className="origin-center animate-spin"
+                    className="origin-center animate-[spin_1.5s_linear_infinite]"
                     style={{ transformOrigin: `${c.cx}px ${c.cy}px` }}
                   />
                 </g>
