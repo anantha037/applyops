@@ -318,7 +318,9 @@ function ContactDetailsModal({ contact, onClose, onEdit, onDelete, onOpenApplica
             <div>
               <p className="text-[11px] font-bold text-foreground-secondary uppercase tracking-wider mb-1">Email</p>
               {contact.email ? (
-                <a href={`mailto:${contact.email}`} className="text-xs font-semibold text-primary hover:underline">{contact.email}</a>
+                <CopyableText text={contact.email}>
+                  <a href={`mailto:${contact.email}`} onClick={e => e.stopPropagation()} className="text-xs font-semibold text-primary hover:underline">{contact.email}</a>
+                </CopyableText>
               ) : (
                 <span className="text-xs font-semibold text-foreground-secondary">—</span>
               )}
@@ -326,7 +328,9 @@ function ContactDetailsModal({ contact, onClose, onEdit, onDelete, onOpenApplica
             <div>
               <p className="text-[11px] font-bold text-foreground-secondary uppercase tracking-wider mb-1">Phone</p>
               {contact.phone ? (
-                <a href={`tel:${contact.phone}`} className="text-xs font-semibold text-foreground hover:text-primary transition-colors">{contact.phone}</a>
+                <CopyableText text={contact.phone}>
+                  <a href={`tel:${contact.phone}`} onClick={e => e.stopPropagation()} className="text-xs font-semibold text-foreground hover:text-primary transition-colors">{contact.phone}</a>
+                </CopyableText>
               ) : (
                 <span className="text-xs font-semibold text-foreground-secondary">—</span>
               )}
@@ -334,9 +338,11 @@ function ContactDetailsModal({ contact, onClose, onEdit, onDelete, onOpenApplica
             <div>
               <p className="text-[11px] font-bold text-foreground-secondary uppercase tracking-wider mb-1">LinkedIn</p>
               {contact.linkedin_url ? (
-                <a href={contact.linkedin_url.startsWith('http') ? contact.linkedin_url : `https://${contact.linkedin_url}`} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-primary hover:underline flex items-center gap-1">
-                  View Profile ↗
-                </a>
+                <CopyableText text={contact.linkedin_url}>
+                  <a href={contact.linkedin_url.startsWith('http') ? contact.linkedin_url : `https://${contact.linkedin_url}`} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="text-xs font-semibold text-primary hover:underline flex items-center gap-1">
+                    View Profile ↗
+                  </a>
+                </CopyableText>
               ) : (
                 <span className="text-xs font-semibold text-foreground-secondary">—</span>
               )}
