@@ -753,11 +753,6 @@ export default function Contacts() {
             <thead>
               <tr className="text-[10px] font-bold text-foreground-secondary uppercase tracking-wider">
                 <th className="py-2.5 px-3.5 font-bold">Contact</th>
-                <th className="py-2.5 px-3.5 font-bold">Company</th>
-                <th className="py-2.5 px-3.5 font-bold">Role</th>
-                <th className="py-2.5 px-3.5 font-bold">Email</th>
-                <th className="py-2.5 px-3.5 font-bold">Phone</th>
-                <th className="py-2.5 px-3.5 font-bold">LinkedIn</th>
                 <th className="py-2.5 px-3.5 font-bold">Application</th>
                 <th className="py-2.5 px-3.5 font-bold">Last Action</th>
                 <th className="py-2.5 px-3.5 font-bold">Last Contact</th>
@@ -767,7 +762,7 @@ export default function Contacts() {
             <tbody>
               {paginated.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="py-12 text-center text-xs text-muted">
+                  <td colSpan="5" className="py-12 text-center text-xs text-muted">
                     {loading ? 'Loading contacts…' : 'No contacts found. Try another search or filter.'}
                   </td>
                 </tr>
@@ -776,26 +771,31 @@ export default function Contacts() {
                 return (
                   <tr key={c.id} className={`hover:bg-surface-tertiary transition-all duration-200 group rounded-xl ${deletingIds.includes(c.id) ? 'opacity-0 scale-95 -translate-y-2 pointer-events-none' : ''}`}>
                     <td className="py-3.5 px-3.5">
-                      <button
-                        onClick={() => setDetailsContact(c)}
-                        className="flex items-center gap-2.5 hover:opacity-80 transition-opacity text-left focus:outline-none"
-                      >
-                        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${getAvatarColor(c.name)}`}>
+                      <div className="flex items-start gap-3">
+                        <button
+                          onClick={() => setDetailsContact(c)}
+                          className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 hover:opacity-80 transition-opacity focus:outline-none mt-0.5 ${getAvatarColor(c.name)}`}
+                        >
                           {getInitials(c.name)}
+                        </button>
+                        <div className="flex flex-col gap-1">
+                          <button
+                            onClick={() => setDetailsContact(c)}
+                            className="font-bold text-foreground text-sm leading-none text-left hover:text-primary transition-colors focus:outline-none"
+                          >
+                            {c.name}
+                          </button>
+                          <div className="flex flex-wrap items-center gap-1.5 text-xs text-foreground-secondary font-medium">
+                            {c.role ? <span>{c.role}</span> : <span className="opacity-50">No Role</span>}
+                            {c.company && (
+                              <>
+                                <span className="opacity-40">•</span>
+                                <span className="text-foreground">{c.company}</span>
+                              </>
+                            )}
+                          </div>
                         </div>
-                        <span className="font-bold text-foreground group-hover:text-primary transition-colors">{c.name}</span>
-                      </button>
-                    </td>
-                    <td className="py-3.5 px-3.5 text-foreground-secondary font-medium">{c.company || '—'}</td>
-                    <td className="py-3.5 px-3.5 text-foreground-secondary font-medium">{c.role || '—'}</td>
-                    <td className="py-3.5 px-3.5 text-foreground-secondary font-medium">
-                      {c.email ? <CopyableText text={c.email}>{c.email}</CopyableText> : '—'}
-                    </td>
-                    <td className="py-3.5 px-3.5 text-foreground-secondary font-medium">
-                      {c.phone ? <CopyableText text={c.phone}>{c.phone}</CopyableText> : '—'}
-                    </td>
-                    <td className="py-3.5 px-3.5 text-foreground-secondary font-medium">
-                      <InlineLinkedinEdit contact={c} onSave={handleUpdateLinkedin} />
+                      </div>
                     </td>
                     <td className="py-3.5 px-3.5">
                       {(c.applications && c.applications.length > 0) ? (
