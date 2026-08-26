@@ -182,7 +182,7 @@ class Application(SQLModel, table=True):
 
     id:                  str           = Field(default_factory=_new_uuid, primary_key=True)
     user_id:             Optional[str] = Field(default=None, foreign_key="users.id", index=True)
-    date_applied:        date          = Field(default_factory=date.today)
+    date_applied:        date          = Field(default_factory=date.today, index=True)
     company:             str
     job_title:           str
     jd_summary:          Optional[str] = Field(default=None)
@@ -191,10 +191,10 @@ class Application(SQLModel, table=True):
     contact_id:          Optional[str] = Field(default=None, foreign_key="contacts.id")
     resume_id:           Optional[str] = Field(default=None, foreign_key="resumes.id")
     ctc:                 Optional[str] = Field(default=None)
-    status:              str           = Field(default=ApplicationStatus.NOT_CONTACTED)
+    status:              str           = Field(default=ApplicationStatus.NOT_CONTACTED, index=True)
     stage:               str           = Field(default=ApplicationStage.APPLIED)
     last_touch_date:     Optional[date] = Field(default=None)
-    next_action_due:     Optional[date] = Field(default=None)
+    next_action_due:     Optional[date] = Field(default=None, index=True)
     next_action_type:    Optional[str]  = Field(default=None)
     next_action_title:   Optional[str]  = Field(default=None)
     interview_date:      Optional[date] = Field(default=None)
@@ -215,10 +215,10 @@ class ActivityLog(SQLModel, table=True):
 
     id:             str           = Field(default_factory=_new_uuid, primary_key=True)
     user_id:        Optional[str] = Field(default=None, foreign_key="users.id", index=True)
-    timestamp:      datetime      = Field(default_factory=_utc_now)
+    timestamp:      datetime      = Field(default_factory=_utc_now, index=True)
     application_id: Optional[str] = Field(default=None, foreign_key="applications.id")
     company:        Optional[str] = Field(default=None)
-    action_type:    str
+    action_type:    str           = Field(index=True)
     contact_id:     Optional[str] = Field(default=None, foreign_key="contacts.id")
     notes:          Optional[str] = Field(default=None)
 
@@ -236,7 +236,7 @@ class CalendarEvent(SQLModel, table=True):
     user_id:                Optional[str] = Field(default=None, foreign_key="users.id", index=True)
     title:                  str
     event_type:             str
-    event_date:             date
+    event_date:             date          = Field(index=True)
     time:                   Optional[str] = Field(default=None)
     related_application_id: Optional[str] = Field(default=None, foreign_key="applications.id")
     contact_id:             Optional[str] = Field(default=None, foreign_key="contacts.id")
