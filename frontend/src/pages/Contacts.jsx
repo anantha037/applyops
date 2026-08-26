@@ -752,7 +752,7 @@ export default function Contacts() {
           <table className="w-full text-left text-xs whitespace-nowrap">
             <thead>
               <tr className="text-[10px] font-bold text-foreground-secondary uppercase tracking-wider">
-                <th className="py-2.5 px-3.5 font-bold">Contact</th>
+                <th className="py-2.5 px-3.5 font-bold w-[35%] min-w-[240px]">Contact</th>
                 <th className="py-2.5 px-3.5 font-bold">Application</th>
                 <th className="py-2.5 px-3.5 font-bold">Last Action</th>
                 <th className="py-2.5 px-3.5 font-bold">Last Contact</th>
@@ -769,22 +769,25 @@ export default function Contacts() {
               ) : paginated.map(c => {
                 const isApplied = c.applied || Boolean(c.application_method) || Boolean(c.application_id)
                 return (
-                  <tr key={c.id} className={`hover:bg-surface-tertiary transition-all duration-200 group rounded-xl ${deletingIds.includes(c.id) ? 'opacity-0 scale-95 -translate-y-2 pointer-events-none' : ''}`}>
+                  <tr 
+                    key={c.id} 
+                    onClick={(e) => {
+                      if (e.target.closest('button, input, select, a, [role="button"], .dropdown-trigger')) return;
+                      setDetailsContact(c);
+                    }}
+                    className={`hover:bg-surface-tertiary transition-all duration-200 group rounded-xl cursor-pointer ${deletingIds.includes(c.id) ? 'opacity-0 scale-95 -translate-y-2 pointer-events-none' : ''}`}
+                  >
                     <td className="py-3.5 px-3.5">
                       <div className="flex items-start gap-3">
-                        <button
-                          onClick={() => setDetailsContact(c)}
-                          className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 hover:opacity-80 transition-opacity focus:outline-none mt-0.5 ${getAvatarColor(c.name)}`}
+                        <div
+                          className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 mt-0.5 ${getAvatarColor(c.name)}`}
                         >
                           {getInitials(c.name)}
-                        </button>
+                        </div>
                         <div className="flex flex-col gap-1">
-                          <button
-                            onClick={() => setDetailsContact(c)}
-                            className="font-bold text-foreground text-sm leading-none text-left hover:text-primary transition-colors focus:outline-none"
-                          >
+                          <span className="font-bold text-foreground text-sm leading-none text-left">
                             {c.name}
-                          </button>
+                          </span>
                           <div className="flex flex-wrap items-center gap-1.5 text-xs text-foreground-secondary font-medium">
                             {c.role ? <span>{c.role}</span> : <span className="opacity-50">No Role</span>}
                             {c.company && (
