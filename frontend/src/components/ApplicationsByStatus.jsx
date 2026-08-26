@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import Dropdown from './ui/Dropdown'
 import CountUp from './ui/CountUp'
+import DataSkeleton from './ui/DataSkeleton'
 
 export default function ApplicationsByStatus({ summary = {}, loading = false }) {
   const [hoveredIndex, setHoveredIndex] = useState(null)
@@ -105,9 +106,9 @@ export default function ApplicationsByStatus({ summary = {}, loading = false }) 
           </svg>
 
           {/* Center Dynamic Label */}
-          <div className={`absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none transition-all duration-200 ${loading ? 'animate-pulse opacity-50' : ''}`}>
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none transition-all duration-200">
             <span className="text-2xl font-extrabold text-foreground tracking-tight leading-none">
-              {loading ? '—' : <CountUp value={activeItem ? activeItem.count : total} duration={800} />}
+              {loading ? <DataSkeleton className="h-6 w-8" /> : <CountUp value={activeItem ? activeItem.count : total} duration={800} />}
             </span>
             <span className="text-[10px] font-semibold uppercase tracking-wider text-foreground-secondary mt-1 max-w-[80px] truncate">
               {activeItem ? activeItem.label : 'Total'}
@@ -140,9 +141,9 @@ export default function ApplicationsByStatus({ summary = {}, loading = false }) 
                   />
                   <span className="truncate font-medium">{seg.label}</span>
                 </div>
-                <div className={`flex items-center gap-1 font-semibold text-foreground flex-shrink-0 ml-2 ${loading ? 'animate-pulse opacity-50' : ''}`}>
-                  <span>{loading ? '—' : <CountUp value={seg.count} duration={800} />}</span>
-                  <span className="text-[11px] text-foreground-secondary font-normal">({loading ? '—' : <CountUp value={`${seg.percent}%`} duration={800} />})</span>
+                <div className="flex items-center gap-1 font-semibold text-foreground flex-shrink-0 ml-2">
+                  <span>{loading ? <DataSkeleton className="h-3 w-4" /> : <CountUp value={seg.count} duration={800} />}</span>
+                  <span className="text-[11px] text-foreground-secondary font-normal">({loading ? <DataSkeleton className="h-3 w-4" /> : <CountUp value={`${seg.percent}%`} duration={800} />})</span>
                 </div>
               </div>
             )

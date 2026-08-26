@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react'
 import { Flame, ArrowRight } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import CountUp from './ui/CountUp'
+import DataSkeleton from './ui/DataSkeleton'
 
 const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
 
@@ -111,15 +112,15 @@ export default function ApplicationStreakCard({ data: propData, onViewHistory, l
           </span>
         </div>
         {bestStreak > 0 ? (
-          <span className={`text-[10px] font-medium text-muted tabular-nums ${loading ? 'animate-pulse opacity-50' : ''}`}>
-            Best {loading ? '—' : <CountUp value={bestStreak} duration={800} />}d
+          <span className="text-[10px] font-medium text-muted tabular-nums">
+            Best {loading ? <DataSkeleton className="h-3 w-4" /> : <CountUp value={bestStreak} duration={800} />}d
           </span>
         ) : null}
       </div>
 
-      <div className={`mb-1 ${loading ? 'animate-pulse opacity-50' : ''}`}>
+      <div className="mb-1">
         <span className="text-[2.25rem] font-extrabold text-foreground leading-none tracking-tight tabular-nums">
-          {loading ? '—' : <CountUp value={currentStreak} duration={800} />}
+          {loading ? <DataSkeleton className="h-8 w-10 mt-1 mb-1" /> : <CountUp value={currentStreak} duration={800} />}
         </span>
         <span className="ml-2 text-xs font-semibold uppercase tracking-widest text-foreground-secondary/80">
           day streak
@@ -137,8 +138,8 @@ export default function ApplicationStreakCard({ data: propData, onViewHistory, l
         <span className="text-[10px] font-medium text-foreground-secondary">
           14-day activity
         </span>
-        <span className={`text-[10px] text-muted tabular-nums ${loading ? 'animate-pulse opacity-50' : ''}`}>
-          {loading ? '—' : <CountUp value={totalApplications} duration={800} />} apps · {loading ? '—' : <CountUp value={activeDays} duration={800} />} active
+        <span className="text-[10px] text-muted tabular-nums">
+          {loading ? <DataSkeleton className="h-3 w-4" /> : <CountUp value={totalApplications} duration={800} />} apps · {loading ? <DataSkeleton className="h-3 w-4" /> : <CountUp value={activeDays} duration={800} />} active
         </span>
       </div>
 

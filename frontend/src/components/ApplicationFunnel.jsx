@@ -125,19 +125,31 @@ export default function ApplicationFunnel({ summary = {}, loading = false }) {
                   }}
                 />
 
-                {/* Number inside trapezoid */}
-                <text
-                  x={c.cx}
-                  y={c.cy + 5}
-                  textAnchor="middle"
-                  fill="#FFFFFF"
-                  fontSize="15"
-                  fontWeight="800"
-                  className={`pointer-events-none drop-shadow-xs transition-opacity duration-200 ${loading ? 'animate-pulse opacity-50' : ''}`}
-                  style={{ opacity: loading ? 0.5 : (hoveredIndex === null || isHovered ? 1 : 0.6) }}
-                >
-                  {loading ? '—' : <CountUp value={stage.count} duration={800} />}
-                </text>
+                {loading ? (
+                  <rect
+                    x={c.cx - 16}
+                    y={c.cy - 6}
+                    width="32"
+                    height="12"
+                    rx="4"
+                    fill="var(--foreground-secondary)"
+                    opacity="0.2"
+                    className="animate-pulse"
+                  />
+                ) : (
+                  <text
+                    x={c.cx}
+                    y={c.cy + 5}
+                    textAnchor="middle"
+                    fill="#FFFFFF"
+                    fontSize="15"
+                    fontWeight="800"
+                    className="pointer-events-none drop-shadow-xs transition-opacity duration-200"
+                    style={{ opacity: hoveredIndex === null || isHovered ? 1 : 0.6 }}
+                  >
+                    <CountUp value={stage.count} duration={800} />
+                  </text>
+                )}
 
                 {/* Connector hairline guide line */}
                 <line
@@ -163,7 +175,7 @@ export default function ApplicationFunnel({ summary = {}, loading = false }) {
                   {stage.label}
                   {isHovered && (
                     <tspan fill={stage.grad[0]} fontWeight="800" dx="6">
-                      ({loading ? '—' : <CountUp value={`${stage.percent}%`} duration={800} />})
+                      {loading ? '' : <CountUp value={`(${stage.percent}%)`} duration={800} />}
                     </tspan>
                   )}
                 </text>

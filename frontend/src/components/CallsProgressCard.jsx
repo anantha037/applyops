@@ -1,6 +1,7 @@
 import React from 'react'
 import { PhoneOutgoing } from 'lucide-react'
 import CountUp from './ui/CountUp'
+import DataSkeleton from './ui/DataSkeleton'
 
 export default function CallsProgressCard({ summary = {}, loading = false }) {
   const goal = summary.calls_goal || 0
@@ -24,9 +25,9 @@ export default function CallsProgressCard({ summary = {}, loading = false }) {
       </div>
       
       <div className="flex flex-col gap-1 mt-1">
-        <div className={`flex items-end justify-between ${loading ? 'animate-pulse opacity-50' : ''}`}>
-          <span className="text-3xl font-extrabold text-foreground leading-none">{loading ? '—' : <CountUp value={today} duration={800} />}</span>
-          <span className="text-sm font-bold text-foreground-secondary mb-0.5">/ {goal > 0 ? (loading ? '—' : <CountUp value={goal} duration={800} />) : '—'}</span>
+        <div className="flex items-end justify-between">
+          <span className="text-3xl font-extrabold text-foreground leading-none">{loading ? <DataSkeleton className="h-8 w-10 mb-1" /> : <CountUp value={today} duration={800} />}</span>
+          <span className="text-sm font-bold text-foreground-secondary mb-0.5">/ {goal > 0 ? (loading ? <DataSkeleton className="h-4 w-6" /> : <CountUp value={goal} duration={800} />) : '—'}</span>
         </div>
         
         {goal > 0 ? (
