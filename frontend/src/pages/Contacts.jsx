@@ -31,6 +31,14 @@ const ACTION_STATUS_OPTIONS = [
   { label: 'Closed', value: 'Closed' }
 ]
 
+function getLocalTodayStr() {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 /** Normalise the tags field — backend sends "" or a comma string; UI uses Array.some(). */
 function tagsArr(c) {
   if (Array.isArray(c.tags)) return c.tags
@@ -872,7 +880,7 @@ export default function Contacts() {
                       <div className="flex flex-col gap-1 max-w-[120px]">
                         <input
                           type="date"
-                          max={new Date().toISOString().split('T')[0]}
+                          max={getLocalTodayStr()}
                           className="bg-transparent border-none text-foreground-secondary font-medium text-xs focus:ring-0 p-0 hover:text-primary cursor-pointer transition-colors"
                           value={c.manual_last_contact_date ? c.manual_last_contact_date : (c.last_contacted || '')}
                           onChange={(e) => {
