@@ -7,7 +7,7 @@ from uuid import uuid4
 from collections import defaultdict
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status, Query
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status, Query
 
 from backend.auth import get_current_user
 from backend.db.models import User
@@ -33,11 +33,23 @@ def list_applications(
     return db_client.list_applications(user.id, status=status, stage=stage)
 
 
-@router.post("/applications", response_model=Application, status_code=status.HTTP_201_CREATED)
-def create_application(payload: ApplicationCreate, request: Request, user: User = Depends(get_current_user)) -> Application:
+@router.post("/applications", status_code=status.HTTP_201_CREATED)
+def create_application(payload: ApplicationCreate, request: Request, response: Response, user: User = Depends(get_current_user)):
     last_touch_date = payload.last_touch_date or payload.date_applied
     application_data = payload.model_dump()
     application_data["last_touch_date"] = last_touch_date
+
+    # Check if we are about to reuse an existing contact by email
+    reused_contact_name = None
+    if payload.contact_email and payload.contact_email.strip():
+        from sqlmodel import Session, select, col
+        from backend.db.session import engine
+        from backend.db.models import Contact
+        with Session(engine) as session:
+            norm_email = payload.contact_email.strip().lower()
+            existing = session.exec(select(Contact).where(Contact.user_id == user.id, col(Contact.email).ilike(norm_email))).first()
+            if existing:
+                reused_contact_name = existing.name
 
     if payload.next_action_due is not None:
         if payload.next_action_due < date.today():
@@ -85,7 +97,12 @@ def create_application(payload: ApplicationCreate, request: Request, user: User 
             application.interview_date, application.interview_round,
             lambda: str(uuid4()),
         )
-    return application
+        
+    ret = application.model_dump()
+    if reused_contact_name:
+        ret["_reusedContact"] = reused_contact_name
+        
+    return ret
 
 
 @router.patch("/applications/{application_id}", response_model=Application)

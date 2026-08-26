@@ -118,6 +118,12 @@ async function request(path, options = {}, isRetry = false) {
       }
       throw new Error(errorMsg)
     }
+    if (options.returnHeaders) {
+      return {
+        data: response.status === 204 ? null : await response.json(),
+        headers: response.headers
+      }
+    }
     return response.status === 204 ? null : await response.json()
   } catch (err) {
     if (err.name === 'AbortError') {
