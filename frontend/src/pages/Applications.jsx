@@ -731,14 +731,20 @@ function ApplicationModal({ isEdit, isOpen, onClose, onSubmit, onDelete, form, s
             </div>
             <div>
               <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">Stage</label>
-              <Dropdown
-                options={STAGE_DROPDOWN_OPTIONS}
-                value={form.stage || 'Applied'}
-                onChange={val => setForm({ ...form, stage: val })}
-                className="w-full"
-                align="left"
-                triggerClassName="bg-surface-secondary text-foreground hover:bg-surface-tertiary border border-transparent"
-              />
+              {['Offer Received', 'Rejected', 'Ghosted'].includes(form.status) ? (
+                <div className="w-full h-[38px] px-3.5 flex items-center bg-surface-secondary/50 rounded-xl text-foreground-secondary/50 text-xs font-semibold border border-transparent cursor-not-allowed select-none">
+                  Closed
+                </div>
+              ) : (
+                <Dropdown
+                  options={STAGE_DROPDOWN_OPTIONS}
+                  value={form.stage || 'Applied'}
+                  onChange={val => setForm({ ...form, stage: val })}
+                  className="w-full"
+                  align="left"
+                  triggerClassName="bg-surface-secondary text-foreground hover:bg-surface-tertiary border border-transparent"
+                />
+              )}
             </div>
           </div>
 
@@ -1597,13 +1603,7 @@ export default function Applications() {
     if (!targetApp) return
 
     const updates = { status: newStatus }
-    if (newStatus === 'Offer Received') {
-      updates.stage = 'Closed'
-      if (targetApp.next_action) {
-        updates.next_action = { ...targetApp.next_action, time: null, completed: true }
-      }
-    } else if (newStatus === 'Rejected') {
-      updates.stage = 'Closed'
+    if (['Offer Received', 'Rejected', 'Ghosted'].includes(newStatus)) {
       if (targetApp.next_action) {
         updates.next_action = { ...targetApp.next_action, time: null, completed: true }
       }
@@ -2071,14 +2071,20 @@ export default function Applications() {
                       </td>
 
                       <td className="px-5 py-4">
-                        <Dropdown
-                          size="sm"
-                          options={STAGE_DROPDOWN_OPTIONS}
-                          value={app.stage}
-                          triggerClassName="bg-surface-secondary text-foreground-secondary hover:text-foreground hover:bg-surface-secondary"
-                          onChange={val => updateAppStage(app.id, val)}
-                          align="left"
-                        />
+                        {['Offer Received', 'Rejected', 'Ghosted'].includes(app.status) ? (
+                          <div className="inline-flex items-center justify-center px-2.5 py-1.5 rounded-lg bg-surface-secondary/40 text-foreground-secondary/40 text-[11px] font-semibold cursor-not-allowed border border-transparent select-none whitespace-nowrap">
+                            Closed
+                          </div>
+                        ) : (
+                          <Dropdown
+                            size="sm"
+                            options={STAGE_DROPDOWN_OPTIONS}
+                            value={app.stage}
+                            triggerClassName="bg-surface-secondary text-foreground-secondary hover:text-foreground hover:bg-surface-secondary"
+                            onChange={val => updateAppStage(app.id, val)}
+                            align="left"
+                          />
+                        )}
                       </td>
 
                       <td className="px-5 py-4">

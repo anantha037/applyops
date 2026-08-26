@@ -472,7 +472,8 @@ def create_application(
     if session is None:
         with Session(engine) as s:
             return create_application(user_id, payload, contact_name=contact_name, contact_email=contact_email, contact_phone=contact_phone, contact_role=contact_role, contact_linkedin=contact_linkedin, resume_id=resume_id, session=s)
-        contact_id: str | None = payload.get("contact_id")
+            
+    contact_id: str | None = payload.get("contact_id")
     if contact_id == "":
         contact_id = None
     
@@ -937,7 +938,8 @@ def sync_followup_event(
     if session is None:
         with Session(engine) as s:
             return sync_followup_event(user_id, application_id, company, next_action_due, next_action_type, next_action_title, event_id_factory, session=s)
-        stmt = select(DBCalendarEvent).where(
+            
+    stmt = select(DBCalendarEvent).where(
         DBCalendarEvent.user_id == user_id,
         DBCalendarEvent.related_application_id == application_id,
         DBCalendarEvent.source == CalendarEventSource.AUTO,
@@ -1007,7 +1009,8 @@ def sync_interview_event(
     if session is None:
         with Session(engine) as s:
             return sync_interview_event(user_id, application_id, company, interview_date, interview_round, event_id_factory, session=s)
-        existing = _find_auto_event(session, user_id, application_id, CalendarEventType.INTERVIEW)
+            
+    existing = _find_auto_event(session, user_id, application_id, CalendarEventType.INTERVIEW)
     if interview_date is None:
         if existing:
             session.delete(existing)
