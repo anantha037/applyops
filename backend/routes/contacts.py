@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, Request, status
 
 from backend.auth import get_current_user
 from backend.db.models import User
+from backend.db.session import get_session
 
 from backend.models import ContactCreate, ContactManual, ContactView, ContactUpdate
 from backend import db_client
@@ -22,9 +23,9 @@ router = APIRouter(prefix="/contacts", tags=["contacts"])
 
 
 @router.get("", response_model=list[ContactView])
-def list_contacts(request: Request, user: User = Depends(get_current_user)) -> list[ContactView]:
+def list_contacts(request: Request, user: User = Depends(get_current_user), session: Session = Depends(get_session)) -> list[ContactView]:
     """Return all contacts from Postgres, enriched with Activity Log data."""
-    return db_client.list_contacts(user.id)
+    return db_client.list_contacts(user.id, session=session)
 
 
 @router.post("", response_model=ContactManual, status_code=status.HTTP_201_CREATED)
@@ -82,11 +83,12 @@ def update_contact(
     contact_id: str,
     payload: ContactUpdate,
     request: Request,
-    user: User = Depends(get_current_user)
+    user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
 ) -> ContactView:
     """Update a contact's fields."""
     try:
-        updated = db_client.update_contact(user.id, contact_id, payload.model_dump(exclude_unset=True))
+        updated = db_client.update_contact(user.id, contact_id, payload.model_dump(exclude_unset=True), session=session)
     except ValueError as e:
         from fastapi import HTTPException
         if "unauthorized" in str(e).lower():
@@ -106,11 +108,11 @@ def update_contact(
 
 
 @router.delete("/{contact_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_contact(contact_id: str, request: Request, user: User = Depends(get_current_user)) -> None:
+def delete_contact(contact_id: str, request: Request, user: User = Depends(get_current_user), session: Session = Depends(get_session)) -> None:
     """Delete a contact if not referenced."""
     from fastapi import HTTPException
     try:
-        db_client.delete_contact(user.id, contact_id)
+        db_client.delete_contact(user.id, contact_id, session=session)
     except ValueError as e:
         if "not found" in str(e).lower():
             raise HTTPException(status_code=404, detail="Contact not found")
