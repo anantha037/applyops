@@ -49,7 +49,7 @@ def get_streak(request: Request, user: User = Depends(get_current_user), session
     today = datetime.now(india_tz).date()
     
     from sqlmodel import select
-    from backend.db.models import DBApplication, ActivityLog
+    from backend.db.models import Application as DBApplication, ActivityLog
     
     app_dates = session.exec(
         select(DBApplication.date_applied)

@@ -65,7 +65,7 @@ export default function ApplicationsByStatus({ summary = {}, loading = false }) 
       {/* Main Content Area: Donut Chart + Legend Grid */}
       <div className="flex-1 flex flex-col xl:flex-row items-center justify-center xl:justify-between gap-6 my-auto pt-2 min-w-0">
         {/* Donut Chart Container */}
-        <div className="relative w-44 h-44 flex-shrink-0 flex items-center justify-center">
+        <div className="relative w-36 h-36 2xl:w-44 2xl:h-44 flex-shrink-0 flex items-center justify-center">
           <svg viewBox="0 0 100 100" className={`w-full h-full transform -rotate-90 ${loading ? 'animate-[spin_1.5s_linear_infinite] transition-opacity duration-300' : ''}`}>
             {/* Background track circle */}
             <circle
@@ -133,7 +133,7 @@ export default function ApplicationsByStatus({ summary = {}, loading = false }) 
         </div>
 
         {/* Status Legend List */}
-        <div className="flex-1 w-full space-y-1.5">
+        <div className="flex-1 w-full min-w-0 space-y-1.5">
           {segments.map((seg) => {
             const isHovered = hoveredIndex === seg.index
             return (

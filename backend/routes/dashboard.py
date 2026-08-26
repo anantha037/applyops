@@ -34,7 +34,7 @@ def summary(request: Request, user: User = Depends(get_current_user), session: S
     stats = db_client.get_current_pipeline_stats(user.id, session=session)
 
     from sqlmodel import select, func
-    from backend.db.models import DBApplication
+    from backend.db.models import Application as DBApplication
     today_count = session.exec(
         select(func.count(DBApplication.id))
         .where(DBApplication.user_id == user.id, DBApplication.date_applied == today)
@@ -74,7 +74,7 @@ def daily_report(request: Request, user: User = Depends(get_current_user), sessi
     today = datetime.now(INDIA_TIMEZONE).date()
     
     from sqlmodel import select, func, or_
-    from backend.db.models import DBApplication
+    from backend.db.models import Application as DBApplication
     applications_sent = session.exec(
         select(func.count(DBApplication.id))
         .where(DBApplication.user_id == user.id, DBApplication.date_applied == today)

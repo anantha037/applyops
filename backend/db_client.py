@@ -62,7 +62,7 @@ from backend.r2_client import (
 
 MAX_RESUME_BYTES = 10 * 1024 * 1024  # 10 MB
 
-def get_all_user_ids(, *, session: Session | None = None) -> list[str]:
+def get_all_user_ids(*, session: Session | None = None) -> list[str]:
     """Return all active user IDs in the system."""
     if session is None:
         with Session(engine) as s:
@@ -752,7 +752,7 @@ def get_settings(user_id: str, *, session: Session | None = None) -> Settings:
 
 
 def get_daily_goal(user_id: str, *, session: Session | None = None) -> int:
-def get_daily_goal(user_id: str) -> int:
+    return get_settings(user_id, session=session).daily_goal
 
 
 def update_settings(user_id: str, changes: SettingsUpdate, *, session: Session | None = None) -> Settings:
