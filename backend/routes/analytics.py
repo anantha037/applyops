@@ -8,6 +8,8 @@ from fastapi import APIRouter, Depends, Query, Request
 
 from backend.auth import get_current_user
 from backend.db.models import User
+from backend.db.session import get_session
+from sqlmodel import Session
 from backend.models import DailySnapshot
 from backend.scheduler import take_daily_snapshot
 from backend import db_client
@@ -25,13 +27,14 @@ def _compute_delta(current: float | int, previous: float | int) -> float | None:
 def get_analytics_overview(
     request: Request,
     user: User = Depends(get_current_user),
-    range: str = Query("7d", description="Time range: 7d, 30d, or custom")
+    range: str = Query("7d", description="Time range: 7d, 30d, or custom"),
+    session: Session = Depends(get_session)
 ) -> dict:
     """Return current pipeline totals plus trend deltas from historical snapshots."""
     # Generate today's snapshot on the fly so totals are perfectly fresh,
     # without needing to wait for the 9 PM cron job.
     # We call the logic directly for the current user instead of the global cron trigger
-    stats = db_client.get_current_pipeline_stats(user.id)
+    stats = db_client.get_current_pipeline_stats(user.id, session=session)
     current_snapshot = DailySnapshot(
         date=date.today(),
         total_applications=stats["Total"],
@@ -46,10 +49,10 @@ def get_analytics_overview(
         calls_connected=stats["calls_connected"],
         interviews_attended=stats["interviews_attended"],
     )
-    db_client.save_daily_snapshot(user.id, current_snapshot)
+    db_client.save_daily_snapshot(user.id, current_snapshot, session=session)
     
     # Get history
-    history = db_client.list_daily_snapshots(user.id)
+    history = db_client.list_daily_snapshots(user.id, session=session)
     
     days_back = 7
     if range == "30d":
@@ -74,7 +77,7 @@ def get_analytics_overview(
             "response_rate": _compute_delta(current_snapshot.response_rate, past_snapshot.response_rate),
         }
         
-    sources = db_client.get_application_sources(user.id)
+    sources = db_client.get_application_sources(user.id, session=session)
 
     return {
         "current": current_snapshot.model_dump(),
@@ -88,10 +91,11 @@ def get_analytics_overview(
 @router.post("/snapshot")
 def trigger_snapshot(
     request: Request,
-    user: User = Depends(get_current_user)
+    user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
 ) -> DailySnapshot:
     """Manually trigger a daily snapshot write (for testing/verification)."""
-    stats = db_client.get_current_pipeline_stats(user.id)
+    stats = db_client.get_current_pipeline_stats(user.id, session=session)
     snapshot = DailySnapshot(
         date=date.today(),
         total_applications=stats["Total"],
@@ -106,5 +110,5 @@ def trigger_snapshot(
         calls_connected=stats["calls_connected"],
         interviews_attended=stats["interviews_attended"],
     )
-    db_client.save_daily_snapshot(user.id, snapshot)
+    db_client.save_daily_snapshot(user.id, snapshot, session=session)
     return snapshot
