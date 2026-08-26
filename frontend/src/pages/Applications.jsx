@@ -63,10 +63,21 @@ const STAGE_DROPDOWN_OPTIONS = [
   { label: 'Closed', value: 'Closed' }
 ]
 
+function getLocalDayStr(d) {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function getLocalTodayStr() {
+  return getLocalDayStr(new Date());
+}
+
 function getFutureDateStr(daysAhead) {
   const d = new Date()
   d.setDate(d.getDate() + daysAhead)
-  return d.toISOString().split('T')[0]
+  return getLocalDayStr(d)
 }
 
 function formatDateDisplay(dateStr) {
@@ -131,7 +142,7 @@ function NextActionCell({ action, onClick }) {
     )
   }
 
-  const today = new Date().toISOString().split('T')[0]
+  const today = getLocalTodayStr()
   const isOverdue = action.date && action.date < today && !action.completed
   const isToday = action.date && action.date === today && !action.completed
   const isCompleted = action.completed
@@ -377,6 +388,7 @@ function EditNextActionModal({ app, onClose, onSave, onRemove }) {
               <input
                 type="date"
                 required
+                min={getLocalTodayStr()}
                 className="w-full rounded-xl border border-transparent bg-surface-secondary hover:bg-surface-tertiary px-3.5 py-2.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-all [color-scheme:dark]"
                 value={form.date}
                 onChange={e => setForm({ ...form, date: e.target.value })}
@@ -688,6 +700,7 @@ function ApplicationModal({ isEdit, isOpen, onClose, onSubmit, onDelete, form, s
               <input
                 type="date"
                 required
+                max={getLocalTodayStr()}
                 className="w-full rounded-xl border border-transparent bg-surface-secondary hover:bg-surface-tertiary px-3.5 py-2.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-all [color-scheme:dark]"
                 value={form.date_applied || ''}
                 onChange={e => setForm({ ...form, date_applied: e.target.value })}
@@ -937,6 +950,7 @@ function ApplicationModal({ isEdit, isOpen, onClose, onSubmit, onDelete, form, s
                     <label className="block text-[11px] font-semibold text-foreground-secondary mb-1">Date</label>
                     <input
                       type="date"
+                      min={getLocalTodayStr()}
                       className="w-full rounded-lg border border-transparent bg-surface-secondary px-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary [color-scheme:dark]"
                       value={form.next_action_date}
                       onChange={e => setForm({ ...form, next_action_date: e.target.value })}
@@ -1162,7 +1176,7 @@ function ApplicationDetailsModal({ app, onClose, onEdit, onDelete, contacts = []
 }
 
 const EMPTY_FORM = {
-  date_applied: new Date().toISOString().split('T')[0],
+  date_applied: getLocalTodayStr(),
   company: '',
   job_title: '',
   location: '',
