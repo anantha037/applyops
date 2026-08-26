@@ -1985,6 +1985,7 @@ export default function Applications() {
               <tr className="text-[10px] font-extrabold uppercase tracking-wider text-foreground-secondary">
                 <th className="px-5 py-3.5 font-extrabold">Application</th>
                 <th className="px-5 py-3.5 font-extrabold">Status</th>
+                <th className="px-5 py-3.5 font-extrabold">Stage</th>
                 <th className="px-5 py-3.5 font-extrabold">Next Action</th>
                 <th className="px-5 py-3.5 font-extrabold">Remarks</th>
                 <th className="px-5 py-3.5 font-extrabold">Resume</th>
@@ -2007,6 +2008,9 @@ export default function Applications() {
                       <div className="h-6 w-24 rounded-full bg-surface-secondary" />
                     </td>
                     <td className="px-5 py-4">
+                      <div className="h-5 w-20 rounded bg-surface-secondary" />
+                    </td>
+                    <td className="px-5 py-4">
                       <div className="h-5 w-24 rounded bg-surface-secondary" />
                     </td>
                     <td className="px-5 py-4">
@@ -2019,7 +2023,7 @@ export default function Applications() {
                 ))
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-16 text-center text-xs text-muted">
+                  <td colSpan={6} className="py-16 text-center text-xs text-muted">
                     No applications match the current filter parameters.
                   </td>
                 </tr>
@@ -2062,6 +2066,17 @@ export default function Applications() {
                           value={app.status}
                           triggerClassName={STATUS_TRIGGER_CLASSES[app.status] || 'bg-surface-secondary text-foreground-secondary'}
                           onChange={val => updateAppStatus(app.id, val)}
+                          align="left"
+                        />
+                      </td>
+
+                      <td className="px-5 py-4">
+                        <Dropdown
+                          size="sm"
+                          options={STAGE_DROPDOWN_OPTIONS}
+                          value={app.stage}
+                          triggerClassName="bg-surface-secondary text-foreground-secondary hover:text-foreground hover:bg-surface-secondary"
+                          onChange={val => updateAppStage(app.id, val)}
                           align="left"
                         />
                       </td>
