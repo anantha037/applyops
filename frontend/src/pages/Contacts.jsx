@@ -3,6 +3,8 @@ import { useEffect, useState, useMemo, useCallback } from 'react'
 import { api } from '../api/client'
 import Dropdown from '../components/ui/Dropdown'
 import SearchableSelect from '../components/ui/SearchableSelect'
+import { useToast } from '../context/ToastContext'
+import ConfirmDeleteModal from '../components/ui/ConfirmDeleteModal'
 
 const MailIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 7.00005L10.2 11.65C11.2667 12.45 12.7333 12.45 13.8 11.65L20 7" /><rect x="3" y="5" width="18" height="14" rx="2" /></svg>
 const PhoneIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
@@ -331,7 +333,9 @@ export default function Contacts() {
   const [showAddModal, setShowAddModal] = useState(false)
   const [editContact, setEditContact] = useState(null)
   const [deleteContactId, setDeleteContactId] = useState(null)
-  const [deleteError, setDeleteError] = useState('')
+  const [deletingIds, setDeletingIds] = useState([])
+  const { addToast } = useToast()
+  const [isDeleting, setIsDeleting] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 10
 
@@ -372,14 +376,23 @@ export default function Contacts() {
   }
 
   const handleDeleteConfirm = async () => {
-    if (!deleteContactId) return
+    if (!deleteContactId || isDeleting) return
+    setIsDeleting(true)
+    const idToRemove = deleteContactId
     try {
-      await api.deleteContact(deleteContactId)
-      await load()
+      await api.deleteContact(idToRemove)
+      addToast('Contact deleted', 'success')
+      setDeletingIds(prev => [...prev, idToRemove])
       setDeleteContactId(null)
-      setDeleteError('')
+      setTimeout(() => {
+        setContacts(prev => prev.filter(c => c.id !== idToRemove))
+        setDeletingIds(prev => prev.filter(id => id !== idToRemove))
+      }, 200)
     } catch (err) {
-      setDeleteError(err.message || 'Failed to delete contact')
+      addToast(`Failed to delete contact: ${err.message}`, 'error')
+      setDeleteContactId(null)
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -571,7 +584,7 @@ export default function Contacts() {
               ) : paginated.map(c => {
                 const isApplied = c.applied || Boolean(c.application_method) || Boolean(c.application_id)
                 return (
-                  <tr key={c.id} className="hover:bg-surface-tertiary transition-colors group rounded-xl">
+                  <tr key={c.id} className={`hover:bg-surface-tertiary transition-all duration-200 group rounded-xl ${deletingIds.includes(c.id) ? 'opacity-0 scale-95 -translate-y-2 pointer-events-none' : ''}`}>
                     <td className="py-3.5 px-3.5">
                       <div className="flex items-center gap-2.5">
                         <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${getAvatarColor(c.name)}`}>
@@ -737,24 +750,14 @@ export default function Contacts() {
         )}
       </div>
 
-      {deleteContactId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in-80 duration-150" onClick={(e) => e.target === e.currentTarget && (setDeleteContactId(null), setDeleteError(''))}>
-          <div className="bg-surface rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden select-none border border-transparent">
-            <div className="p-6">
-              <h3 className="text-base font-bold text-foreground mb-2">Delete Contact</h3>
-              {deleteError ? (
-                <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-xs font-medium text-rose-400">{deleteError}</div>
-              ) : (
-                <p className="text-xs text-foreground-secondary mb-6">Are you sure you want to delete this contact?</p>
-              )}
-              <div className="flex items-center justify-end gap-3">
-                <button onClick={() => { setDeleteContactId(null); setDeleteError(''); }} className="px-4 py-2 text-xs font-semibold text-foreground-secondary hover:bg-surface-tertiary rounded-xl transition-colors">Cancel</button>
-                <button onClick={handleDeleteConfirm} className="px-4 py-2 text-xs font-semibold text-white bg-rose-500 hover:bg-rose-600 rounded-xl transition-colors shadow-2xs">Delete</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDeleteModal
+        isOpen={!!deleteContactId}
+        onClose={() => setDeleteContactId(null)}
+        onConfirm={handleDeleteConfirm}
+        isDeleting={isDeleting}
+        title="Delete Contact"
+        message="Are you sure you want to delete this contact?"
+      />
 
       {showAddModal && (
         <ContactModal

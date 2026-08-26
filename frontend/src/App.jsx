@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { GoalProvider } from './context/GoalContext'
+import { ToastProvider } from './context/ToastContext'
 import DashboardLayout from './components/layout/DashboardLayout'
 import Dashboard from './pages/Dashboard'
 import Applications from './pages/Applications'
@@ -81,14 +82,16 @@ export default function App() {
   }
 
   return (
-    <GoalProvider>
-      <DashboardLayout 
-        currentView={view} 
-        onViewChange={handleViewChange}
-        onLogout={handleLogout}
-      >
-        <View />
-      </DashboardLayout>
-    </GoalProvider>
+    <ToastProvider>
+      <GoalProvider>
+        <DashboardLayout 
+          currentView={view} 
+          onViewChange={handleViewChange}
+          onLogout={handleLogout}
+        >
+          <View />
+        </DashboardLayout>
+      </GoalProvider>
+    </ToastProvider>
   )
 }

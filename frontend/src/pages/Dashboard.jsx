@@ -177,7 +177,37 @@ export default function Dashboard() {
   )
 }
 
- function StatCard({ title, value, icon: Icon, gradient, iconColor, badge, badgePositive, loading }) {
+function CountUp({ value, duration = 800 }) {
+  const [displayValue, setDisplayValue] = useState(0)
+  
+  useEffect(() => {
+    if (value === '—') return
+    const isPercent = typeof value === 'string' && value.endsWith('%')
+    const numericValue = parseInt(String(value).replace(/[^0-9]/g, '')) || 0
+    let startTimestamp = null
+    let animationFrameId
+    
+    const step = (timestamp) => {
+      if (!startTimestamp) startTimestamp = timestamp
+      const progress = Math.min((timestamp - startTimestamp) / duration, 1)
+      const easeOut = 1 - Math.pow(1 - progress, 3) // Cubic ease-out
+      setDisplayValue(Math.floor(easeOut * numericValue))
+      
+      if (progress < 1) {
+        animationFrameId = window.requestAnimationFrame(step)
+      }
+    }
+    
+    animationFrameId = window.requestAnimationFrame(step)
+    return () => window.cancelAnimationFrame(animationFrameId)
+  }, [value, duration])
+
+  if (value === '—') return '—'
+  const isPercent = typeof value === 'string' && value.endsWith('%')
+  return isPercent ? `${displayValue}%` : displayValue
+}
+
+function StatCard({ title, value, icon: Icon, gradient, iconColor, badge, badgePositive, loading }) {
    return (
      <div className="group relative overflow-hidden rounded-2xl p-4 bg-surface-secondary hover:bg-surface-tertiary shadow-sm hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 hover:scale-[1.02] transition-all duration-300 ease-out cursor-pointer flex flex-col justify-between h-[124px]">
        {/* Ambient Subtle Radial Gradient Overlay */}
@@ -201,7 +231,7 @@ export default function Dashboard() {
            <div className="h-8 w-16 bg-foreground-secondary/20 rounded-md animate-pulse mt-1" />
          ) : (
            <span className="text-2xl lg:text-3xl font-extrabold text-foreground tracking-tight leading-none group-hover:translate-x-0.5 transition-transform duration-200 block">
-             {value}
+             <CountUp value={value} />
            </span>
          )}
        </div>

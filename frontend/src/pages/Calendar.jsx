@@ -12,6 +12,8 @@ import { api, activityApi } from '../api/client'
 import ActivityHeatmap from '../components/ActivityHeatmap'
 import Dropdown from '../components/ui/Dropdown'
 import SearchableSelect from '../components/ui/SearchableSelect'
+import { useToast } from '../context/ToastContext'
+import ConfirmDeleteModal from '../components/ui/ConfirmDeleteModal'
 import {
   Plus, X, ChevronLeft, ChevronRight, RefreshCw,
   Calendar as CalendarIcon, Phone, Target, ClipboardList, Bell, Sparkles, Filter,
@@ -134,7 +136,7 @@ function MiniCalendar({ selected, onSelect, eventDates = [] }) {
   )
 }
 
-function UpcomingEvents({ events = [], loading = false, selectedDate, onEditEvent, onDeleteEvent }) {
+function UpcomingEvents({ events = [], loading = false, selectedDate, onEditEvent, onDeleteEvent, deletingIds = [] }) {
   const [expandedId, setExpandedId] = useState(null)
 
   if (loading) {
@@ -200,7 +202,7 @@ function UpcomingEvents({ events = [], loading = false, selectedDate, onEditEven
                 const TypeIcon = cfg.Icon
                 const isExpanded = expandedId === ev.id
                 return (
-                  <div key={ev.id} className="flex flex-col rounded-xl bg-surface-secondary hover:bg-surface-tertiary transition-colors group overflow-hidden">
+                  <div key={ev.id} className={`flex flex-col rounded-xl bg-surface-secondary hover:bg-surface-tertiary transition-all duration-200 group overflow-hidden ${deletingIds.includes(ev.id) ? 'opacity-0 scale-95 -translate-y-2 pointer-events-none' : ''}`}>
                     <div 
                       className="flex items-center gap-2.5 p-2.5 cursor-pointer"
                       onClick={() => setExpandedId(isExpanded ? null : ev.id)}
@@ -491,6 +493,11 @@ export default function Calendar() {
   const [error, setError]               = useState('')
   const [loading, setLoading]           = useState(false)
   const [streakData, setStreakData]     = useState(null)
+  
+  const [deleteEventObj, setDeleteEventObj] = useState(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [deletingIds, setDeletingIds] = useState([])
+  const { addToast } = useToast()
 
   const [apps, setApps] = useState([])
   const [contacts, setContacts] = useState([])
@@ -539,12 +546,27 @@ export default function Calendar() {
   }
 
   const handleDeleteEvent = async (ev) => {
-    if (!window.confirm(`Are you sure you want to delete "${ev.title}"?`)) return
+    setDeleteEventObj(ev)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteEventObj || isDeleting) return
+    setIsDeleting(true)
+    const idToRemove = deleteEventObj.id
     try {
-      await api.deleteCalendarEvent(ev.id)
-      await load()
+      await api.deleteCalendarEvent(idToRemove)
+      addToast('Event removed', 'success')
+      setDeletingIds(prev => [...prev, idToRemove])
+      setDeleteEventObj(null)
+      setTimeout(() => {
+        setEvents(prev => prev.filter(e => e.id !== idToRemove))
+        setDeletingIds(prev => prev.filter(id => id !== idToRemove))
+      }, 200)
     } catch (e) {
-      setError(e.message)
+      addToast(`Failed to delete event: ${e.message}`, 'error')
+      setDeleteEventObj(null)
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -824,6 +846,7 @@ export default function Calendar() {
                   selectedDate={selectedDate} 
                   onEditEvent={handleEditEvent}
                   onDeleteEvent={handleDeleteEvent}
+                  deletingIds={deletingIds}
                 />
               </div>
             </div>
@@ -846,6 +869,15 @@ export default function Calendar() {
           contacts={contacts}
         />
       )}
+
+      <ConfirmDeleteModal
+        isOpen={!!deleteEventObj}
+        onClose={() => setDeleteEventObj(null)}
+        onConfirm={handleDeleteConfirm}
+        isDeleting={isDeleting}
+        title="Remove Event"
+        message="Are you sure you want to remove this calendar event?"
+      />
     </section>
   )
 }
