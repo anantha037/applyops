@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
 import Dropdown from './ui/Dropdown'
-import CountUp from './ui/CountUp'
-import DataSkeleton from './ui/DataSkeleton'
+import ValueLoader from './ui/ValueLoader'
 
 export default function ApplicationsByStatus({ summary = {}, loading = false }) {
   const [hoveredIndex, setHoveredIndex] = useState(null)
@@ -67,7 +66,7 @@ export default function ApplicationsByStatus({ summary = {}, loading = false }) 
       <div className="flex-1 flex flex-col xl:flex-row items-center justify-center xl:justify-between gap-6 my-auto pt-2 min-w-0">
         {/* Donut Chart Container */}
         <div className="relative w-44 h-44 flex-shrink-0 flex items-center justify-center">
-          <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
+          <svg viewBox="0 0 100 100" className={`w-full h-full transform -rotate-90 ${loading ? 'animate-spin transition-opacity duration-300' : ''}`}>
             {/* Background track circle */}
             <circle
               cx="50"
@@ -78,6 +77,20 @@ export default function ApplicationsByStatus({ summary = {}, loading = false }) 
               strokeWidth="14"
               opacity="0.5"
             />
+            {/* Indeterminate spinner track while loading */}
+            {loading && (
+              <circle
+                cx="50"
+                cy="50"
+                r={radius}
+                fill="transparent"
+                stroke="var(--foreground-secondary)"
+                strokeWidth="14"
+                strokeDasharray={`${radius * Math.PI} ${radius * Math.PI}`}
+                strokeDashoffset="0"
+                className="opacity-40"
+              />
+            )}
 
             {/* Interactive Donut Segments */}
             {segments.map((seg) => {
@@ -108,9 +121,12 @@ export default function ApplicationsByStatus({ summary = {}, loading = false }) 
           {/* Center Dynamic Label */}
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none transition-all duration-200">
             <span className="text-2xl font-extrabold text-foreground tracking-tight leading-none">
-              {loading ? <DataSkeleton className="h-6 w-8" /> : <CountUp value={activeItem ? activeItem.count : total} duration={800} />}
+              {/* Do not show the value loader spinner here, the ring itself is spinning */}
+              <span className={`transition-opacity duration-150 ${loading ? 'opacity-0' : 'opacity-100'}`}>
+                {loading ? <span className="invisible">0</span> : <ValueLoader loading={false} value={activeItem ? activeItem.count : total} />}
+              </span>
             </span>
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-foreground-secondary mt-1 max-w-[80px] truncate">
+            <span className={`text-[10px] font-semibold uppercase tracking-wider text-foreground-secondary mt-1 max-w-[80px] truncate transition-opacity duration-150 ${loading ? 'opacity-0' : 'opacity-100'}`}>
               {activeItem ? activeItem.label : 'Total'}
             </span>
           </div>
@@ -142,8 +158,8 @@ export default function ApplicationsByStatus({ summary = {}, loading = false }) 
                   <span className="truncate font-medium">{seg.label}</span>
                 </div>
                 <div className="flex items-center gap-1 font-semibold text-foreground flex-shrink-0 ml-2">
-                  <span>{loading ? <DataSkeleton className="h-3 w-4" /> : <CountUp value={seg.count} duration={800} />}</span>
-                  <span className="text-[11px] text-foreground-secondary font-normal">({loading ? <DataSkeleton className="h-3 w-4" /> : <CountUp value={`${seg.percent}%`} duration={800} />})</span>
+                  <span><ValueLoader loading={loading} value={seg.count} spinnerClass="h-3 w-3" /></span>
+                  <span className="text-[11px] text-foreground-secondary font-normal">(<ValueLoader loading={loading} value={`${seg.percent}%`} spinnerClass="h-3 w-3" />)</span>
                 </div>
               </div>
             )

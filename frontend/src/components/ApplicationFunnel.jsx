@@ -125,31 +125,37 @@ export default function ApplicationFunnel({ summary = {}, loading = false }) {
                   }}
                 />
 
-                {loading ? (
-                  <rect
-                    x={c.cx - 16}
-                    y={c.cy - 6}
-                    width="32"
-                    height="12"
-                    rx="4"
-                    fill="var(--foreground-secondary)"
-                    opacity="0.2"
-                    className="animate-pulse"
+                {/* Loading Spinner */}
+                <g className={`transition-opacity duration-150 ${loading ? 'opacity-100' : 'opacity-0'}`}>
+                  <circle
+                    cx={c.cx}
+                    cy={c.cy}
+                    r="8"
+                    fill="none"
+                    stroke="var(--surface-tertiary)"
+                    strokeWidth="3"
                   />
-                ) : (
-                  <text
-                    x={c.cx}
-                    y={c.cy + 5}
-                    textAnchor="middle"
-                    fill="#FFFFFF"
-                    fontSize="15"
-                    fontWeight="800"
-                    className="pointer-events-none drop-shadow-xs transition-opacity duration-200"
-                    style={{ opacity: hoveredIndex === null || isHovered ? 1 : 0.6 }}
-                  >
-                    <CountUp value={stage.count} duration={800} />
-                  </text>
-                )}
+                  <path
+                    d={`M ${c.cx} ${c.cy - 8} A 8 8 0 0 1 ${c.cx + 8} ${c.cy}`}
+                    fill="none"
+                    stroke="var(--foreground-secondary)"
+                    strokeWidth="3"
+                    className="origin-center animate-spin"
+                    style={{ transformOrigin: `${c.cx}px ${c.cy}px` }}
+                  />
+                </g>
+
+                <text
+                  x={c.cx}
+                  y={c.cy + 5}
+                  textAnchor="middle"
+                  fill="#FFFFFF"
+                  fontSize="15"
+                  fontWeight="800"
+                  className={`pointer-events-none drop-shadow-xs transition-opacity duration-150 ${loading ? 'opacity-0' : (hoveredIndex === null || isHovered ? 'opacity-100' : 'opacity-60')}`}
+                >
+                  <CountUp value={stage.count} duration={800} />
+                </text>
 
                 {/* Connector hairline guide line */}
                 <line
@@ -175,7 +181,9 @@ export default function ApplicationFunnel({ summary = {}, loading = false }) {
                   {stage.label}
                   {isHovered && (
                     <tspan fill={stage.grad[0]} fontWeight="800" dx="6">
-                      {loading ? '' : <CountUp value={`(${stage.percent}%)`} duration={800} />}
+                      <tspan className={`transition-opacity duration-150 ${loading ? 'opacity-0' : 'opacity-100'}`}>
+                        (<CountUp value={`${stage.percent}%`} duration={800} />)
+                      </tspan>
                     </tspan>
                   )}
                 </text>

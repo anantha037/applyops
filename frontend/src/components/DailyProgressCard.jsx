@@ -1,8 +1,7 @@
 import React, { useState } from 'react'
 import { TrendingUp, ArrowUpRight, Calendar, Sparkles } from 'lucide-react'
 import Dropdown from './ui/Dropdown'
-import CountUp from './ui/CountUp'
-import DataSkeleton from './ui/DataSkeleton'
+import ValueLoader from './ui/ValueLoader'
 import { useGoalContext } from '../context/GoalContext'
 
 export default function DailyProgressCard({ data: propData, loading = false }) {
@@ -206,10 +205,12 @@ export default function DailyProgressCard({ data: propData, loading = false }) {
         {/* Metric 1: Today */}
         <div className="flex flex-col gap-0.5">
           <span className="text-[10px] font-semibold text-foreground-secondary uppercase tracking-wider">Today</span>
-          <div className="flex items-baseline gap-1.5">
-            <span className="text-base font-extrabold text-foreground">{loading ? <DataSkeleton className="h-4 w-6" /> : <CountUp value={todayCount} duration={800} />}</span>
+          <div className="flex items-baseline gap-1.5 min-h-[1.5rem]">
+            <span className="text-base font-extrabold text-foreground">
+              <ValueLoader loading={loading} value={todayCount} />
+            </span>
             <span className="text-[10px] font-bold text-emerald-500 flex items-center gap-0.5">
-              ▲ +{loading ? <DataSkeleton className="h-3 w-4" /> : <CountUp value={`${dayChangePct}%`} duration={800} />}
+              ▲ +<ValueLoader loading={loading} value={`${dayChangePct}%`} spinnerClass="h-3 w-3 border-2" />
             </span>
           </div>
         </div>
@@ -217,8 +218,10 @@ export default function DailyProgressCard({ data: propData, loading = false }) {
         <div className="flex flex-col gap-0.5">
           <span className="text-[10px] font-semibold text-foreground-secondary uppercase tracking-wider">Weekly Goal</span>
           {weeklyGoal > 0 ? (
-            <div className="flex items-center gap-2">
-              <span className="text-base font-extrabold text-foreground">{loading ? <DataSkeleton className="h-4 w-5" /> : <CountUp value={weeklyApplications} duration={800} />} / {weeklyGoal}</span>
+            <div className="flex items-center gap-2 min-h-[1.5rem]">
+              <span className="text-base font-extrabold text-foreground">
+                <ValueLoader loading={loading} value={weeklyApplications} /> / {weeklyGoal}
+              </span>
               <div className="flex-1 h-1.5 bg-surface-tertiary rounded-full overflow-hidden" title={`${weeklyProgress}% complete`}>
                 <div className="h-full bg-primary rounded-full transition-all duration-500" style={{ width: loading ? '0%' : `${Math.min(100, weeklyProgress)}%` }} />
               </div>
@@ -231,14 +234,16 @@ export default function DailyProgressCard({ data: propData, loading = false }) {
         {/* Metric 3: Daily Average */}
         <div className="flex flex-col gap-0.5">
           <span className="text-[10px] font-semibold text-foreground-secondary uppercase tracking-wider">Daily Avg</span>
-          <span className="text-base font-extrabold text-foreground">{loading ? <DataSkeleton className="h-4 w-6" /> : <CountUp value={dailyAvg} duration={800} />} <span className="text-[10px] font-medium text-foreground-secondary">/day</span></span>
+          <span className="text-base font-extrabold text-foreground min-h-[1.5rem]">
+            <ValueLoader loading={loading} value={dailyAvg} /> <span className="text-[10px] font-medium text-foreground-secondary">/day</span>
+          </span>
         </div>
 
         {/* Metric 4: vs Last Week */}
         <div className="flex flex-col gap-0.5">
           <span className="text-[10px] font-semibold text-foreground-secondary uppercase tracking-wider">vs Last Week</span>
-          <span className="text-base font-extrabold text-emerald-500 flex items-center gap-1">
-            ▲ +{loading ? <DataSkeleton className="h-4 w-6" /> : <CountUp value="18%" duration={800} />} <span className="text-[10px] font-medium text-foreground-secondary">pace</span>
+          <span className="text-base font-extrabold text-emerald-500 flex items-center gap-1 min-h-[1.5rem]">
+            ▲ +<ValueLoader loading={loading} value="18%" /> <span className="text-[10px] font-medium text-foreground-secondary">pace</span>
           </span>
         </div>
       </div>

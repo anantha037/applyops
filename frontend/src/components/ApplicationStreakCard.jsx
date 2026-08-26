@@ -1,8 +1,7 @@
 import React, { useState, useRef } from 'react'
 import { Flame, ArrowRight } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
-import CountUp from './ui/CountUp'
-import DataSkeleton from './ui/DataSkeleton'
+import ValueLoader from './ui/ValueLoader'
 
 const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
 
@@ -113,14 +112,14 @@ export default function ApplicationStreakCard({ data: propData, onViewHistory, l
         </div>
         {bestStreak > 0 ? (
           <span className="text-[10px] font-medium text-muted tabular-nums">
-            Best {loading ? <DataSkeleton className="h-3 w-4" /> : <CountUp value={bestStreak} duration={800} />}d
+            Best <ValueLoader loading={loading} value={bestStreak} spinnerClass="h-3 w-3" />d
           </span>
         ) : null}
       </div>
 
-      <div className="mb-1">
+      <div className="mb-1 min-h-[2.25rem] flex items-center">
         <span className="text-[2.25rem] font-extrabold text-foreground leading-none tracking-tight tabular-nums">
-          {loading ? <DataSkeleton className="h-8 w-10 mt-1 mb-1" /> : <CountUp value={currentStreak} duration={800} />}
+          <ValueLoader loading={loading} value={currentStreak} spinnerClass="h-6 w-6 border-2" />
         </span>
         <span className="ml-2 text-xs font-semibold uppercase tracking-widest text-foreground-secondary/80">
           day streak
@@ -138,8 +137,8 @@ export default function ApplicationStreakCard({ data: propData, onViewHistory, l
         <span className="text-[10px] font-medium text-foreground-secondary">
           14-day activity
         </span>
-        <span className="text-[10px] text-muted tabular-nums">
-          {loading ? <DataSkeleton className="h-3 w-4" /> : <CountUp value={totalApplications} duration={800} />} apps · {loading ? <DataSkeleton className="h-3 w-4" /> : <CountUp value={activeDays} duration={800} />} active
+        <span className="text-[10px] text-muted tabular-nums min-h-[1.25rem] flex items-center gap-1">
+          <ValueLoader loading={loading} value={totalApplications} spinnerClass="h-3 w-3" /> apps · <ValueLoader loading={loading} value={activeDays} spinnerClass="h-3 w-3" /> active
         </span>
       </div>
 
