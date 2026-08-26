@@ -462,69 +462,72 @@ def create_application(
     contact_role:  str | None = None,
     contact_linkedin: str | None = None,
     resume_id:     str | None = None,
+    session: Session | None = None,
 ) -> Application:
     """Create a new application row.
 
     Inline contact fields trigger find_or_create_contact().  resume_id must
     reference an existing resumes row (or be None).
     """
-    with Session(engine) as session:
+    if session is None:
+        with Session(engine) as s:
+            return create_application(user_id, payload, contact_name=contact_name, contact_email=contact_email, contact_phone=contact_phone, contact_role=contact_role, contact_linkedin=contact_linkedin, resume_id=resume_id, session=s)
         contact_id: str | None = payload.get("contact_id")
-        if contact_id == "":
-            contact_id = None
-        
-        # Verify explicit contact_id ownership
-        if contact_id is not None:
-            if not verify_owned(session, Contact, contact_id, user_id):
-                raise ValueError("Invalid or unauthorized contact_id")
+    if contact_id == "":
+        contact_id = None
+    
+    # Verify explicit contact_id ownership
+    if contact_id is not None:
+        if not verify_owned(session, Contact, contact_id, user_id):
+            raise ValueError("Invalid or unauthorized contact_id")
 
-        if not contact_id and any([contact_name, contact_email, contact_phone, contact_linkedin]):
-            contact = find_or_create_contact(
-                session,
-                user_id,
-                name=contact_name,
-                email=contact_email,
-                phone=contact_phone,
-                role=contact_role,
-                company=payload.get("company"),
-                linkedin_url=contact_linkedin,
-            )
-            contact_id = contact.id if contact else None
-
-        if resume_id is not None:
-            resume_row = session.get(Resume, resume_id)
-            if not resume_row or resume_row.user_id != user_id:
-                raise ValueError("Invalid or unauthorized resume_id")
-
-        app_id = payload.get("id") or _new_id()
-        row = DBApplication(
-            id=app_id,
-            user_id=user_id,
-            date_applied=payload["date_applied"],
-            company=payload["company"],
-            job_title=payload["job_title"],
-            jd_summary=payload.get("jd_summary") or None,
-            location=payload.get("location") or None,
-            application_method=payload.get("application_method") or None,
-            contact_id=contact_id,
-            resume_id=resume_id,
-            ctc=payload.get("ctc") or None,
-            status=payload.get("status", "Not Contacted"),
-            stage=payload.get("stage", "Applied"),
-            last_touch_date=payload.get("last_touch_date"),
-            next_action_due=payload.get("next_action_due"),
-            next_action_type=payload.get("next_action_type"),
-            next_action_title=payload.get("next_action_title"),
-            interview_date=payload.get("interview_date"),
-            interview_round=payload.get("interview_round") or None,
-            interview_attended=payload.get("interview_attended"),
-            latest_update=payload.get("latest_update") or None,
-            remarks=payload.get("remarks") or None,
+    if not contact_id and any([contact_name, contact_email, contact_phone, contact_linkedin]):
+        contact = find_or_create_contact(
+            session,
+            user_id,
+            name=contact_name,
+            email=contact_email,
+            phone=contact_phone,
+            role=contact_role,
+            company=payload.get("company"),
+            linkedin_url=contact_linkedin,
         )
-        session.add(row)
-        session.commit()
-        session.refresh(row)
-        return _app_to_pydantic(row)
+        contact_id = contact.id if contact else None
+
+    if resume_id is not None:
+        resume_row = session.get(Resume, resume_id)
+        if not resume_row or resume_row.user_id != user_id:
+            raise ValueError("Invalid or unauthorized resume_id")
+
+    app_id = payload.get("id") or _new_id()
+    row = DBApplication(
+        id=app_id,
+        user_id=user_id,
+        date_applied=payload["date_applied"],
+        company=payload["company"],
+        job_title=payload["job_title"],
+        jd_summary=payload.get("jd_summary") or None,
+        location=payload.get("location") or None,
+        application_method=payload.get("application_method") or None,
+        contact_id=contact_id,
+        resume_id=resume_id,
+        ctc=payload.get("ctc") or None,
+        status=payload.get("status", "Not Contacted"),
+        stage=payload.get("stage", "Applied"),
+        last_touch_date=payload.get("last_touch_date"),
+        next_action_due=payload.get("next_action_due"),
+        next_action_type=payload.get("next_action_type"),
+        next_action_title=payload.get("next_action_title"),
+        interview_date=payload.get("interview_date"),
+        interview_round=payload.get("interview_round") or None,
+        interview_attended=payload.get("interview_attended"),
+        latest_update=payload.get("latest_update") or None,
+        remarks=payload.get("remarks") or None,
+    )
+    session.add(row)
+    session.commit()
+    session.refresh(row)
+    return _app_to_pydantic(row)
 
 
 def update_application(
@@ -794,15 +797,20 @@ def list_calendar_events(
     user_id: str,
     start: date | None = None,
     end:   date | None = None,
+    *,
+    session: Session | None = None,
 ) -> list[CalendarEvent]:
-    with Session(engine) as session:
-        stmt = select(DBCalendarEvent).where(DBCalendarEvent.user_id == user_id).order_by(DBCalendarEvent.event_date)
-        if start:
-            stmt = stmt.where(DBCalendarEvent.event_date >= start)
-        if end:
-            stmt = stmt.where(DBCalendarEvent.event_date <= end)
-        rows = session.exec(stmt).all()
-        return [_calendar_to_pydantic(r) for r in rows]
+    if session is None:
+        with Session(engine) as s:
+            return list_calendar_events(user_id=user_id, start=start, end=end, session=s)
+    
+    stmt = select(DBCalendarEvent).where(DBCalendarEvent.user_id == user_id).order_by(DBCalendarEvent.event_date)
+    if start:
+        stmt = stmt.where(DBCalendarEvent.event_date >= start)
+    if end:
+        stmt = stmt.where(DBCalendarEvent.event_date <= end)
+    rows = session.exec(stmt).all()
+    return [_calendar_to_pydantic(r) for r in rows]
 
 
 def get_calendar_event(user_id: str, event_id: str, *, session: Session | None = None) -> CalendarEvent | None:
@@ -918,64 +926,68 @@ def sync_followup_event(
     next_action_type: str | None = None,
     next_action_title: str | None = None,
     event_id_factory=lambda: str(uuid.uuid4()),
+    *,
+    session: Session | None = None,
 ) -> None:
     """Keep the auto-generated follow-up calendar event in sync."""
-    with Session(engine) as session:
+    if session is None:
+        with Session(engine) as s:
+            return sync_followup_event(user_id, application_id, company, next_action_due, next_action_type, next_action_title, event_id_factory, session=s)
         stmt = select(DBCalendarEvent).where(
-            DBCalendarEvent.user_id == user_id,
-            DBCalendarEvent.related_application_id == application_id,
-            DBCalendarEvent.source == CalendarEventSource.AUTO,
-            DBCalendarEvent.event_type != CalendarEventType.INTERVIEW
-        )
-        existing = session.exec(stmt).first()
+        DBCalendarEvent.user_id == user_id,
+        DBCalendarEvent.related_application_id == application_id,
+        DBCalendarEvent.source == CalendarEventSource.AUTO,
+        DBCalendarEvent.event_type != CalendarEventType.INTERVIEW
+    )
+    existing = session.exec(stmt).first()
 
-        if next_action_due is None:
-            if existing:
-                session.delete(existing)
-                session.commit()
-            return
-
-        title = next_action_title or f"{company} - Follow-up"
-
-        # Coerce frontend action-type strings to valid CalendarEventType values.
-        # The frontend uses human labels ('Follow Up', 'Recruiter Call', …) that
-        # don't match the DB enum.  Map anything that isn't already a valid type
-        # to the nearest sensible CalendarEventType.
-        _TYPE_MAP: dict[str, str] = {
-            "follow up":              CalendarEventType.FOLLOW_UP,
-            "follow-up":              CalendarEventType.FOLLOW_UP,
-            "recruiter call":         CalendarEventType.RECRUITER_CALL,
-            "send email":             CalendarEventType.SEND_EMAIL,
-            "send thank-you":         CalendarEventType.SEND_THANK_YOU,
-            "prepare for interview":  CalendarEventType.PREPARE_FOR_INTERVIEW,
-            "review offer":           CalendarEventType.REVIEW_OFFER,
-            "custom":                 CalendarEventType.CUSTOM,
-        }
-        valid_types = {e.value for e in CalendarEventType}
-        raw_type = (next_action_type or "").strip()
-        if raw_type in valid_types:
-            event_type: str = raw_type
-        else:
-            event_type = _TYPE_MAP.get(raw_type.lower(), CalendarEventType.FOLLOW_UP)
-
+    if next_action_due is None:
         if existing:
-            existing.event_date = next_action_due
-            existing.title = title
-            existing.event_type = event_type
-            session.add(existing)
-        else:
-            row = DBCalendarEvent(
-                id=event_id_factory(),
-                user_id=user_id,
-                title=title,
-                event_type=event_type,
-                event_date=next_action_due,
-                related_application_id=application_id,
-                notes=None,
-                source=CalendarEventSource.AUTO,
-            )
-            session.add(row)
-        session.commit()
+            session.delete(existing)
+            session.commit()
+        return
+
+    title = next_action_title or f"{company} - Follow-up"
+
+    # Coerce frontend action-type strings to valid CalendarEventType values.
+    # The frontend uses human labels ('Follow Up', 'Recruiter Call', …) that
+    # don't match the DB enum.  Map anything that isn't already a valid type
+    # to the nearest sensible CalendarEventType.
+    _TYPE_MAP: dict[str, str] = {
+        "follow up":              CalendarEventType.FOLLOW_UP,
+        "follow-up":              CalendarEventType.FOLLOW_UP,
+        "recruiter call":         CalendarEventType.RECRUITER_CALL,
+        "send email":             CalendarEventType.SEND_EMAIL,
+        "send thank-you":         CalendarEventType.SEND_THANK_YOU,
+        "prepare for interview":  CalendarEventType.PREPARE_FOR_INTERVIEW,
+        "review offer":           CalendarEventType.REVIEW_OFFER,
+        "custom":                 CalendarEventType.CUSTOM,
+    }
+    valid_types = {e.value for e in CalendarEventType}
+    raw_type = (next_action_type or "").strip()
+    if raw_type in valid_types:
+        event_type: str = raw_type
+    else:
+        event_type = _TYPE_MAP.get(raw_type.lower(), CalendarEventType.FOLLOW_UP)
+
+    if existing:
+        existing.event_date = next_action_due
+        existing.title = title
+        existing.event_type = event_type
+        session.add(existing)
+    else:
+        row = DBCalendarEvent(
+            id=event_id_factory(),
+            user_id=user_id,
+            title=title,
+            event_type=event_type,
+            event_date=next_action_due,
+            related_application_id=application_id,
+            notes=None,
+            source=CalendarEventSource.AUTO,
+        )
+        session.add(row)
+    session.commit()
 
 
 def sync_interview_event(
@@ -985,33 +997,37 @@ def sync_interview_event(
     interview_date: date | None,
     interview_round: str,
     event_id_factory=lambda: str(uuid.uuid4()),
+    *,
+    session: Session | None = None,
 ) -> None:
-    with Session(engine) as session:
+    if session is None:
+        with Session(engine) as s:
+            return sync_interview_event(user_id, application_id, company, interview_date, interview_round, event_id_factory, session=s)
         existing = _find_auto_event(session, user_id, application_id, CalendarEventType.INTERVIEW)
-        if interview_date is None:
-            if existing:
-                session.delete(existing)
-                session.commit()
-            return
-
-        title = f"{company} - {interview_round or 'Interview'}"
+    if interview_date is None:
         if existing:
-            existing.event_date = interview_date
-            existing.title = title
-            session.add(existing)
-        else:
-            row = DBCalendarEvent(
-                id=event_id_factory(),
-                user_id=user_id,
-                title=title,
-                event_type=CalendarEventType.INTERVIEW,
-                event_date=interview_date,
-                related_application_id=application_id,
-                notes=None,
-                source=CalendarEventSource.AUTO,
-            )
-            session.add(row)
-        session.commit()
+            session.delete(existing)
+            session.commit()
+        return
+
+    title = f"{company} - {interview_round or 'Interview'}"
+    if existing:
+        existing.event_date = interview_date
+        existing.title = title
+        session.add(existing)
+    else:
+        row = DBCalendarEvent(
+            id=event_id_factory(),
+            user_id=user_id,
+            title=title,
+            event_type=CalendarEventType.INTERVIEW,
+            event_date=interview_date,
+            related_application_id=application_id,
+            notes=None,
+            source=CalendarEventSource.AUTO,
+        )
+        session.add(row)
+    session.commit()
 
 
 # ---------------------------------------------------------------------------
@@ -1023,6 +1039,7 @@ def get_current_pipeline_stats(user_id: str, *, session: Session | None = None) 
     if session is None:
         with Session(engine) as s:
             return get_current_pipeline_stats(user_id=user_id, session=s)
+    
     # Applications counts
     app_counts = session.exec(
         select(DBApplication.status, func.count(DBApplication.id))
@@ -1034,50 +1051,50 @@ def get_current_pipeline_stats(user_id: str, *, session: Session | None = None) 
 
     # Response rate
     total_contacted = session.exec(
-        select(func.count(DBApplication.id))
-        .where(
-            DBApplication.user_id == user_id,
-            DBApplication.status != "Not Contacted"
-        )
+    select(func.count(DBApplication.id))
+    .where(
+        DBApplication.user_id == user_id,
+        DBApplication.status != "Not Contacted"
+    )
     ).one()
     
     responded_subq = select(ActivityLog.application_id).where(
-        ActivityLog.user_id == user_id,
-        col(ActivityLog.action_type).in_(["Call Connected", "Interview Completed"]),
-        ActivityLog.application_id.is_not(None)
+    ActivityLog.user_id == user_id,
+    col(ActivityLog.action_type).in_(["Call Connected", "Interview Completed"]),
+    ActivityLog.application_id.is_not(None)
     ).distinct()
     
     contacted_and_responded = session.exec(
-        select(func.count(DBApplication.id))
-        .where(
-            DBApplication.user_id == user_id,
-            DBApplication.status != "Not Contacted",
-            col(DBApplication.id).in_(responded_subq)
-        )
+    select(func.count(DBApplication.id))
+    .where(
+        DBApplication.user_id == user_id,
+        DBApplication.status != "Not Contacted",
+        col(DBApplication.id).in_(responded_subq)
+    )
     ).one()
     
     response_rate = (contacted_and_responded / total_contacted * 100) if total_contacted > 0 else 0.0
     
     # Activity counts
     act_counts = session.exec(
-        select(ActivityLog.action_type, func.count(ActivityLog.id))
-        .where(ActivityLog.user_id == user_id)
-        .group_by(ActivityLog.action_type)
+    select(ActivityLog.action_type, func.count(ActivityLog.id))
+    .where(ActivityLog.user_id == user_id)
+    .group_by(ActivityLog.action_type)
     ).all()
     activities = {atype: count for atype, count in act_counts}
     
     return {
-        "Total": total,
-        "Not Contacted": counts.get("Not Contacted", 0),
-        "In Progress": counts.get("In Progress", 0),
-        "Interviewing": counts.get("Interviewing", 0),
-        "Offer Received": counts.get("Offer Received", 0),
-        "Rejected": counts.get("Rejected", 0),
-        "Ghosted": counts.get("Ghosted", 0),
-        "response_rate": response_rate,
-        "calls_dialed": activities.get("Call Dialed", 0),
-        "calls_connected": activities.get("Call Connected", 0),
-        "interviews_attended": activities.get("Interview Completed", 0)
+    "Total": total,
+    "Not Contacted": counts.get("Not Contacted", 0),
+    "In Progress": counts.get("In Progress", 0),
+    "Interviewing": counts.get("Interviewing", 0),
+    "Offer Received": counts.get("Offer Received", 0),
+    "Rejected": counts.get("Rejected", 0),
+    "Ghosted": counts.get("Ghosted", 0),
+    "response_rate": response_rate,
+    "calls_dialed": activities.get("Call Dialed", 0),
+    "calls_connected": activities.get("Call Connected", 0),
+    "interviews_attended": activities.get("Interview Completed", 0)
     }
 
 def get_application_sources(user_id: str, *, session: Session | None = None) -> dict[str, int]:
@@ -1085,6 +1102,7 @@ def get_application_sources(user_id: str, *, session: Session | None = None) -> 
     if session is None:
         with Session(engine) as s:
             return get_application_sources(user_id=user_id, session=s)
+    
     rows = session.exec(
         select(DBApplication.application_method, func.count(DBApplication.id))
         .where(DBApplication.user_id == user_id)
