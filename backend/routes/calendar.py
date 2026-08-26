@@ -9,6 +9,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from backend.auth import get_current_user
 from backend.db.models import User
+from backend.db.session import get_session
+from sqlmodel import Session
 from backend.models import (
     CalendarEvent,
     CalendarEventCreate,
@@ -26,13 +28,14 @@ def list_events(
     user: User = Depends(get_current_user),
     start: date | None = Query(default=None),
     end:   date | None = Query(default=None),
+    session: Session = Depends(get_session),
 ) -> list[CalendarEvent]:
     """Return all calendar events, optionally filtered to a date range."""
-    return db_client.list_calendar_events(user.id, start=start, end=end)
+    return db_client.list_calendar_events(user.id, start=start, end=end, session=session)
 
 
 @router.post("/events", response_model=CalendarEvent, status_code=status.HTTP_201_CREATED)
-def create_event(payload: CalendarEventCreate, request: Request, user: User = Depends(get_current_user)) -> CalendarEvent:
+def create_event(payload: CalendarEventCreate, request: Request, user: User = Depends(get_current_user), session: Session = Depends(get_session)) -> CalendarEvent:
     """Create a manual calendar event (Personal / Reminder / Application Deadline)."""
     event = CalendarEvent(
         id=str(uuid4()),
@@ -43,7 +46,7 @@ def create_event(payload: CalendarEventCreate, request: Request, user: User = De
     # Override source to MANUAL — this endpoint is only for manual events.
     event = event.model_copy(update={"source": CalendarEventSource.MANUAL})
     try:
-        return db_client.create_calendar_event(user.id, event)
+        return db_client.create_calendar_event(user.id, event, session=session)
     except ValueError as e:
         if "unauthorized" in str(e).lower():
             raise HTTPException(status_code=403, detail=str(e))
@@ -52,9 +55,9 @@ def create_event(payload: CalendarEventCreate, request: Request, user: User = De
 
 @router.patch("/events/{event_id}", response_model=CalendarEvent)
 def update_event(
-    event_id: str, payload: CalendarEventUpdate, request: Request, user: User = Depends(get_current_user)
+    event_id: str, payload: CalendarEventUpdate, request: Request, user: User = Depends(get_current_user), session: Session = Depends(get_session)
 ) -> CalendarEvent:
-    existing = db_client.get_calendar_event(user.id, event_id)
+    existing = db_client.get_calendar_event(user.id, event_id, session=session)
     if existing is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Calendar event not found")
 
@@ -65,7 +68,7 @@ def update_event(
     updated = existing.model_copy(update=changes)
     
     try:
-        result = db_client.update_calendar_event(user.id, updated)
+        result = db_client.update_calendar_event(user.id, updated, session=session)
     except ValueError as e:
         if "unauthorized" in str(e).lower():
             raise HTTPException(status_code=403, detail=str(e))
@@ -77,6 +80,6 @@ def update_event(
 
 
 @router.delete("/events/{event_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_event(event_id: str, request: Request, user: User = Depends(get_current_user)) -> None:
-    if not db_client.delete_calendar_event(user.id, event_id):
+def delete_event(event_id: str, request: Request, user: User = Depends(get_current_user), session: Session = Depends(get_session)) -> None:
+    if not db_client.delete_calendar_event(user.id, event_id, session=session):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Calendar event not found")
