@@ -1716,7 +1716,7 @@ export default function Applications() {
   const filtered = apps.filter(a => {
     const matchStatus = filterStatus === 'All' || a.status === filterStatus
     const isTerminalStatus = ['Offer Received', 'Rejected', 'Ghosted'].includes(a.status)
-    const matchStage = filterStage === 'All' || a.stage === filterStage || (filterStage === 'Closed' && isTerminalStatus)
+    const matchStage = filterStage === 'All' || (isTerminalStatus ? filterStage === 'Closed' : a.stage === filterStage)
     const matchSearch = !search || [a.company, a.job_title].some(f => f?.toLowerCase().includes(search.toLowerCase()))
     let matchDate = true
     if (filterDateRange !== 'All Time') {
