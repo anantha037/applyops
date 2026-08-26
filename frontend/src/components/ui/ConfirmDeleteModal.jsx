@@ -1,6 +1,6 @@
 import React from 'react'
 
-export default function ConfirmDeleteModal({ isOpen, onClose, onConfirm, isDeleting, title, message }) {
+export default function ConfirmDeleteModal({ isOpen, onClose, onConfirm, isDeleting, title, message, confirmText = 'Delete', confirmingText = 'Deleting...', confirmStyle = 'bg-rose-500 hover:bg-rose-600' }) {
   if (!isOpen) return null
 
   return (
@@ -11,9 +11,9 @@ export default function ConfirmDeleteModal({ isOpen, onClose, onConfirm, isDelet
           <p className="text-xs text-foreground-secondary mb-6">{message || 'Are you sure you want to delete this?'}</p>
           <div className="flex items-center justify-end gap-3">
             <button onClick={onClose} disabled={isDeleting} className="px-4 py-2 text-xs font-semibold text-foreground-secondary hover:bg-surface-tertiary rounded-xl transition-colors disabled:opacity-50">Cancel</button>
-            <button onClick={onConfirm} disabled={isDeleting} className="px-4 py-2 text-xs font-semibold text-white bg-rose-500 hover:bg-rose-600 rounded-xl transition-colors shadow-2xs disabled:opacity-50 flex items-center gap-2">
+            <button onClick={onConfirm} disabled={isDeleting} className={`px-4 py-2 text-xs font-semibold text-white ${confirmStyle} rounded-xl transition-colors shadow-2xs disabled:opacity-50 flex items-center gap-2`}>
               {isDeleting && <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
-              {isDeleting ? 'Deleting...' : 'Delete'}
+              {isDeleting ? confirmingText : confirmText}
             </button>
           </div>
         </div>
