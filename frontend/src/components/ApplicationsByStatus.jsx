@@ -15,7 +15,6 @@ export default function ApplicationsByStatus({ summary = {}, loading = false }) 
     { label: 'Offer Received',count: funnel['Offer Received'] ?? 0, color: '#10B981' },
     { label: 'Rejected',      count: funnel['Rejected'] ?? 0,       color: '#EF4444' },
     { label: 'Ghosted',       count: funnel['Ghosted'] ?? 0,      color: '#F97316' },
-    { label: 'Closed',        count: funnel['Closed'] ?? 0,       color: '#0D9488' },
   ]
 
   const total = defaultStatusData.reduce((acc, item) => acc + item.count, 0) || 1
