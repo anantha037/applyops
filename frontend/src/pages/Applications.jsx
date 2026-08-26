@@ -994,7 +994,7 @@ function ApplicationModal({ isEdit, isOpen, onClose, onSubmit, onDelete, form, s
   )
 }
 
-function ApplicationDetailsModal({ app, onClose, onEdit, onDelete }) {
+function ApplicationDetailsModal({ app, onClose, onEdit, onDelete, contacts = [], onUnlinkContact, unlinkingIds = [] }) {
   if (!app) return null
 
   return (
@@ -1055,37 +1055,67 @@ function ApplicationDetailsModal({ app, onClose, onEdit, onDelete }) {
           )}
 
           {(app.contact_name || app.contact_email || app.contact_id) && (
-            <div className="p-3.5 rounded-xl bg-surface-secondary border border-transparent space-y-2">
-              <p className="text-[11px] font-bold text-foreground-secondary uppercase tracking-wider">Contact</p>
-              {app.contact_name && (
-                <p className="text-sm font-bold text-foreground">
-                  {app.contact_name}
-                  {app.contact_role && <span className="text-xs font-medium text-foreground-secondary ml-1.5">· {app.contact_role}</span>}
-                </p>
-              )}
-              <div className="flex flex-col gap-1">
-                {app.contact_email && (
-                  <a href={`mailto:${app.contact_email}`} className="text-xs text-primary hover:underline font-medium">{app.contact_email}</a>
-                )}
-                {app.contact_phone && (
-                  <a href={`tel:${app.contact_phone}`} className="text-xs text-foreground-secondary hover:text-foreground font-medium">{app.contact_phone}</a>
-                )}
-                {app.contact_linkedin && (
-                  <a href={app.contact_linkedin} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline font-medium">LinkedIn ↗</a>
+            <div className={`p-3.5 rounded-xl bg-surface-secondary border border-transparent space-y-2 relative group/contact transition-all duration-200 ${unlinkingIds.includes(app.id) ? 'opacity-0 scale-95 pointer-events-none' : ''}`}>
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] font-bold text-foreground-secondary uppercase tracking-wider">Contact</p>
+                {onUnlinkContact && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onUnlinkContact(app.id);
+                    }}
+                    className="text-foreground-secondary hover:text-rose-400 p-1 -mr-1 -mt-1 rounded-md transition-colors opacity-0 group-hover/contact:opacity-100"
+                    title="Remove contact"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
                 )}
               </div>
+              {(() => {
+                const c = contacts.find(contact => contact.id === app.contact_id) || app;
+                const name = c.name || c.contact_name;
+                const role = c.role || c.contact_role;
+                const email = c.email || c.contact_email;
+                const phone = c.phone || c.contact_phone;
+                const linkedin = c.linkedin_url || c.contact_linkedin;
+                
+                return (
+                  <>
+                    {name && (
+                      <p className="text-sm font-bold text-foreground">
+                        {name}
+                        {role && <span className="text-xs font-medium text-foreground-secondary ml-1.5">· {role}</span>}
+                      </p>
+                    )}
+                    <div className="flex flex-col gap-1">
+                      {email && (
+                        <a href={`mailto:${email}`} className="text-xs text-primary hover:underline font-medium">{email}</a>
+                      )}
+                      {phone && (
+                        <a href={`tel:${phone}`} className="text-xs text-foreground-secondary hover:text-foreground font-medium">{phone}</a>
+                      )}
+                      {linkedin && (
+                        <a href={linkedin} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline font-medium">LinkedIn ↗</a>
+                      )}
+                    </div>
+                  </>
+                );
+              })()}
               {app.contact_id && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    sessionStorage.setItem('applyops_pending_action', JSON.stringify({ type: 'scroll_contact', contactId: app.contact_id }))
-                    window.location.hash = '#/contacts'
-                    onClose()
-                  }}
-                  className="text-[11px] font-semibold text-primary hover:underline flex items-center gap-1"
-                >
-                  View in Contacts ↗
-                </button>
+                <div className="pt-2 mt-1 border-t border-border/10">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      sessionStorage.setItem('applyops_pending_action', JSON.stringify({ type: 'details_contact', contactId: app.contact_id }))
+                      window.location.hash = '#/contacts'
+                      onClose()
+                    }}
+                    className="text-[11px] font-semibold text-primary hover:underline flex items-center gap-1"
+                  >
+                    View in Contacts ↗
+                  </button>
+                </div>
               )}
             </div>
           )}
@@ -1164,6 +1194,9 @@ export default function Applications() {
   const [detailsApp, setDetailsApp] = useState(null)
   const [deletingIds, setDeletingIds] = useState([])
   const [deleteAppId, setDeleteAppId] = useState(null)
+  const [unlinkContactAppId, setUnlinkContactAppId] = useState(null)
+  const [isUnlinkingContact, setIsUnlinkingContact] = useState(false)
+  const [unlinkingContactAppIds, setUnlinkingContactAppIds] = useState([])
   const { addToast } = useToast()
   const [previewResume, setPreviewResume] = useState(null)
   const [editActionApp, setEditActionApp] = useState(null)
@@ -1335,6 +1368,57 @@ export default function Applications() {
       setDeleteAppId(null)
     } finally {
       setIsDeleting(false)
+    }
+  }
+
+  const handleUnlinkContact = (appId) => {
+    setUnlinkContactAppId(appId)
+  }
+
+  const confirmUnlinkContact = async () => {
+    if (!unlinkContactAppId || isUnlinkingContact) return
+    setIsUnlinkingContact(true)
+    const idToRemove = unlinkContactAppId
+    try {
+      await api.updateApplication(idToRemove, {
+        contact_id: "",
+        contact_name: "",
+        contact_email: "",
+        contact_phone: "",
+        contact_role: "",
+        contact_linkedin: ""
+      })
+      addToast('Contact removed from application', 'success')
+      setUnlinkingContactAppIds(prev => [...prev, idToRemove])
+      setUnlinkContactAppId(null)
+      setTimeout(() => {
+        setApps(prev => prev.map(a => a.id === idToRemove ? {
+          ...a,
+          contact_id: null,
+          contact_name: "",
+          contact_email: "",
+          contact_phone: "",
+          contact_role: "",
+          contact_linkedin: ""
+        } : a))
+        if (detailsApp && detailsApp.id === idToRemove) {
+          setDetailsApp(prev => ({
+            ...prev,
+            contact_id: null,
+            contact_name: "",
+            contact_email: "",
+            contact_phone: "",
+            contact_role: "",
+            contact_linkedin: ""
+          }))
+        }
+        setUnlinkingContactAppIds(prev => prev.filter(id => id !== idToRemove))
+      }, 200)
+    } catch (err) {
+      addToast(`Failed to remove contact: ${err.message}`, 'error')
+      setUnlinkContactAppId(null)
+    } finally {
+      setIsUnlinkingContact(false)
     }
   }
 
@@ -1659,6 +1743,17 @@ export default function Applications() {
         message="Are you sure you want to delete this application? All related calendar events and activity logs will also be permanently deleted."
       />
 
+      <ConfirmDeleteModal
+        isOpen={!!unlinkContactAppId}
+        onClose={() => setUnlinkContactAppId(null)}
+        onConfirm={confirmUnlinkContact}
+        isDeleting={isUnlinkingContact}
+        title="Unlink Contact"
+        message="Are you sure you want to unlink this contact from the application? The contact details will be removed."
+        confirmText="Unlink"
+        confirmingText="Unlinking..."
+      />
+
       <ApplicationModal
         isEdit={!!editApp}
         isOpen={showAddModal}
@@ -1689,6 +1784,9 @@ export default function Applications() {
       {detailsApp && (
         <ApplicationDetailsModal
           app={detailsApp}
+          contacts={contacts}
+          onUnlinkContact={handleUnlinkContact}
+          unlinkingIds={unlinkingContactAppIds}
           onClose={() => setDetailsApp(null)}
           onEdit={() => {
             handleEditClick(detailsApp);
