@@ -1,9 +1,10 @@
 import React from 'react'
 import { Calendar as CalendarIcon, ArrowUpRight } from 'lucide-react'
+import CountUp from './ui/CountUp'
 
 const EVENT_DAYS = {}
 
-export default function MiniCalendarCard({ onViewFullCalendar }) {
+export default function MiniCalendarCard({ onViewFullCalendar, loading = false }) {
   const today = new Date()
   const currentMonth = today.getMonth()
   const currentYear = today.getFullYear()
@@ -86,11 +87,10 @@ export default function MiniCalendarCard({ onViewFullCalendar }) {
         </div>
       </div>
 
-      {/* Footer Full Calendar Redirect Button — Completely Borderless Clean Spacing */}
       <div className="mt-3 pt-1 flex items-center justify-between text-xs">
-        <div className="flex items-center gap-2 text-[10px] font-semibold text-foreground-secondary">
+        <div className={`flex items-center gap-2 text-[10px] font-semibold text-foreground-secondary ${loading ? 'animate-pulse opacity-50' : ''}`}>
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span>3 events this week</span>
+          <span>{loading ? '—' : <CountUp value={3} duration={800} />} events this week</span>
         </div>
         <button
           onClick={() => {

@@ -1,9 +1,10 @@
 import React, { useState } from 'react'
 import { TrendingUp, ArrowUpRight, Calendar, Sparkles } from 'lucide-react'
 import Dropdown from './ui/Dropdown'
+import CountUp from './ui/CountUp'
 import { useGoalContext } from '../context/GoalContext'
 
-export default function DailyProgressCard({ data: propData }) {
+export default function DailyProgressCard({ data: propData, loading = false }) {
   const { weeklyGoal, weeklyApplications, weeklyProgress, applications } = useGoalContext()
   const [timeframe, setTimeframe] = useState('7d')
   const [hoveredIndex, setHoveredIndex] = useState(null)
@@ -130,10 +131,10 @@ export default function DailyProgressCard({ data: propData }) {
             </defs>
 
             {/* Area Fill */}
-            <path d={areaPath} fill="url(#chartAreaGradient)" />
+            <path d={areaPath} fill="url(#chartAreaGradient)" className={loading ? 'animate-pulse opacity-50' : ''} />
 
             {/* Smooth Curve Line */}
-            <path d={linePath} fill="none" stroke="var(--primary)" strokeWidth="2.5" strokeLinecap="round" />
+            <path d={linePath} fill="none" stroke="var(--primary)" strokeWidth="2.5" strokeLinecap="round" className={loading ? 'animate-pulse opacity-50' : ''} />
 
             {/* Data Points & Interactive Hover Vertical Column Guides */}
             {points.map((pt, idx) => (
@@ -165,7 +166,7 @@ export default function DailyProgressCard({ data: propData }) {
                   cx={pt.x} 
                   cy={pt.y} 
                   r={hoveredIndex === idx ? "6" : "3.5"} 
-                  className="fill-surface stroke-primary transition-all duration-150"
+                  className={`fill-surface stroke-primary transition-all duration-150 ${loading ? 'animate-pulse opacity-50' : ''}`}
                   strokeWidth={hoveredIndex === idx ? "3" : "2"} 
                 />
               </g>
@@ -199,14 +200,15 @@ export default function DailyProgressCard({ data: propData }) {
       )}
 
       {/* Bottom Summary Metrics Row — Completely Borderless Clean Spacing */}
+      {/* Bottom Summary Metrics Row — Completely Borderless Clean Spacing */}
       <div className="mt-4 pt-3 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
         {/* Metric 1: Today */}
         <div className="flex flex-col gap-0.5">
           <span className="text-[10px] font-semibold text-foreground-secondary uppercase tracking-wider">Today</span>
-          <div className="flex items-baseline gap-1.5">
-            <span className="text-base font-extrabold text-foreground">{todayCount}</span>
+          <div className={`flex items-baseline gap-1.5 ${loading ? 'animate-pulse opacity-50' : ''}`}>
+            <span className="text-base font-extrabold text-foreground">{loading ? '—' : <CountUp value={todayCount} duration={800} />}</span>
             <span className="text-[10px] font-bold text-emerald-500 flex items-center gap-0.5">
-              ▲ +{dayChangePct}%
+              ▲ +{loading ? '—' : <CountUp value={`${dayChangePct}%`} duration={800} />}
             </span>
           </div>
         </div>
@@ -214,10 +216,10 @@ export default function DailyProgressCard({ data: propData }) {
         <div className="flex flex-col gap-0.5">
           <span className="text-[10px] font-semibold text-foreground-secondary uppercase tracking-wider">Weekly Goal</span>
           {weeklyGoal > 0 ? (
-            <div className="flex items-center gap-2">
-              <span className="text-base font-extrabold text-foreground">{weeklyApplications} / {weeklyGoal}</span>
+            <div className={`flex items-center gap-2 ${loading ? 'animate-pulse opacity-50' : ''}`}>
+              <span className="text-base font-extrabold text-foreground">{loading ? '—' : <CountUp value={weeklyApplications} duration={800} />} / {weeklyGoal}</span>
               <div className="flex-1 h-1.5 bg-surface-tertiary rounded-full overflow-hidden" title={`${weeklyProgress}% complete`}>
-                <div className="h-full bg-primary rounded-full transition-all duration-500" style={{ width: `${Math.min(100, weeklyProgress)}%` }} />
+                <div className="h-full bg-primary rounded-full transition-all duration-500" style={{ width: loading ? '0%' : `${Math.min(100, weeklyProgress)}%` }} />
               </div>
             </div>
           ) : (
@@ -228,14 +230,14 @@ export default function DailyProgressCard({ data: propData }) {
         {/* Metric 3: Daily Average */}
         <div className="flex flex-col gap-0.5">
           <span className="text-[10px] font-semibold text-foreground-secondary uppercase tracking-wider">Daily Avg</span>
-          <span className="text-base font-extrabold text-foreground">{dailyAvg} <span className="text-[10px] font-medium text-foreground-secondary">/day</span></span>
+          <span className={`text-base font-extrabold text-foreground ${loading ? 'animate-pulse opacity-50' : ''}`}>{loading ? '—' : <CountUp value={dailyAvg} duration={800} />} <span className="text-[10px] font-medium text-foreground-secondary">/day</span></span>
         </div>
 
         {/* Metric 4: vs Last Week */}
         <div className="flex flex-col gap-0.5">
           <span className="text-[10px] font-semibold text-foreground-secondary uppercase tracking-wider">vs Last Week</span>
-          <span className="text-base font-extrabold text-emerald-500 flex items-center gap-1">
-            ▲ +18% <span className="text-[10px] font-medium text-foreground-secondary">pace</span>
+          <span className={`text-base font-extrabold text-emerald-500 flex items-center gap-1 ${loading ? 'animate-pulse opacity-50' : ''}`}>
+            ▲ +<CountUp value="18%" duration={800} /> <span className="text-[10px] font-medium text-foreground-secondary">pace</span>
           </span>
         </div>
       </div>

@@ -1,7 +1,8 @@
 import React, { useState } from 'react'
 import Dropdown from './ui/Dropdown'
+import CountUp from './ui/CountUp'
 
-export default function ApplicationsByStatus({ summary = {} }) {
+export default function ApplicationsByStatus({ summary = {}, loading = false }) {
   const [hoveredIndex, setHoveredIndex] = useState(null)
   const [timeRange, setTimeRange] = useState('month')
 
@@ -104,9 +105,9 @@ export default function ApplicationsByStatus({ summary = {} }) {
           </svg>
 
           {/* Center Dynamic Label */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none transition-all duration-200">
+          <div className={`absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none transition-all duration-200 ${loading ? 'animate-pulse opacity-50' : ''}`}>
             <span className="text-2xl font-extrabold text-foreground tracking-tight leading-none">
-              {activeItem ? activeItem.count : total}
+              {loading ? '—' : <CountUp value={activeItem ? activeItem.count : total} duration={800} />}
             </span>
             <span className="text-[10px] font-semibold uppercase tracking-wider text-foreground-secondary mt-1 max-w-[80px] truncate">
               {activeItem ? activeItem.label : 'Total'}
@@ -139,9 +140,9 @@ export default function ApplicationsByStatus({ summary = {} }) {
                   />
                   <span className="truncate font-medium">{seg.label}</span>
                 </div>
-                <div className="flex items-center gap-1 font-semibold text-foreground flex-shrink-0 ml-2">
-                  <span>{seg.count}</span>
-                  <span className="text-[11px] text-foreground-secondary font-normal">({seg.percent}%)</span>
+                <div className={`flex items-center gap-1 font-semibold text-foreground flex-shrink-0 ml-2 ${loading ? 'animate-pulse opacity-50' : ''}`}>
+                  <span>{loading ? '—' : <CountUp value={seg.count} duration={800} />}</span>
+                  <span className="text-[11px] text-foreground-secondary font-normal">({loading ? '—' : <CountUp value={`${seg.percent}%`} duration={800} />})</span>
                 </div>
               </div>
             )

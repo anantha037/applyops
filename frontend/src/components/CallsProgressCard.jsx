@@ -1,7 +1,8 @@
 import React from 'react'
 import { PhoneOutgoing } from 'lucide-react'
+import CountUp from './ui/CountUp'
 
-export default function CallsProgressCard({ summary = {} }) {
+export default function CallsProgressCard({ summary = {}, loading = false }) {
   const goal = summary.calls_goal || 0
   const today = summary.calls_today || 0
   const progress = goal > 0 ? Math.min(100, Math.round((today / goal) * 100)) : 0
@@ -23,16 +24,16 @@ export default function CallsProgressCard({ summary = {} }) {
       </div>
       
       <div className="flex flex-col gap-1 mt-1">
-        <div className="flex items-end justify-between">
-          <span className="text-3xl font-extrabold text-foreground leading-none">{today}</span>
-          <span className="text-sm font-bold text-foreground-secondary mb-0.5">/ {goal > 0 ? goal : '—'}</span>
+        <div className={`flex items-end justify-between ${loading ? 'animate-pulse opacity-50' : ''}`}>
+          <span className="text-3xl font-extrabold text-foreground leading-none">{loading ? '—' : <CountUp value={today} duration={800} />}</span>
+          <span className="text-sm font-bold text-foreground-secondary mb-0.5">/ {goal > 0 ? (loading ? '—' : <CountUp value={goal} duration={800} />) : '—'}</span>
         </div>
         
         {goal > 0 ? (
           <div className="w-full h-2 bg-surface-tertiary rounded-full overflow-hidden mt-2" title={`${progress}% complete`}>
             <div 
               className="h-full bg-blue-500 rounded-full transition-all duration-500" 
-              style={{ width: `${progress}%` }} 
+              style={{ width: loading ? '0%' : `${progress}%` }} 
             />
           </div>
         ) : (

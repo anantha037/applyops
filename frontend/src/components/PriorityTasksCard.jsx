@@ -1,8 +1,9 @@
 import React, { useState } from 'react'
 import { Check, CheckCircle2, ArrowUpRight } from 'lucide-react'
 import Dropdown from './ui/Dropdown'
+import CountUp from './ui/CountUp'
 
-export default function PriorityTasksCard({ tasks: initialPropTasks, onViewAll }) {
+export default function PriorityTasksCard({ tasks: initialPropTasks, onViewAll, loading = false }) {
   const [tasks, setTasks] = useState(initialPropTasks || [])
   const [filterPriority, setFilterPriority] = useState('all')
   const [expandedId, setExpandedId] = useState(null)
@@ -50,9 +51,9 @@ export default function PriorityTasksCard({ tasks: initialPropTasks, onViewAll }
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <h3 className="text-sm font-bold text-foreground">Priority Tasks</h3>
-          {activeTasks.length > 0 && (
-            <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-              {activeTasks.length}
+          {(activeTasks.length > 0 || loading) && (
+            <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-primary/10 text-primary ${loading ? 'animate-pulse opacity-50' : ''}`}>
+              {loading ? '—' : <CountUp value={activeTasks.length} duration={800} />}
             </span>
           )}
         </div>
@@ -181,11 +182,11 @@ export default function PriorityTasksCard({ tasks: initialPropTasks, onViewAll }
       </div>
 
       {/* Footer View All Action Bar — Borderless Clean Spacing */}
-      {activeTasks.length > 0 && (
+      {(activeTasks.length > 0 || loading) && (
         <div className="mt-3 pt-1 flex items-center justify-between text-xs">
-          <div className="flex items-center gap-1.5 text-[11px] font-medium text-foreground-secondary">
+          <div className={`flex items-center gap-1.5 text-[11px] font-medium text-foreground-secondary ${loading ? 'animate-pulse opacity-50' : ''}`}>
             <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-            <span>{activeTasks.length} pending action{activeTasks.length > 1 ? 's' : ''}</span>
+            <span>{loading ? '—' : <CountUp value={activeTasks.length} duration={800} />} pending action{activeTasks.length !== 1 ? 's' : ''}</span>
           </div>
           <button
             onClick={() => {

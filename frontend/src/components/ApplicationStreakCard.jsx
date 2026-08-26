@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react'
 import { Flame, ArrowRight } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
+import CountUp from './ui/CountUp'
 
 const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
 
@@ -18,7 +19,7 @@ function dateTextClass(total) {
   return 'text-white'
 }
 
-export default function ApplicationStreakCard({ data: propData, onViewHistory }) {
+export default function ApplicationStreakCard({ data: propData, onViewHistory, loading = false }) {
   const [hovered, setHovered] = useState(null)
   const [tipPos, setTipPos] = useState({ x: 0, y: 0 })
   const cardRef = useRef(null)
@@ -86,6 +87,7 @@ export default function ApplicationStreakCard({ data: propData, onViewHistory })
             ${intensityClass(day.total)}
             ${day.isToday ? 'ring-[1.5px] ring-foreground/40 ring-offset-1 ring-offset-surface' : ''}
             hover:opacity-80
+            ${loading ? 'animate-pulse opacity-50' : ''}
           `}
         >
           <span className={`text-[9px] leading-none select-none ${dateTextClass(day.total)}`}>
@@ -108,16 +110,16 @@ export default function ApplicationStreakCard({ data: propData, onViewHistory })
             Application Streak
           </span>
         </div>
-        {bestStreak > 0 && (
-          <span className="text-[10px] font-medium text-muted tabular-nums">
-            Best {bestStreak}d
+        {bestStreak > 0 ? (
+          <span className={`text-[10px] font-medium text-muted tabular-nums ${loading ? 'animate-pulse opacity-50' : ''}`}>
+            Best {loading ? '—' : <CountUp value={bestStreak} duration={800} />}d
           </span>
-        )}
+        ) : null}
       </div>
 
-      <div className="mb-1">
+      <div className={`mb-1 ${loading ? 'animate-pulse opacity-50' : ''}`}>
         <span className="text-[2.25rem] font-extrabold text-foreground leading-none tracking-tight tabular-nums">
-          {currentStreak}
+          {loading ? '—' : <CountUp value={currentStreak} duration={800} />}
         </span>
         <span className="ml-2 text-xs font-semibold uppercase tracking-widest text-foreground-secondary/80">
           day streak
@@ -135,8 +137,8 @@ export default function ApplicationStreakCard({ data: propData, onViewHistory })
         <span className="text-[10px] font-medium text-foreground-secondary">
           14-day activity
         </span>
-        <span className="text-[10px] text-muted tabular-nums">
-          {totalApplications} apps · {activeDays} active
+        <span className={`text-[10px] text-muted tabular-nums ${loading ? 'animate-pulse opacity-50' : ''}`}>
+          {loading ? '—' : <CountUp value={totalApplications} duration={800} />} apps · {loading ? '—' : <CountUp value={activeDays} duration={800} />} active
         </span>
       </div>
 

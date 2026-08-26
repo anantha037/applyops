@@ -1,7 +1,8 @@
 import React, { useState } from 'react'
 import Dropdown from './ui/Dropdown'
+import CountUp from './ui/CountUp'
 
-export default function ApplicationFunnel({ summary = {} }) {
+export default function ApplicationFunnel({ summary = {}, loading = false }) {
   const [hoveredIndex, setHoveredIndex] = useState(null)
   const [timeRange, setTimeRange] = useState('all')
 
@@ -132,10 +133,10 @@ export default function ApplicationFunnel({ summary = {} }) {
                   fill="#FFFFFF"
                   fontSize="15"
                   fontWeight="800"
-                  className="pointer-events-none drop-shadow-xs transition-opacity duration-200"
-                  style={{ opacity: hoveredIndex === null || isHovered ? 1 : 0.6 }}
+                  className={`pointer-events-none drop-shadow-xs transition-opacity duration-200 ${loading ? 'animate-pulse opacity-50' : ''}`}
+                  style={{ opacity: loading ? 0.5 : (hoveredIndex === null || isHovered ? 1 : 0.6) }}
                 >
-                  {stage.count}
+                  {loading ? '—' : <CountUp value={stage.count} duration={800} />}
                 </text>
 
                 {/* Connector hairline guide line */}
@@ -162,7 +163,7 @@ export default function ApplicationFunnel({ summary = {} }) {
                   {stage.label}
                   {isHovered && (
                     <tspan fill={stage.grad[0]} fontWeight="800" dx="6">
-                      ({stage.percent}%)
+                      ({loading ? '—' : <CountUp value={`${stage.percent}%`} duration={800} />})
                     </tspan>
                   )}
                 </text>
