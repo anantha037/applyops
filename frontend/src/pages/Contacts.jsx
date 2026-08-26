@@ -752,7 +752,7 @@ export default function Contacts() {
           <table className="w-full text-left text-xs whitespace-nowrap">
             <thead>
               <tr className="text-[10px] font-bold text-foreground-secondary uppercase tracking-wider">
-                <th className="py-2.5 px-3.5 font-bold w-[35%] min-w-[240px]">Contact</th>
+                <th className="py-2.5 px-3.5 font-bold min-w-[200px]">Contact</th>
                 <th className="py-2.5 px-3.5 font-bold">Application</th>
                 <th className="py-2.5 px-3.5 font-bold">Last Action</th>
                 <th className="py-2.5 px-3.5 font-bold">Last Contact</th>
