@@ -12,6 +12,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from backend.auth import get_current_user
 from backend.db.models import User
+from backend.db.session import get_session
+from sqlmodel import Session
 from backend.models import Activity, ActivityCreate
 from backend import db_client
 
@@ -20,13 +22,13 @@ router = APIRouter(tags=["activity"])
 
 
 @router.post("/activity", response_model=Activity, status_code=status.HTTP_201_CREATED)
-def create_activity(payload: ActivityCreate, request: Request, user: User = Depends(get_current_user)) -> Activity:
-    return db_client.create_activity(user.id, str(uuid4()), payload)
+def create_activity(payload: ActivityCreate, request: Request, user: User = Depends(get_current_user), session: Session = Depends(get_session)) -> Activity:
+    return db_client.create_activity(user.id, str(uuid4()), payload, session=session)
 
 
 @router.get("/activity", response_model=list[Activity])
 def list_activity(
-    request: Request, user: User = Depends(get_current_user), date_filter: str = Query(default="today", alias="date")
+    request: Request, user: User = Depends(get_current_user), date_filter: str = Query(default="today", alias="date"), session: Session = Depends(get_session)
 ) -> list[Activity]:
     if date_filter == "today":
         activity_date = date.today()
@@ -38,42 +40,49 @@ def list_activity(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="date must be 'today' or an ISO date (YYYY-MM-DD)",
             ) from exc
-    return db_client.list_activity(user.id, activity_date)
+    return db_client.list_activity(user.id, activity_date, session=session)
 
 
 @router.get("/activity/streak")
-def get_streak(request: Request, user: User = Depends(get_current_user)) -> dict[str, Any]:
+def get_streak(request: Request, user: User = Depends(get_current_user), session: Session = Depends(get_session)) -> dict[str, Any]:
     india_tz = ZoneInfo("Asia/Kolkata")
     today = datetime.now(india_tz).date()
     
-    apps = db_client.list_applications(user.id)
-    activities = db_client.list_activity(user.id, None)
+    from sqlmodel import select
+    from backend.db.models import DBApplication, ActivityLog
+    
+    app_dates = session.exec(
+        select(DBApplication.date_applied)
+        .where(DBApplication.user_id == user.id, DBApplication.date_applied.is_not(None))
+    ).all()
+    
+    act_rows = session.exec(
+        select(ActivityLog.timestamp, ActivityLog.action_type)
+        .where(ActivityLog.user_id == user.id)
+    ).all()
 
     daily_stats = defaultdict(lambda: {
         "applications": 0, "followUps": 0, "interviews": 0, "recruiterCalls": 0, "total": 0
     })
 
-    for a in apps:
-        if a.date_applied:
-            try:
-                d = a.date_applied if isinstance(a.date_applied, date) else date.fromisoformat(a.date_applied)
-                daily_stats[d]["applications"] += 1
-                daily_stats[d]["total"] += 1
-            except ValueError:
-                pass
+    for d in app_dates:
+        if isinstance(d, str):
+            d = date.fromisoformat(d)
+        daily_stats[d]["applications"] += 1
+        daily_stats[d]["total"] += 1
                 
-    for act in activities:
-        if act.timestamp:
-            if act.timestamp.tzinfo:
-                d = act.timestamp.astimezone(india_tz).date()
+    for timestamp, action_type in act_rows:
+        if timestamp:
+            if timestamp.tzinfo:
+                d = timestamp.astimezone(india_tz).date()
             else:
-                d = act.timestamp.replace(tzinfo=ZoneInfo("UTC")).astimezone(india_tz).date()
+                d = timestamp.replace(tzinfo=ZoneInfo("UTC")).astimezone(india_tz).date()
             
-            if act.action_type == "Follow Up":
+            if action_type == "Follow Up":
                 daily_stats[d]["followUps"] += 1
-            elif act.action_type in ("Interview Completed", "Interview Scheduled"):
+            elif action_type in ("Interview Completed", "Interview Scheduled"):
                 daily_stats[d]["interviews"] += 1
-            elif act.action_type in ("Call Connected", "Call Dialed", "Recruiter Call"):
+            elif action_type in ("Call Connected", "Call Dialed", "Recruiter Call"):
                 daily_stats[d]["recruiterCalls"] += 1
             daily_stats[d]["total"] += 1
 
