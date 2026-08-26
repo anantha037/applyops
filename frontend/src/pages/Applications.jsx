@@ -574,26 +574,36 @@ function PostCreateBanner({ info, onDismiss, onEdit }) {
   if (!info) return null
 
   return (
-    <div className="mb-5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 p-4 flex items-center justify-between text-xs text-emerald-400 animate-in fade-in-50 duration-200">
-      <div className="flex items-center gap-3">
-        <div className="w-8 h-8 rounded-xl bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
+    <div className="mb-5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 p-4 flex items-start justify-between gap-3 text-xs text-emerald-400">
+      <div className="flex items-start gap-3">
+        <div className="w-8 h-8 rounded-xl bg-emerald-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
           <Check className="w-4 h-4 text-emerald-400" />
         </div>
         <div>
           <p className="font-bold text-foreground">Application Created: {info.company} ({info.job_title})</p>
-          <p className="text-[11px] text-foreground-secondary mt-0.5">
-            Next action scheduled: <strong className="text-foreground">{info.next_action?.title}</strong> on {formatDateDisplay(info.next_action?.date)} at {info.next_action?.time}
-          </p>
+          {info.next_action && (
+            <p className="text-[11px] text-foreground-secondary mt-0.5">
+              Next action scheduled: <strong className="text-foreground">{info.next_action?.title}</strong> on {formatDateDisplay(info.next_action?.date)} at {info.next_action?.time}
+            </p>
+          )}
+          {info.reusedContact && (
+            <p className="text-[11px] text-sky-400 mt-1 flex items-center gap-1">
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-sky-400 flex-shrink-0" />
+              Linked to existing contact: <strong>{info.reusedContact}</strong>
+            </p>
+          )}
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
-        <button
-          onClick={onEdit}
-          className="px-3 py-1.5 rounded-xl bg-primary text-white text-[11px] font-bold hover:bg-primary-hover transition-all"
-        >
-          Edit Action
-        </button>
+      <div className="flex items-center gap-2 flex-shrink-0">
+        {info.next_action && (
+          <button
+            onClick={onEdit}
+            className="px-3 py-1.5 rounded-xl bg-primary text-white text-[11px] font-bold hover:bg-primary-hover transition-all"
+          >
+            Edit Action
+          </button>
+        )}
         <button
           onClick={onDismiss}
           className="p-1.5 text-foreground-secondary hover:text-foreground rounded-lg transition-colors"
@@ -1396,8 +1406,14 @@ export default function Applications() {
             company: newApp.company,
             job_title: newApp.job_title,
             next_action: nextActionObj,
-            appId: newApp.id
+            appId: newApp.id,
+            reusedContact: newApp._reusedContact || null
           })
+        } else {
+          // No banner will appear, so use toast to notify of contact reuse
+          if (newApp._reusedContact) {
+            addToast(`Linked to existing contact: ${newApp._reusedContact}`, 'info')
+          }
         }
         load()
       }
