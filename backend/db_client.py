@@ -541,60 +541,64 @@ def update_application(
     contact_role:  str | None = None,
     contact_linkedin: str | None = None,
     resume_id:     str | None = None,
+    session: Session | None = None,
 ) -> Application | None:
     """Patch an existing application."""
-    with Session(engine) as session:
-        row = session.get(DBApplication, application_id)
-        if row is None or row.user_id != user_id:
-            return None
+    if session is None:
+        with Session(engine) as s:
+            return update_application(user_id, application_id, changes, contact_name=contact_name, contact_email=contact_email, contact_phone=contact_phone, contact_role=contact_role, contact_linkedin=contact_linkedin, resume_id=resume_id, session=s)
+        
+    row = session.get(DBApplication, application_id)
+    if row is None or row.user_id != user_id:
+        return None
 
-        # Handle explicit contact_id linkage
-        if "contact_id" in changes:
-            new_contact_id = changes["contact_id"]
-            if new_contact_id == "":
-                row.contact_id = None
-            else:
-                if new_contact_id is not None:
-                    if not verify_owned(session, Contact, new_contact_id, user_id):
-                        raise ValueError("Invalid or unauthorized contact_id")
-                row.contact_id = new_contact_id
-        # Handle inline contact fields linkage
-        elif any([contact_name, contact_email, contact_phone, contact_linkedin]):
-            contact = find_or_create_contact(
-                session,
-                user_id,
-                name=contact_name,
-                email=contact_email,
-                phone=contact_phone,
-                role=contact_role,
-                company=changes.get("company") or row.company,
-                linkedin_url=contact_linkedin,
-            )
-            row.contact_id = contact.id if contact else row.contact_id
-
-        # Handle resume linkage
-        if resume_id is not None:
-            resume_row = session.get(Resume, resume_id)
-            if not resume_row or resume_row.user_id != user_id:
-                raise ValueError("Invalid or unauthorized resume_id")
-            row.resume_id = resume_id
-
-        # Apply scalar field updates
-        scalar_fields = (
-            "date_applied", "company", "job_title", "jd_summary",
-            "location", "application_method", "ctc", "status", "stage",
-            "last_touch_date", "next_action_due", "next_action_type", "next_action_title",
-            "interview_date", "interview_round", "interview_attended", 
-            "latest_update", "remarks",
+    # Handle explicit contact_id linkage
+    if "contact_id" in changes:
+        new_contact_id = changes["contact_id"]
+        if new_contact_id == "":
+            row.contact_id = None
+        else:
+            if new_contact_id is not None:
+                if not verify_owned(session, Contact, new_contact_id, user_id):
+                    raise ValueError("Invalid or unauthorized contact_id")
+            row.contact_id = new_contact_id
+    # Handle inline contact fields linkage
+    elif any([contact_name, contact_email, contact_phone, contact_linkedin]):
+        contact = find_or_create_contact(
+            session,
+            user_id,
+            name=contact_name,
+            email=contact_email,
+            phone=contact_phone,
+            role=contact_role,
+            company=changes.get("company") or row.company,
+            linkedin_url=contact_linkedin,
         )
-        for field in scalar_fields:
-            if field in changes:
-                setattr(row, field, changes[field] if changes[field] != "" else None)
+        row.contact_id = contact.id if contact else row.contact_id
 
-        session.add(row)
-        session.commit()
-        session.refresh(row)
-        return _app_to_pydantic(row)
+    # Handle resume linkage
+    if resume_id is not None:
+        resume_row = session.get(Resume, resume_id)
+        if not resume_row or resume_row.user_id != user_id:
+            raise ValueError("Invalid or unauthorized resume_id")
+        row.resume_id = resume_id
+
+    # Apply scalar field updates
+    scalar_fields = (
+        "date_applied", "company", "job_title", "jd_summary",
+        "location", "application_method", "ctc", "status", "stage",
+        "last_touch_date", "next_action_due", "next_action_type", "next_action_title",
+        "interview_date", "interview_round", "interview_attended", 
+        "latest_update", "remarks",
+    )
+    for field in scalar_fields:
+        if field in changes:
+            setattr(row, field, changes[field] if changes[field] != "" else None)
+
+    session.add(row)
+    session.commit()
+    session.refresh(row)
+    return _app_to_pydantic(row)
 
 
 def delete_application(user_id: str, application_id: str, *, session: Session | None = None) -> bool:
