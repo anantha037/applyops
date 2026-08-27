@@ -256,11 +256,7 @@ export const authApi = {
   updateMe: (body) => request('/auth/me', { method: 'PATCH', body: JSON.stringify(body) })
 }
 
-export const updatesApi = {
-  getUpdates: () => request('/updates'),
-  markAsRead: (id) => request(`/updates/${id}/read`, { method: 'PATCH' }),
-  markAllAsRead: () => request('/updates/read-all', { method: 'PATCH' })
-}
+
 
 export const settingsApi = {
   getSettings: () => request('/settings'),
