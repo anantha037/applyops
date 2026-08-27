@@ -1318,7 +1318,11 @@ export default function Applications() {
               setForm({
                 ...EMPTY_FORM,
                 ...targetApp,
-                has_contact: !!(targetApp.contact_id || targetApp.contact_name || targetApp.contact_email || targetApp.contact_phone || targetApp.contact_linkedin)
+                has_contact: !!(targetApp.contact_id || targetApp.contact_name || targetApp.contact_email || targetApp.contact_phone || targetApp.contact_linkedin),
+                enable_next_action: !!targetApp.next_action_due,
+                next_action_date: targetApp.next_action_due || '',
+                next_action_type: targetApp.next_action_type || 'Follow Up',
+                next_action_title: targetApp.next_action_title || 'Follow up with recruiter'
               })
               setShowAddModal(true)
             }
@@ -1368,6 +1372,10 @@ export default function Applications() {
       application_method: method,
       application_method_other: methodOther,
       has_contact: !!(app.contact_id || app.contact_name || app.contact_email || app.contact_phone || app.contact_linkedin),
+      enable_next_action: !!app.next_action_due,
+      next_action_date: app.next_action_due || '',
+      next_action_type: app.next_action_type || 'Follow Up',
+      next_action_title: app.next_action_title || 'Follow up with recruiter',
       status: app.status || 'Not Contacted',
       stage: app.stage || 'Applied',
       remarks: app.remarks || ''
