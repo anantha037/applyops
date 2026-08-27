@@ -211,7 +211,7 @@ export default function Updates() {
         </div>
       </div>
 
-      <div className="flex items-center gap-1.5 p-1 bg-surface-secondary rounded-xl w-fit overflow-x-auto scrollbar-none">
+      <div className="flex items-center gap-1.5 p-1 bg-surface-secondary rounded-xl w-fit overflow-x-auto scrollbar-none shrink-0">
         {tabs.map((t) => {
           const isActive = tab === t.value
           return (
@@ -226,7 +226,7 @@ export default function Updates() {
               }`}
             >
               <span>{t.label}</span>
-              <span className={`text-[11px] px-1.5 py-0.2 rounded-md ${
+              <span className={`text-[11px] px-1.5 py-0.5 rounded-md ${
                 isActive ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-surface-secondary text-muted'
               }`}>
                 {t.count}

@@ -170,7 +170,7 @@ export default function Settings() {
         </p>
       </div>
 
-      <div className="flex items-center gap-1.5 p-1 bg-surface-secondary rounded-xl w-fit overflow-x-auto scrollbar-none">
+      <div className="flex items-center gap-1.5 p-1 bg-surface-secondary rounded-xl w-fit overflow-x-auto scrollbar-none shrink-0">
         <button
           type="button"
           onClick={() => setActiveSection('goals')}
