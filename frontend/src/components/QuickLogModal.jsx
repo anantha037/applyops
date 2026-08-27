@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { X, Save, CheckCircle2, Calendar as CalendarIcon, MessageSquare, Briefcase } from 'lucide-react'
-import api from '../api/client'
+import { api } from '../api/client'
 
 const STAGE_OPTIONS = [
   'Saved', 'Applied', 'In Progress', 'Interviewing',
