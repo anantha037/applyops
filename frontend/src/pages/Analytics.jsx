@@ -175,7 +175,7 @@ export default function Analytics() {
     'Offer Received': '#10B981',
     'Rejected': '#EF4444',
     'Ghosted': '#F59E0B',
-    'Not Contacted': '#64748B',
+    'Not Contacted': '#EAB308',
   }
 
   // ── Live data derived from /analytics/overview ──────────────────────────
