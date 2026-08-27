@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api } from '../api/client'
+import { api, activityApi } from '../api/client'
 import Dropdown from '../components/ui/Dropdown'
 import SearchableSelect from '../components/ui/SearchableSelect'
 import ManageResumesModal from '../components/ManageResumesModal'
@@ -150,30 +150,30 @@ function NextActionCell({ action, onClick }) {
   let statusBadge = null
   if (isCompleted) {
     statusBadge = (
-      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 font-bold text-[11px]">
-        <Check className="w-3.5 h-3.5" />
-        Completed
+      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 font-bold text-[11px] max-w-[250px] truncate" title={action.title}>
+        <Check className="w-3.5 h-3.5 flex-shrink-0" />
+        <span className="truncate">{action.title ? `${action.title} · Completed` : 'Completed'}</span>
       </span>
     )
   } else if (isOverdue) {
     statusBadge = (
-      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-400 font-bold text-[11px]">
-        <AlertCircle className="w-3.5 h-3.5" />
-        Overdue · {formatDateDisplay(action.date)}
+      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-400 font-bold text-[11px] max-w-[250px] truncate" title={action.title}>
+        <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+        <span className="truncate">{action.title ? `${action.title} · ${formatDateDisplay(action.date)}` : `Overdue · ${formatDateDisplay(action.date)}`}</span>
       </span>
     )
   } else if (isToday) {
     statusBadge = (
-      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-400 font-bold text-[11px]">
-        <Clock className="w-3.5 h-3.5" />
-        Today {action.time ? `· ${action.time}` : ''}
+      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-400 font-bold text-[11px] max-w-[250px] truncate" title={action.title}>
+        <Clock className="w-3.5 h-3.5 flex-shrink-0" />
+        <span className="truncate">{action.title ? `${action.title} · Today` : `Today ${action.time ? `· ${action.time}` : ''}`}</span>
       </span>
     )
   } else {
     statusBadge = (
-      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-surface-secondary text-foreground-secondary hover:text-foreground font-semibold text-[11px] transition-colors">
-        <Calendar className="w-3.5 h-3.5 opacity-70" />
-        {formatDateDisplay(action.date)} {action.time ? `· ${action.time}` : ''}
+      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-surface-secondary text-foreground-secondary hover:text-foreground font-semibold text-[11px] transition-colors max-w-[250px] truncate" title={action.title}>
+        <Calendar className="w-3.5 h-3.5 opacity-70 flex-shrink-0" />
+        <span className="truncate">{action.title ? `${action.title} · ${formatDateDisplay(action.date)}` : `${formatDateDisplay(action.date)} ${action.time ? `· ${action.time}` : ''}`}</span>
       </span>
     )
   }
@@ -1050,6 +1050,21 @@ function ApplicationModal({ isEdit, isOpen, onClose, onSubmit, onDelete, form, s
 }
 
 function ApplicationDetailsModal({ app, onClose, onEdit, onDelete, contacts = [], onUnlinkContact, unlinkingIds = [] }) {
+  const [activities, setActivities] = useState([])
+  const [loadingActivities, setLoadingActivities] = useState(true)
+
+  useEffect(() => {
+    if (app) {
+      setLoadingActivities(true)
+      activityApi.getActivity('all')
+        .then(data => {
+          setActivities(data.filter(a => a.application_id === app.id))
+        })
+        .catch(err => console.error("Failed to load activity history", err))
+        .finally(() => setLoadingActivities(false))
+    }
+  }, [app])
+
   if (!app) return null
 
   return (
@@ -1181,6 +1196,34 @@ function ApplicationDetailsModal({ app, onClose, onEdit, onDelete, contacts = []
               <p className="text-xs text-foreground bg-surface-secondary p-3 rounded-xl">{app.remarks}</p>
             </div>
           )}
+
+          <div className="pt-2">
+            <p className="text-[11px] font-bold text-foreground-secondary uppercase tracking-wider mb-3">Activity History</p>
+            {loadingActivities ? (
+              <div className="flex justify-center py-4"><div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" /></div>
+            ) : activities.length > 0 ? (
+              <div className="space-y-4">
+                {activities.map((act, i) => (
+                  <div key={act.id} className="relative pl-4">
+                    <div className="absolute left-0 top-1.5 w-1.5 h-1.5 rounded-full bg-primary/50 ring-4 ring-background" />
+                    {i !== activities.length - 1 && <div className="absolute left-[2.5px] top-3 bottom-[-16px] w-[1px] bg-border/50" />}
+                    
+                    <div className="text-xs font-semibold text-foreground flex items-center justify-between">
+                      <span>{act.action_type}</span>
+                      <span className="text-[10px] text-foreground-secondary font-medium">
+                        {new Date(act.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                      </span>
+                    </div>
+                    {act.notes && (
+                      <p className="text-xs text-foreground-secondary mt-1">{act.notes}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-foreground-secondary italic">No activity logged yet.</p>
+            )}
+          </div>
 
 
           <div className="pt-4 border-t border-white/5 flex items-center justify-between">
