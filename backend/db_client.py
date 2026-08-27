@@ -746,7 +746,7 @@ def get_settings(user_id: str, *, session: Session | None = None) -> Settings:
     if row is None:
         return Settings()
     return Settings(
-        daily_goal=row.daily_goal,
+        weekly_goal=row.weekly_goal,
         working_hours_start=row.working_hours_start,
         working_hours_end=row.working_hours_end,
         telegram_chat_id=row.telegram_chat_id,
@@ -759,8 +759,8 @@ def get_settings(user_id: str, *, session: Session | None = None) -> Settings:
     )
 
 
-def get_daily_goal(user_id: str, *, session: Session | None = None) -> int:
-    return get_settings(user_id, session=session).daily_goal
+def get_weekly_goal(user_id: str, *, session: Session | None = None) -> int:
+    return get_settings(user_id, session=session).weekly_goal
 
 
 def update_settings(user_id: str, changes: SettingsUpdate, *, session: Session | None = None) -> Settings:
@@ -781,7 +781,7 @@ def update_settings(user_id: str, changes: SettingsUpdate, *, session: Session |
     session.refresh(row)
 
     return Settings(
-        daily_goal=row.daily_goal,
+        weekly_goal=row.weekly_goal,
         working_hours_start=row.working_hours_start,
         working_hours_end=row.working_hours_end,
         telegram_chat_id=row.telegram_chat_id,
