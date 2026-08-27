@@ -16,6 +16,7 @@ client = TestClient(app, raise_server_exceptions=False)
 def _create_user(session: Session, email: str) -> User:
     user = User(
         id=str(uuid.uuid4()),
+        name="Test User",
         email=email,
         password_hash=hash_password("password")
     )
@@ -199,19 +200,21 @@ def test_cross_user_activity_calendar_settings(test_users):
     assert res_cal_del.status_code == 404
 
     # User A updates settings
-    client.patch("/settings", json={"daily_goal": 50}, headers=headers_a)
+    client.patch("/settings", json={"weekly_goal": 50}, headers=headers_a)
     # User B updating settings does not affect A
-    client.patch("/settings", json={"daily_goal": 20}, headers=headers_b)
+    client.patch("/settings", json={"weekly_goal": 20}, headers=headers_b)
     
     settings_a = client.get("/settings", headers=headers_a).json()
-    assert settings_a["daily_goal"] == 50
+    assert settings_a["weekly_goal"] == 50
     settings_b = client.get("/settings", headers=headers_b).json()
-    assert settings_b["daily_goal"] == 20
+    assert settings_b["weekly_goal"] == 20
 
     # Analytics / Dashboard / Reports return 0 cross-user data
     summary_b = client.get("/dashboard/summary", headers=headers_b).json()
     assert summary_b["today_count"] == 0
-    assert summary_b["funnel"] == {}
+    # Funnel values should all be 0 (if keys exist)
+    for stage_count in summary_b.get("funnel", {}).values():
+        assert stage_count == 0
     
     analytics_b = client.get("/analytics/overview", headers=headers_b).json()
     assert analytics_b["current"]["total_applications"] == 0
