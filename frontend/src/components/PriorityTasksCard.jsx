@@ -46,7 +46,7 @@ export default function PriorityTasksCard({ tasks: initialPropTasks, onViewAll, 
   }
 
   return (
-    <div className="panel flex flex-col rounded-2xl p-5 border border-border bg-surface shadow-xs h-[380px] select-none">
+    <div className="panel flex flex-col rounded-2xl p-5 border border-border bg-surface shadow-xs h-full max-h-[340px] select-none">
       {/* Header with Title & Filter */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
@@ -77,7 +77,7 @@ export default function PriorityTasksCard({ tasks: initialPropTasks, onViewAll, 
             <div
               key={task.id}
               onClick={() => setExpandedId(isExpanded ? null : task.id)}
-              className="group relative flex flex-col p-3 rounded-xl bg-surface-secondary hover:bg-surface-tertiary dark:hover:bg-surface-secondary border border-transparent hover:border-border/30 hover:translate-x-1.5 transition-all duration-200 ease-out cursor-pointer shadow-2xs hover:shadow-md overflow-hidden"
+              className="group relative flex flex-col shrink-0 p-3 rounded-xl bg-surface-secondary hover:bg-surface-tertiary dark:hover:bg-surface-secondary border border-transparent hover:border-border/30 hover:translate-x-1.5 transition-all duration-200 ease-out cursor-pointer shadow-2xs hover:shadow-md overflow-hidden"
             >
               {/* Left Hover Indicator Bar */}
               <div className="absolute left-0 top-2 bottom-2 w-1 bg-primary rounded-r-full opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
