@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { Check, CheckCircle2, ArrowUpRight } from 'lucide-react'
 import Dropdown from './ui/Dropdown'
 import CountUp from './ui/CountUp'
@@ -7,6 +7,18 @@ export default function PriorityTasksCard({ tasks: initialPropTasks, onViewAll, 
   const [tasks, setTasks] = useState(initialPropTasks || [])
   const [filterPriority, setFilterPriority] = useState('all')
   const [expandedId, setExpandedId] = useState(null)
+  const scrollRef = useRef(null)
+
+  useEffect(() => {
+    if (expandedId && scrollRef.current) {
+      const el = scrollRef.current.querySelector(`[data-task-id="${expandedId}"]`)
+      if (el) {
+        setTimeout(() => {
+          el.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+        }, 150)
+      }
+    }
+  }, [expandedId])
 
   React.useEffect(() => {
     if (initialPropTasks) {
@@ -69,13 +81,14 @@ export default function PriorityTasksCard({ tasks: initialPropTasks, onViewAll, 
       </div>
 
       {/* Task List / Empty State */}
-      <div className="flex-1 flex flex-col gap-2.5 overflow-y-auto scrollbar-none min-h-[220px]">
+      <div ref={scrollRef} className="flex-1 flex flex-col gap-2.5 overflow-y-auto scrollbar-none min-h-[220px]">
         {filteredTasks.length > 0 ? (
           filteredTasks.map((task) => {
             const isExpanded = expandedId === task.id
             return (
             <div
               key={task.id}
+              data-task-id={task.id}
               onClick={() => setExpandedId(isExpanded ? null : task.id)}
               className="group relative flex flex-col shrink-0 p-3 rounded-xl bg-surface-secondary hover:bg-surface-tertiary dark:hover:bg-surface-secondary border border-transparent hover:border-border/30 hover:translate-x-1.5 transition-all duration-200 ease-out cursor-pointer shadow-2xs hover:shadow-md overflow-hidden"
             >
