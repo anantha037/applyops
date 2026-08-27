@@ -8,6 +8,7 @@ import CallsProgressCard from '../components/CallsProgressCard'
 import RecentActivityCard from '../components/RecentActivityCard'
 import MiniCalendarCard from '../components/MiniCalendarCard'
 import ApplicationStreakCard from '../components/ApplicationStreakCard'
+import QuickLogModal from '../components/QuickLogModal'
 import CountUp from '../components/ui/CountUp'
 import ValueLoader from '../components/ui/ValueLoader'
 import { Send, TrendingUp, CalendarCheck, Trophy, Ghost, ArrowUpRight, ArrowDownRight } from 'lucide-react'
@@ -16,6 +17,7 @@ export default function Dashboard() {
   const [data, setData] = useState({})
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
+  const [quickLogTask, setQuickLogTask] = useState(null)
 
   const load = () => {
     setLoading(true)
@@ -193,6 +195,7 @@ export default function Dashboard() {
         <PriorityTasksCard
           loading={loading}
           tasks={getUnifiedTasks()}
+          onCompleteTask={setQuickLogTask}
         />
       </div>
 
@@ -240,6 +243,16 @@ export default function Dashboard() {
           <MiniCalendarCard onViewFullCalendar={() => window.location.hash = '#/calendar'} loading={loading} />
         </div>
       </div>
+
+      <QuickLogModal 
+        isOpen={!!quickLogTask} 
+        task={quickLogTask} 
+        onClose={() => setQuickLogTask(null)} 
+        onSuccess={() => {
+          setQuickLogTask(null)
+          load()
+        }} 
+      />
     </section>
   )
 }

@@ -3,7 +3,7 @@ import { Check, CheckCircle2, ArrowUpRight } from 'lucide-react'
 import Dropdown from './ui/Dropdown'
 import CountUp from './ui/CountUp'
 
-export default function PriorityTasksCard({ tasks: initialPropTasks, onViewAll, loading = false }) {
+export default function PriorityTasksCard({ tasks: initialPropTasks, onCompleteTask, onViewAll, loading = false }) {
   const [tasks, setTasks] = useState(initialPropTasks || [])
   const [filterPriority, setFilterPriority] = useState('all')
   const [expandedId, setExpandedId] = useState(null)
@@ -26,12 +26,24 @@ export default function PriorityTasksCard({ tasks: initialPropTasks, onViewAll, 
     }
   }, [initialPropTasks])
 
-  const toggleComplete = (id, e) => {
+  const toggleComplete = (task, e) => {
     e.stopPropagation()
-    setTasks(prev => prev.map(t => t.id === id ? { ...t, completed: !t.completed } : t))
+    if (!task.isEvent && onCompleteTask) {
+      onCompleteTask(task)
+      return
+    }
+
+    if (task.isEvent) {
+      const dismissed = JSON.parse(sessionStorage.getItem('applyops_dismissed_events') || '[]')
+      dismissed.push(task.id)
+      sessionStorage.setItem('applyops_dismissed_events', JSON.stringify(dismissed))
+    }
+
+    setTasks(prev => prev.map(t => t.id === task.id ? { ...t, completed: !t.completed } : t))
   }
 
-  const activeTasks = tasks.filter(t => !t.completed)
+  const dismissedSession = JSON.parse(sessionStorage.getItem('applyops_dismissed_events') || '[]')
+  const activeTasks = tasks.filter(t => !t.completed && !dismissedSession.includes(t.id))
   const filteredTasks = activeTasks.filter(t => {
     if (filterPriority === 'all') return true
     return t.priority.toLowerCase() === filterPriority
@@ -147,7 +159,7 @@ export default function PriorityTasksCard({ tasks: initialPropTasks, onViewAll, 
                   </span>
 
                   <button
-                    onClick={(e) => toggleComplete(task.id, e)}
+                    onClick={(e) => toggleComplete(task, e)}
                     className="w-7 h-7 rounded-lg bg-surface-secondary hover:bg-emerald-500/20 text-foreground-secondary hover:text-emerald-400 flex items-center justify-center transition-all focus:outline-none shadow-2xs active:scale-95 group-hover:bg-emerald-500/10"
                     title="Mark as completed"
                     aria-label="Mark task completed"
