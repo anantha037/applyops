@@ -58,7 +58,7 @@ export default function PriorityTasksCard({ tasks: initialPropTasks, onViewAll, 
   }
 
   return (
-    <div className="panel flex flex-col rounded-2xl p-5 border border-border bg-surface shadow-xs h-full max-h-[340px] select-none">
+    <div className="panel flex flex-col rounded-2xl p-5 border border-border bg-surface shadow-xs h-[320px] select-none">
       {/* Header with Title & Filter */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
