@@ -30,10 +30,46 @@ export default function Dashboard() {
       api.report(), 
       activityApi.getStreak(), 
       api.me(),
-      api.calendarEvents(todayStr, todayStr).catch(() => [])
+      api.calendarEvents(todayStr, todayStr).catch(() => []),
+      activityApi.getRecentActivity().catch(() => [])
     ])
-      .then(([summary, due, report, streak, me, events]) => {
-        setData({ summary, due, report, streak, me, events })
+      .then(([summary, due, report, streak, me, events, rawRecent]) => {
+        const recentActivities = (rawRecent || []).map(act => {
+          let color = 'bg-surface-tertiary text-foreground-secondary'
+          let type = act.action_type || 'Update'
+          
+          if (type.includes('Applied') || type === 'Application Submitted') {
+            color = 'bg-primary/15 text-primary'
+            type = 'Applied'
+          } else if (type.includes('Interview')) {
+            color = 'bg-blue-500/15 text-blue-400'
+            type = 'Interview'
+          } else if (type.includes('Call')) {
+            color = 'bg-emerald-500/15 text-emerald-400'
+            type = 'Call'
+          } else if (type.includes('Email') || type.includes('Message')) {
+            color = 'bg-amber-500/15 text-amber-400'
+            type = 'Message'
+          } else if (type.includes('Follow')) {
+            color = 'bg-purple-500/15 text-purple-400'
+            type = 'Follow Up'
+          }
+
+          const d = new Date(act.timestamp)
+          const timeStr = isNaN(d.getTime()) ? act.timestamp : d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' at ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+
+          return {
+            id: act.id,
+            domain: (act.company || '').toLowerCase().replace(/[^a-z0-9]/g, '') + '.com',
+            company: act.company || 'Unknown',
+            action: act.notes ? `${act.action_type} - ${act.notes}` : act.action_type,
+            timestamp: timeStr,
+            color,
+            type
+          }
+        })
+
+        setData({ summary, due, report, streak, me, events, recentActivities })
         setError('')
       })
       .catch(e => setError(e.message))
@@ -202,7 +238,7 @@ export default function Dashboard() {
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 flex flex-col gap-6">
           <DailyProgressCard loading={loading} />
-          <RecentActivityCard loading={loading} />
+          <RecentActivityCard loading={loading} activities={data.recentActivities || []} />
         </div>
         <div className="flex flex-col gap-6">
           <CallsProgressCard summary={summary} loading={loading} />
