@@ -93,6 +93,7 @@ export default function Dashboard() {
     
     if (data.events) {
       data.events.forEach(ev => {
+        if (ev.source === 'Auto' && ev.event_type !== 'Interview') return;
         const evDate = ev.date || (ev.start ? String(ev.start).split('T')[0] : '')
         const type = ev.event_type || ev.type || 'Event'
         tasks.push({
