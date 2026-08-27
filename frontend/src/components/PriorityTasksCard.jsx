@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { Check, CheckCircle2, ArrowUpRight } from 'lucide-react'
+import { Check, CheckCircle2, ArrowUpRight, Zap } from 'lucide-react'
 import Dropdown from './ui/Dropdown'
 import CountUp from './ui/CountUp'
 
@@ -160,11 +160,11 @@ export default function PriorityTasksCard({ tasks: initialPropTasks, onCompleteT
 
                   <button
                     onClick={(e) => toggleComplete(task, e)}
-                    className="w-7 h-7 rounded-lg bg-surface-secondary hover:bg-emerald-500/20 text-foreground-secondary hover:text-emerald-400 flex items-center justify-center transition-all focus:outline-none shadow-2xs active:scale-95 group-hover:bg-emerald-500/10"
-                    title="Mark as completed"
-                    aria-label="Mark task completed"
+                    className="w-7 h-7 rounded-lg bg-surface-secondary hover:bg-primary/20 text-foreground-secondary hover:text-primary flex items-center justify-center transition-all focus:outline-none shadow-2xs active:scale-95 group-hover:bg-primary/10"
+                    title={task.isEvent ? "Dismiss Event" : "Quick Action"}
+                    aria-label="Quick action"
                   >
-                    <Check className="w-3.5 h-3.5" />
+                    {task.isEvent ? <Check className="w-3.5 h-3.5" /> : <Zap className="w-3.5 h-3.5" />}
                   </button>
                 </div>
               </div>
