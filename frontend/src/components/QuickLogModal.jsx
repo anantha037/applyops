@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { X, Save, Zap, Calendar as CalendarIcon, MessageSquare, Briefcase, Mail, Linkedin, Phone, UserCircle, ExternalLink } from 'lucide-react'
+import { X, Save, Zap, Calendar as CalendarIcon, MessageSquare, Briefcase, Mail, Phone, UserCircle, ExternalLink } from 'lucide-react'
 import { api } from '../api/client'
 
 const STAGE_OPTIONS = [
@@ -133,7 +133,7 @@ export default function QuickLogModal({ isOpen, onClose, task, onSuccess }) {
                     )}
                     {contact.linkedin_url && (
                       <a href={contact.linkedin_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 text-xs font-semibold rounded-lg transition-colors border border-indigo-500/20">
-                        <Linkedin className="w-3.5 h-3.5" /> LinkedIn
+                        <ExternalLink className="w-3.5 h-3.5" /> LinkedIn
                       </a>
                     )}
                     {contact.phone && (
