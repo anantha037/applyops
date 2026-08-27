@@ -7,7 +7,7 @@ import Applications from './pages/Applications'
 import Calendar from './pages/Calendar'
 import Contacts from './pages/Contacts'
 import Analytics from './pages/Analytics'
-import Updates from './pages/Updates'
+
 import Settings from './pages/Settings'
 import Auth from './pages/Auth'
 import { authApi } from './api/client'
@@ -18,7 +18,7 @@ const views = {
   calendar: Calendar, 
   contacts: Contacts, 
   analytics: Analytics, 
-  updates: Updates, 
+
   settings: Settings 
 }
 
