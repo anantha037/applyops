@@ -87,18 +87,26 @@ export default function PriorityTasksCard({ tasks: initialPropTasks, onViewAll, 
                 <div className="flex items-center gap-3 min-w-0 flex-1 mr-2 pl-1">
                   {/* Company Logo Badge */}
                   <div className="w-8 h-8 rounded-lg bg-surface flex items-center justify-center flex-shrink-0 overflow-hidden text-xs font-bold text-foreground shadow-2xs group-hover:scale-110 transition-transform duration-200">
-                    <img
-                      src={`https://logo.clearbit.com/${task.domain}`}
-                      alt={task.company}
-                      className="w-full h-full object-contain p-1"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none'
-                        e.currentTarget.nextSibling.style.display = 'flex'
-                      }}
-                    />
-                    <span className="hidden w-full h-full items-center justify-center bg-primary/10 text-primary font-bold text-xs">
-                      {task.company.charAt(0)}
-                    </span>
+                    {task.isEvent ? (
+                      <span className="w-full h-full flex items-center justify-center bg-primary/10 text-primary font-bold text-lg">
+                        📅
+                      </span>
+                    ) : (
+                      <>
+                        <img
+                          src={`https://logo.clearbit.com/${task.domain}`}
+                          alt={task.company}
+                          className="w-full h-full object-contain p-1"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none'
+                            e.currentTarget.nextSibling.style.display = 'flex'
+                          }}
+                        />
+                        <span className="hidden w-full h-full items-center justify-center bg-primary/10 text-primary font-bold text-xs">
+                          {task.company.charAt(0)}
+                        </span>
+                      </>
+                    )}
                   </div>
 
                   {/* Company Name & Task Title */}
@@ -113,7 +121,7 @@ export default function PriorityTasksCard({ tasks: initialPropTasks, onViewAll, 
                     </div>
                     <div className="flex items-center gap-2 mt-0.5">
                       <span className="text-[10px] font-semibold text-foreground-secondary">
-                        Due {task.dueDate}
+                        Due {task.dueDate}{task.time ? ` · ${task.time}` : ''}
                       </span>
                     </div>
                   </div>
@@ -136,7 +144,7 @@ export default function PriorityTasksCard({ tasks: initialPropTasks, onViewAll, 
                 </div>
               </div>
               
-              {isExpanded && task.appDetails && (
+              {isExpanded && !task.isEvent && task.appDetails && (
                 <div className="mt-3 pt-3 border-t border-border/40 text-[11px] text-foreground-secondary space-y-1.5 animate-in slide-in-from-top-2 fade-in duration-200 pl-1">
                   <div className="flex gap-2">
                     <span className="font-semibold text-foreground">Status:</span>
@@ -166,6 +174,40 @@ export default function PriorityTasksCard({ tasks: initialPropTasks, onViewAll, 
                   </div>
                 </div>
               )}
+
+              {isExpanded && task.isEvent && task.eventDetails && (
+                <div className="mt-3 pt-3 border-t border-border/40 text-[11px] text-foreground-secondary space-y-1.5 animate-in slide-in-from-top-2 fade-in duration-200 pl-1">
+                  {task.eventDetails.notes && (
+                    <div className="flex gap-2 flex-col mt-1 bg-surface p-2 rounded-lg border border-border/50">
+                      <span className="font-semibold text-foreground">Event Notes</span>
+                      <span className="whitespace-pre-wrap">{task.eventDetails.notes}</span>
+                    </div>
+                  )}
+                  <div className="mt-2 pt-2 flex items-center gap-4">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        window.location.hash = `#/calendar`
+                      }}
+                      className="text-primary hover:underline font-semibold"
+                    >
+                      Open Calendar &rarr;
+                    </button>
+                    {task.eventDetails.related_application_id && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          sessionStorage.setItem('applyops_pending_action', JSON.stringify({ type: 'details_app', appId: task.eventDetails.related_application_id }))
+                          window.location.hash = `#/applications`
+                        }}
+                        className="text-emerald-400 hover:underline font-semibold"
+                      >
+                        View related application &rarr;
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )})
         ) : (
@@ -189,16 +231,6 @@ export default function PriorityTasksCard({ tasks: initialPropTasks, onViewAll, 
             <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
             <span><CountUp value={activeTasks.length} duration={800} /> pending action{activeTasks.length !== 1 ? 's' : ''}</span>
           </div>
-          <button
-            onClick={() => {
-              if (onViewAll) onViewAll()
-              else window.location.hash = '#/applications'
-            }}
-            className="text-[11px] font-bold text-primary hover:text-primary-hover flex items-center gap-1 transition-all duration-150 focus:outline-none group/link"
-          >
-            <span className="group-hover/link:underline">View all tasks</span>
-            <ArrowUpRight className="w-3.5 h-3.5 transition-transform duration-150 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5" />
-          </button>
         </div>
       )}
     </div>

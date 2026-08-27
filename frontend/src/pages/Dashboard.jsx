@@ -19,9 +19,19 @@ export default function Dashboard() {
 
   const load = () => {
     setLoading(true)
-    Promise.all([api.summary(), api.dueToday(), api.report(), activityApi.getStreak(), api.me()])
-      .then(([summary, due, report, streak, me]) => {
-        setData({ summary, due, report, streak, me })
+    const d = new Date()
+    const todayStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+    
+    Promise.all([
+      api.summary(), 
+      api.dueToday(), 
+      api.report(), 
+      activityApi.getStreak(), 
+      api.me(),
+      api.calendarEvents(todayStr, todayStr).catch(() => [])
+    ])
+      .then(([summary, due, report, streak, me, events]) => {
+        setData({ summary, due, report, streak, me, events })
         setError('')
       })
       .catch(e => setError(e.message))
@@ -43,6 +53,68 @@ export default function Dashboard() {
   const SkeletonCard = ({ className = '' }) => (
     <div className={`panel rounded-2xl bg-surface-secondary border border-border/50 animate-pulse ${className}`} />
   )
+
+  const getPriority = (dateStr, type, stage) => {
+    const d = new Date()
+    const todayStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+    
+    if (dateStr && dateStr < todayStr) return 'high'
+    
+    const highTypes = ['Review Offer', 'Prepare for Interview', 'Recruiter Call', 'Interview', 'Application Deadline']
+    if (highTypes.includes(type)) return 'high'
+    
+    if (stage === 'Interviewing' || stage === 'Offer Received') return 'high'
+    if (type === 'Send Thank-you' || type === 'Send Email') return 'medium'
+    if (!dateStr || dateStr === todayStr) return 'medium'
+    
+    return 'low'
+  }
+
+  const getUnifiedTasks = () => {
+    if (!data.due && !data.events) return []
+    const tasks = []
+    
+    if (data.due) {
+      data.due.forEach(app => {
+        tasks.push({
+          id: app.id,
+          isEvent: false,
+          company: app.company,
+          taskTitle: `${app.next_action_title || app.next_action_type || 'Follow-up'}: ${app.job_title}`,
+          dueDate: app.next_action_due,
+          time: null,
+          priority: getPriority(app.next_action_due, app.next_action_type, app.stage),
+          completed: false,
+          domain: `${app.company.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`,
+          appDetails: app
+        })
+      })
+    }
+    
+    if (data.events) {
+      data.events.forEach(ev => {
+        const evDate = ev.date || (ev.start ? String(ev.start).split('T')[0] : '')
+        const type = ev.event_type || ev.type || 'Event'
+        tasks.push({
+          id: `cal_${ev.id}`,
+          originalId: ev.id,
+          isEvent: true,
+          company: type,
+          taskTitle: ev.title,
+          dueDate: evDate,
+          time: ev.time || (ev.start && String(ev.start).includes('T') ? String(ev.start).split('T')[1].slice(0, 5) : null),
+          priority: getPriority(evDate, type, ''),
+          completed: false,
+          domain: 'calendar',
+          eventDetails: ev
+        })
+      })
+    }
+    
+    const weight = { high: 0, medium: 1, low: 2 }
+    tasks.sort((a, b) => weight[a.priority] - weight[b.priority])
+    return tasks
+  }
 
   return (
     <section className="animate-fade-in pb-10 select-none max-w-full">
@@ -119,16 +191,7 @@ export default function Dashboard() {
         <ApplicationsByStatus summary={summary} loading={loading} />
         <PriorityTasksCard
           loading={loading}
-          tasks={data.due?.map(app => ({
-            id: app.id,
-            company: app.company,
-            taskTitle: `${app.next_action_title || app.next_action_type || 'Follow-up'}: ${app.job_title}`,
-            dueDate: app.next_action_due,
-            priority: 'high',
-            completed: false,
-            domain: `${app.company.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`,
-            appDetails: app
-          })) || []}
+          tasks={getUnifiedTasks()}
         />
       </div>
 
