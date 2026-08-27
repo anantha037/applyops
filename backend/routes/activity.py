@@ -32,13 +32,15 @@ def list_activity(
 ) -> list[Activity]:
     if date_filter == "today":
         activity_date = date.today()
+    elif date_filter == "all":
+        activity_date = None
     else:
         try:
             activity_date = date.fromisoformat(date_filter)
         except ValueError as exc:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="date must be 'today' or an ISO date (YYYY-MM-DD)",
+                detail="date must be 'today', 'all', or an ISO date (YYYY-MM-DD)",
             ) from exc
     return db_client.list_activity(user.id, activity_date, session=session)
 
