@@ -1318,7 +1318,7 @@ export default function Applications() {
               setForm({
                 ...EMPTY_FORM,
                 ...targetApp,
-                has_contact: !!(targetApp.contact_name || targetApp.contact_email || targetApp.contact_phone || targetApp.contact_linkedin)
+                has_contact: !!(targetApp.contact_id || targetApp.contact_name || targetApp.contact_email || targetApp.contact_phone || targetApp.contact_linkedin)
               })
               setShowAddModal(true)
             }
@@ -1367,7 +1367,7 @@ export default function Applications() {
       ...app,
       application_method: method,
       application_method_other: methodOther,
-      has_contact: !!(app.contact_name || app.contact_email || app.contact_phone || app.contact_linkedin),
+      has_contact: !!(app.contact_id || app.contact_name || app.contact_email || app.contact_phone || app.contact_linkedin),
       status: app.status || 'Not Contacted',
       stage: app.stage || 'Applied',
       remarks: app.remarks || ''

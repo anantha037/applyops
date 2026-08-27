@@ -130,7 +130,12 @@ def update_application(
             )
 
     # We must calculate next_action_due if relevant fields changed
-    if {"stage", "last_touch_date", "status"} & changes.keys():
+    stage_changed = "stage" in changes and changes["stage"] != existing.stage
+    status_changed = "status" in changes and changes["status"] != existing.status
+    last_touch_changed = "last_touch_date" in changes and changes["last_touch_date"] != existing.last_touch_date
+    next_action_due_changed = "next_action_due" in changes and changes["next_action_due"] != existing.next_action_due
+
+    if (stage_changed or status_changed or last_touch_changed) and not next_action_due_changed:
         stage = ApplicationStage(changes.get("stage", existing.stage))
         last_touch = changes.get("last_touch_date", existing.last_touch_date)
         status_val = changes.get("status", existing.status)
