@@ -57,7 +57,7 @@ def summary(request: Request, user: User = Depends(get_current_user), session: S
     return {
         "today_count": today_count,
         "applications_today": today_count,
-        "goal": settings.daily_goal,
+        "goal": settings.weekly_goal,
         "calls_goal": getattr(settings, "daily_calls_goal", 10),
         "calls_today": calls_today,
         "streak": 0,
