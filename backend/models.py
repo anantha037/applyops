@@ -247,7 +247,7 @@ class DailyFeedback(BaseModel):
 
 
 class Settings(BaseModel):
-    daily_goal: int = Field(default=0, ge=0)
+    weekly_goal: int = Field(default=25, ge=1)
     daily_calls_goal: int = Field(default=0, ge=0)
     working_hours_start: str = ""
     working_hours_end: str = ""
@@ -261,7 +261,7 @@ class Settings(BaseModel):
 
 
 class SettingsUpdate(BaseModel):
-    daily_goal: int | None = Field(default=None, ge=0)
+    weekly_goal: int | None = Field(default=None, ge=1)
     daily_calls_goal: int | None = Field(default=None, ge=0)
     working_hours_start: str | None = None
     working_hours_end: str | None = None
