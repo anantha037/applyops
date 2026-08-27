@@ -282,7 +282,7 @@ class Settings(SQLModel, table=True):
 
     id:                   Optional[int] = Field(default=None, primary_key=True)
     user_id:              Optional[str] = Field(default=None, foreign_key="users.id", index=True)
-    daily_goal:           int           = Field(default=0)
+    weekly_goal:          int           = Field(default=25)
     daily_calls_goal:     int           = Field(default=0)
     working_hours_start:  str           = Field(default="09:00")
     working_hours_end:    str           = Field(default="18:00")
