@@ -156,11 +156,12 @@ export default function PriorityTasksCard({ tasks: initialPropTasks, onViewAll, 
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
+                        sessionStorage.setItem('applyops_pending_action', JSON.stringify({ type: 'details_app', appId: task.id }))
                         window.location.hash = `#/applications`
                       }}
                       className="text-primary hover:underline font-semibold"
                     >
-                      View application &rarr;
+                      View application details &rarr;
                     </button>
                   </div>
                 </div>
