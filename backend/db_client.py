@@ -686,6 +686,17 @@ def create_activity(user_id: str, activity_id: str, payload: ActivityCreate, *, 
                 contact.last_action_status = "Interviewing"
             session.add(contact)
             
+    # Auto-bump application status if appropriate
+    if payload.application_id and app_row:
+        if app_row.status not in ("Offer Received", "Rejected", "Ghosted"):
+            if payload.action_type in ("Email Reply Received", "Call Connected"):
+                if app_row.status == "Not Contacted":
+                    app_row.status = "In Progress"
+            elif payload.action_type in ("Interview Scheduled", "Interview Completed"):
+                if app_row.status in ("Not Contacted", "In Progress"):
+                    app_row.status = "Interviewing"
+        session.add(app_row)
+
     session.commit()
     session.refresh(row)
 
