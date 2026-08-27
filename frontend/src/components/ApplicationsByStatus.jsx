@@ -9,7 +9,7 @@ export default function ApplicationsByStatus({ summary = {}, loading = false }) 
   const funnel = summary.funnel || {}
 
   const defaultStatusData = [
-    { label: 'Not Contacted', count: funnel['Not Contacted'] ?? 0, color: '#facc15' },
+    { label: 'Not Contacted', count: funnel['Not Contacted'] ?? 0, color: '#EAB308' },
     { label: 'In Progress',   count: funnel['In Progress'] ?? 0,   color: '#2563EB' },
     { label: 'Interviewing',  count: funnel['Interviewing'] ?? 0,  color: '#8B5CF6' },
     { label: 'Offer Received',count: funnel['Offer Received'] ?? 0, color: '#10B981' },

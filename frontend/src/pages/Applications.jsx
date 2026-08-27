@@ -45,7 +45,7 @@ const STATUS_TRIGGER_CLASSES = {
 }
 
 const STATUS_DROPDOWN_OPTIONS = [
-  { label: 'Not Contacted', value: 'Not Contacted', dotColor: 'bg-yellow-400' },
+  { label: 'Not Contacted', value: 'Not Contacted', dotColor: 'bg-yellow-500' },
   { label: 'In Progress',   value: 'In Progress',   dotColor: 'bg-info' },
   { label: 'Interviewing',  value: 'Interviewing',  dotColor: 'bg-primary' },
   { label: 'Offer Received',value: 'Offer Received',dotColor: 'bg-emerald-400' },
