@@ -17,7 +17,7 @@ export function GoalProvider({ children }) {
       ])
 
       if (settingsRes) {
-        const goal = settingsRes.weekly_goal ?? (settingsRes.daily_goal ? settingsRes.daily_goal * 5 : 25)
+        const goal = settingsRes.weekly_goal || 25
         setWeeklyGoal(goal)
       }
 
@@ -60,7 +60,7 @@ export function GoalProvider({ children }) {
     const validatedGoal = Math.max(1, parseInt(newGoal, 10) || 1)
     setWeeklyGoal(validatedGoal)
     try {
-      await api.updateSettings({ weekly_goal: validatedGoal, daily_goal: Math.ceil(validatedGoal / 5) })
+      await api.updateSettings({ weekly_goal: validatedGoal })
     } catch {
     }
   }, [])
