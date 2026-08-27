@@ -45,6 +45,13 @@ def list_activity(
     return db_client.list_activity(user.id, activity_date, session=session)
 
 
+@router.get("/activity/recent", response_model=list[Activity])
+def get_recent_activity(
+    request: Request, user: User = Depends(get_current_user), session: Session = Depends(get_session)
+) -> list[Activity]:
+    return db_client.list_activity(user.id, None, session=session)[:5]
+
+
 @router.get("/activity/streak")
 def get_streak(request: Request, user: User = Depends(get_current_user), session: Session = Depends(get_session)) -> dict[str, Any]:
     india_tz = ZoneInfo("Asia/Kolkata")
