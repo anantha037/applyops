@@ -19,7 +19,18 @@ const ACTION_OPTIONS = [
   { label: 'Call Dialed', value: 'Call Dialed' },
   { label: 'Call Connected', value: 'Call Connected' },
   { label: 'WhatsApp Sent', value: 'WhatsApp Sent' },
+  { label: 'Interview Scheduled', value: 'Interview Scheduled' },
   { label: 'Interview Completed', value: 'Interview Completed' }
+]
+
+const NEXT_ACTION_TYPE_OPTIONS = [
+  { label: 'Follow Up', value: 'Follow Up' },
+  { label: 'Recruiter Call', value: 'Recruiter Call' },
+  { label: 'Send Email', value: 'Send Email' },
+  { label: 'Prepare for Interview', value: 'Prepare for Interview' },
+  { label: 'Send Thank-you', value: 'Send Thank-you' },
+  { label: 'Review Offer', value: 'Review Offer' },
+  { label: 'Custom', value: 'Custom' }
 ]
 
 export default function QuickLogModal({ isOpen, onClose, task, onSuccess }) {
@@ -42,7 +53,8 @@ export default function QuickLogModal({ isOpen, onClose, task, onSuccess }) {
         notes: '',
         stage: task.appDetails?.stage || 'Applied',
         next_action_due: '',
-        next_action_title: ''
+        next_action_title: '',
+        next_action_type: 'Follow Up'
       })
       
       setContact(null)
@@ -61,6 +73,16 @@ export default function QuickLogModal({ isOpen, onClose, task, onSuccess }) {
 
   if (!isOpen || !task || task.isEvent) return null
 
+  const handleTypeChange = (newType) => {
+    setForm(f => {
+      const updates = { next_action_type: newType }
+      if (newType !== 'Custom' && (!f.next_action_title || f.next_action_title === 'Follow up with recruiter' || NEXT_ACTION_TYPE_OPTIONS.some(opt => opt.label === f.next_action_title))) {
+        updates.next_action_title = newType
+      }
+      return { ...f, ...updates }
+    })
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
@@ -76,6 +98,7 @@ export default function QuickLogModal({ isOpen, onClose, task, onSuccess }) {
         stage: form.stage,
         next_action_due: form.next_action_due || null,
         next_action_title: form.next_action_due ? form.next_action_title : null,
+        next_action_type: form.next_action_due ? form.next_action_type : null,
       }
 
       await api.updateApplication(task.id, updates)
@@ -211,15 +234,28 @@ export default function QuickLogModal({ isOpen, onClose, task, onSuccess }) {
             
             {/* Pick Next Action Title if Date is set */}
             {form.next_action_due && (
-              <div className="animate-in fade-in slide-in-from-top-1 duration-200">
-                <label className="block text-[10px] font-semibold text-foreground-secondary uppercase tracking-wider mb-1.5">Next Action Title *</label>
-                <input
-                  required
-                  placeholder="e.g. Follow up email"
-                  value={form.next_action_title || ''}
-                  onChange={e => setForm(f => ({ ...f, next_action_title: e.target.value }))}
-                  className="w-full rounded-xl border border-transparent bg-surface-secondary hover:bg-surface-tertiary px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary transition-all"
-                />
+              <div className="grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
+                <div>
+                  <label className="block text-[10px] font-semibold text-foreground-secondary uppercase tracking-wider mb-1.5">Action Type</label>
+                  <Dropdown
+                    options={NEXT_ACTION_TYPE_OPTIONS}
+                    value={form.next_action_type}
+                    onChange={handleTypeChange}
+                    className="w-full"
+                    size="sm"
+                    triggerClassName="bg-surface-secondary text-foreground hover:bg-surface-tertiary border border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold text-foreground-secondary uppercase tracking-wider mb-1.5">Next Action Title *</label>
+                  <input
+                    required
+                    placeholder="e.g. Follow up email"
+                    value={form.next_action_title || ''}
+                    onChange={e => setForm(f => ({ ...f, next_action_title: e.target.value }))}
+                    className="w-full rounded-xl border border-transparent bg-surface-secondary hover:bg-surface-tertiary px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+                  />
+                </div>
               </div>
             )}
           </div>
