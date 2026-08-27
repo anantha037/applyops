@@ -1,15 +1,25 @@
 import React, { useState, useEffect } from 'react'
 import { X, Save, Zap, Calendar as CalendarIcon, MessageSquare, Briefcase, Mail, Phone, UserCircle, ExternalLink } from 'lucide-react'
 import { api } from '../api/client'
+import Dropdown from './ui/Dropdown'
 
 const STAGE_OPTIONS = [
-  'Saved', 'Applied', 'In Progress', 'Interviewing',
-  'Offer Received', 'Rejected', 'Ghosted', 'Withdrawn'
+  { label: 'Applied', value: 'Applied' },
+  { label: 'Called', value: 'Called' },
+  { label: 'Emailed', value: 'Emailed' },
+  { label: 'Follow-up 1', value: 'Follow-up 1' },
+  { label: 'Follow-up 2', value: 'Follow-up 2' },
+  { label: 'Follow-up 3', value: 'Follow-up 3' },
+  { label: 'Closed', value: 'Closed' }
 ]
 
 const ACTION_OPTIONS = [
-  'Follow Up', 'Email Sent', 'LinkedIn Message', 
-  'Call Dialed', 'Interview Prep', 'Offer Negotiation'
+  { label: 'Email Sent', value: 'Email Sent' },
+  { label: 'LinkedIn Message', value: 'LinkedIn Message' },
+  { label: 'Call Dialed', value: 'Call Dialed' },
+  { label: 'Call Connected', value: 'Call Connected' },
+  { label: 'WhatsApp Sent', value: 'WhatsApp Sent' },
+  { label: 'Interview Completed', value: 'Interview Completed' }
 ]
 
 export default function QuickLogModal({ isOpen, onClose, task, onSuccess }) {
@@ -18,21 +28,21 @@ export default function QuickLogModal({ isOpen, onClose, task, onSuccess }) {
   const [loadingContact, setLoadingContact] = useState(false)
   
   const [form, setForm] = useState({
-    action_type: 'Follow Up',
+    action_type: 'Email Sent',
     notes: '',
     stage: 'Applied',
     next_action_due: '',
-    next_action_type: 'Follow Up'
+    next_action_title: ''
   })
 
   useEffect(() => {
     if (isOpen && task && !task.isEvent) {
       setForm({
-        action_type: task.appDetails?.next_action_type || 'Follow Up',
+        action_type: 'Email Sent',
         notes: '',
         stage: task.appDetails?.stage || 'Applied',
         next_action_due: '',
-        next_action_type: 'Follow Up'
+        next_action_title: ''
       })
       
       setContact(null)
@@ -65,7 +75,7 @@ export default function QuickLogModal({ isOpen, onClose, task, onSuccess }) {
       const updates = {
         stage: form.stage,
         next_action_due: form.next_action_due || null,
-        next_action_type: form.next_action_due ? form.next_action_type : null,
+        next_action_title: form.next_action_due ? form.next_action_title : null,
       }
 
       await api.updateApplication(task.id, updates)
@@ -149,18 +159,35 @@ export default function QuickLogModal({ isOpen, onClose, task, onSuccess }) {
           </div>
 
           <div className="space-y-4 pt-1">
+            {/* Grid for Action & Stage */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">Action Taken *</label>
+                <Dropdown
+                  options={ACTION_OPTIONS}
+                  value={form.action_type || 'Email Sent'}
+                  onChange={val => setForm({ ...form, action_type: val })}
+                  className="w-full"
+                  align="left"
+                  triggerClassName="bg-surface-secondary text-foreground hover:bg-surface-tertiary border border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">Pipeline Stage</label>
+                <Dropdown
+                  options={STAGE_OPTIONS}
+                  value={form.stage || 'Applied'}
+                  onChange={val => setForm({ ...form, stage: val })}
+                  className="w-full"
+                  align="left"
+                  triggerClassName="bg-surface-secondary text-foreground hover:bg-surface-tertiary border border-transparent"
+                />
+              </div>
+            </div>
+
             {/* Outcome Notes */}
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-semibold text-foreground-secondary">Outcome / Notes *</label>
-                <select
-                  value={form.action_type}
-                  onChange={e => setForm(f => ({ ...f, action_type: e.target.value }))}
-                  className="bg-transparent border-none text-[10px] font-bold text-primary focus:outline-none cursor-pointer appearance-none text-right pr-2 hover:opacity-80 transition-opacity"
-                >
-                  {ACTION_OPTIONS.map(a => <option key={a} value={a} className="bg-surface">{a}</option>)}
-                </select>
-              </div>
+              <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">Outcome / Notes *</label>
               <textarea
                 required
                 value={form.notes}
@@ -171,41 +198,28 @@ export default function QuickLogModal({ isOpen, onClose, task, onSuccess }) {
               />
             </div>
 
-            {/* Grid for Stage & Next Action */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">Pipeline Stage</label>
-                <select
-                  value={form.stage}
-                  onChange={e => setForm(f => ({ ...f, stage: e.target.value }))}
-                  className="w-full rounded-xl border border-transparent bg-surface-secondary hover:bg-surface-tertiary px-3.5 py-2.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-all appearance-none"
-                >
-                  {STAGE_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">Next Action Due</label>
-                <input
-                  type="date"
-                  value={form.next_action_due}
-                  onChange={e => setForm(f => ({ ...f, next_action_due: e.target.value }))}
-                  className="w-full rounded-xl border border-transparent bg-surface-secondary hover:bg-surface-tertiary px-3.5 py-2.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-all [color-scheme:dark]"
-                />
-              </div>
+            {/* Next Action Scheduling */}
+            <div>
+              <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">Next Action Due</label>
+              <input
+                type="date"
+                value={form.next_action_due}
+                onChange={e => setForm(f => ({ ...f, next_action_due: e.target.value }))}
+                className="w-full rounded-xl border border-transparent bg-surface-secondary hover:bg-surface-tertiary px-3.5 py-2.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-all [color-scheme:dark]"
+              />
             </div>
             
-            {/* Optional: Pick Next Action Type if Date is set */}
+            {/* Pick Next Action Title if Date is set */}
             {form.next_action_due && (
               <div className="animate-in fade-in slide-in-from-top-1 duration-200">
-                <label className="block text-[10px] font-semibold text-foreground-secondary uppercase tracking-wider mb-1.5">Next Action Type</label>
-                <select
-                  value={form.next_action_type}
-                  onChange={e => setForm(f => ({ ...f, next_action_type: e.target.value }))}
-                  className="w-full rounded-xl border border-transparent bg-surface-secondary hover:bg-surface-tertiary px-3.5 py-2.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-all appearance-none"
-                >
-                  {ACTION_OPTIONS.map(a => <option key={a} value={a}>{a}</option>)}
-                </select>
+                <label className="block text-[10px] font-semibold text-foreground-secondary uppercase tracking-wider mb-1.5">Next Action Title *</label>
+                <input
+                  required
+                  placeholder="e.g. Follow up email"
+                  value={form.next_action_title || ''}
+                  onChange={e => setForm(f => ({ ...f, next_action_title: e.target.value }))}
+                  className="w-full rounded-xl border border-transparent bg-surface-secondary hover:bg-surface-tertiary px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+                />
               </div>
             )}
           </div>
