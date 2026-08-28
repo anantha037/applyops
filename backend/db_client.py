@@ -438,6 +438,9 @@ def list_applications(
         stmt = stmt.where(DBApplication.status == status)
     if stage:
         stmt = stmt.where(DBApplication.stage == stage)
+        
+    stmt = stmt.order_by(col(DBApplication.date_applied).desc())
+    
     rows = session.exec(stmt).all()
     return [_app_to_pydantic(r) for r in rows]
 
