@@ -1,7 +1,10 @@
-import { Edit, Trash2 } from 'lucide-react'
+import { Edit, Trash2, X } from 'lucide-react'
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import { api } from '../api/client'
 import Dropdown from '../components/ui/Dropdown'
+import SearchableSelect from '../components/ui/SearchableSelect'
+import { useToast } from '../context/ToastContext'
+import ConfirmDeleteModal from '../components/ui/ConfirmDeleteModal'
 
 const MailIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 7.00005L10.2 11.65C11.2667 12.45 12.7333 12.45 13.8 11.65L20 7" /><rect x="3" y="5" width="18" height="14" rx="2" /></svg>
 const PhoneIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
@@ -27,6 +30,14 @@ const ACTION_STATUS_OPTIONS = [
   { label: 'Not Interested', value: 'Not Interested' },
   { label: 'Closed', value: 'Closed' }
 ]
+
+function getLocalTodayStr() {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
 
 /** Normalise the tags field — backend sends "" or a comma string; UI uses Array.some(). */
 function tagsArr(c) {
@@ -67,102 +78,50 @@ function getAvatarColor(name) {
   return colors[sum % colors.length]
 }
 
-function MarkAsAppliedModal({ contact, onClose, onConfirm }) {
-  const [method, setMethod] = useState('LinkedIn Easy Apply')
-  const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState('')
-
-  const submit = async e => {
-    e.preventDefault()
-    setSubmitting(true)
-    try {
-      await onConfirm(contact.id, method)
-      onClose()
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setSubmitting(false)
-    }
+function CopyableText({ text, children }) {
+  const [copied, setCopied] = useState(false)
+  const copy = (e) => {
+    e.stopPropagation()
+    navigator.clipboard.writeText(text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in-80 duration-150" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="bg-surface rounded-2xl border border-transparent shadow-2xl w-full max-w-md overflow-hidden select-none">
-        <div className="flex items-center justify-between px-6 pt-5 pb-2">
-          <div>
-            <h3 className="text-base font-bold text-foreground">Mark as Applied</h3>
-            <p className="text-[11px] text-foreground-secondary font-medium">Confirm that you applied for a role through this contact.</p>
-          </div>
-          <button onClick={onClose} className="rounded-lg p-1.5 text-foreground-secondary hover:text-foreground hover:bg-surface-tertiary transition-colors">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
-          </button>
-        </div>
-
-        <form onSubmit={submit} className="px-6 py-4 space-y-4">
-          {error && <p className="text-xs text-rose-400 bg-rose-500/10 rounded-xl p-3 border border-rose-500/20">{error}</p>}
-
-          <div className="p-3 rounded-xl bg-surface-secondary border border-transparent">
-            <p className="text-xs font-bold text-foreground">{contact.name}</p>
-            <p className="text-[11px] text-foreground-secondary font-medium">{contact.role || 'Contact'} {contact.company ? `· ${contact.company}` : ''}</p>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">How did you apply? *</label>
-            <Dropdown
-              options={APPLICATION_METHOD_OPTIONS}
-              value={method}
-              onChange={setMethod}
-              className="w-full"
-              align="left"
-            />
-          </div>
-
-          <div className="flex items-center justify-end gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-xl px-4 py-2 text-xs font-semibold text-foreground-secondary hover:bg-surface-tertiary transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="rounded-xl bg-primary px-5 py-2 text-xs font-semibold text-white hover:bg-primary-hover disabled:opacity-60 transition-all shadow-2xs active:scale-95"
-            >
-              {submitting ? 'Confirming…' : 'Confirm Application'}
-            </button>
-          </div>
-        </form>
-      </div>
+    <div className="flex items-center gap-2 group/copy cursor-pointer" onClick={copy} title="Click to copy">
+      <span className="truncate">{children}</span>
+      <span className="opacity-0 group-hover/copy:opacity-100 transition-opacity">
+        {copied ? (
+          <svg className="w-3.5 h-3.5 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6L9 17l-5-5"/></svg>
+        ) : (
+          <svg className="w-3.5 h-3.5 text-muted hover:text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        )}
+      </span>
     </div>
   )
 }
 
-function ContactModal({ isEdit, onClose, onSave }) {
+function ContactModal({ isEdit, onClose, onSave, apps = [] }) {
   const [form, setForm] = useState(arguments[0].initialData || {
     name: '',
     company: '',
     role: '',
     email: '',
     phone: '',
-    mark_applied: false,
-    application_method: 'LinkedIn Easy Apply',
     tags: '',
     notes: '',
-    linkedin_url: ''
+    linkedin_url: '',
+    application_id: null
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
   const submit = async e => {
     e.preventDefault()
+    if (saving) return
     setSaving(true)
     try {
       const payload = {
-        ...form,
-        applied: form.mark_applied,
-        application_method: form.mark_applied ? form.application_method : null
+        ...form
       }
       await onSave(payload)
       onClose()
@@ -174,7 +133,7 @@ function ContactModal({ isEdit, onClose, onSave }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in-80 duration-150" onClick={e => e.target === e.currentTarget && onClose()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in-80 duration-150" onMouseDown={e => e.target === e.currentTarget && onClose()}>
       <div className="bg-surface rounded-2xl border border-transparent shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto scrollbar-none select-none">
         <div className="flex items-center justify-between px-6 pt-5 pb-2">
           <div className="flex items-center gap-2.5">
@@ -248,48 +207,20 @@ function ContactModal({ isEdit, onClose, onSave }) {
             </div>
           </div>
 
-          <div className="pt-1">
-            <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">
-              Do you want to mark this contact as applied?
-            </label>
-            <div className="flex rounded-xl bg-surface-secondary p-1 gap-1 w-full sm:w-auto">
-              <button
-                type="button"
-                onClick={() => setForm({ ...form, mark_applied: false })}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all focus:outline-none flex-1 sm:flex-initial ${
-                  !form.mark_applied
-                    ? 'bg-surface text-primary shadow-2xs'
-                    : 'text-foreground-secondary hover:text-foreground'
-                }`}
-              >
-                Not applied
-              </button>
-              <button
-                type="button"
-                onClick={() => setForm({ ...form, mark_applied: true })}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all focus:outline-none flex-1 sm:flex-initial ${
-                  form.mark_applied
-                    ? 'bg-surface text-primary shadow-2xs'
-                    : 'text-foreground-secondary hover:text-foreground'
-                }`}
-              >
-                Mark as applied
-              </button>
-            </div>
-
-            {form.mark_applied && (
-              <div className="mt-3.5 space-y-1.5 animate-in fade-in-50 duration-150">
-                <label className="block text-xs font-semibold text-foreground-secondary">How did you apply? *</label>
-                <Dropdown
-                  options={APPLICATION_METHOD_OPTIONS}
-                  value={form.application_method}
-                  onChange={val => setForm({ ...form, application_method: val })}
-                  className="w-full"
-                  align="left"
-                />
-              </div>
-            )}
+          <div>
+            <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">Link Application (Optional)</label>
+            <SearchableSelect
+              options={apps.map(a => ({
+                value: a.id,
+                label: a.company,
+                sublabel: a.job_title
+              }))}
+              value={form.application_id || null}
+              onChange={val => setForm({ ...form, application_id: val })}
+              placeholder="Search and link an application..."
+            />
           </div>
+
 
           <div>
             <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">Tags (comma-separated)</label>
@@ -334,8 +265,9 @@ function ContactModal({ isEdit, onClose, onSave }) {
             <button
               type="submit"
               disabled={saving}
-              className="rounded-xl bg-primary px-5 py-2 text-xs font-semibold text-white hover:bg-primary-hover disabled:opacity-60 transition-all shadow-2xs active:scale-95"
+              className="rounded-xl bg-primary px-5 py-2 text-xs font-semibold text-white hover:bg-primary-hover disabled:opacity-60 transition-all shadow-2xs active:scale-95 flex items-center gap-2"
             >
+              {saving && <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
               {saving ? 'Saving...' : (isEdit ? 'Save Changes' : 'Save Contact')}
             </button>
           </div>
@@ -343,6 +275,143 @@ function ContactModal({ isEdit, onClose, onSave }) {
       </div>
     </div>
   )
+}
+
+function ContactDetailsModal({ contact, onClose, onEdit, onDelete, onOpenApplication, onUnlinkApplication, unlinkingAppIds = [] }) {
+  if (!contact) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in-80 duration-150" onMouseDown={e => e.target === e.currentTarget && onClose()}>
+      <div className="bg-surface rounded-2xl border border-transparent shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto scrollbar-none select-none flex flex-col">
+        <div className="flex items-center justify-between px-6 pt-5 pb-2">
+          <div className="flex items-center gap-2.5">
+            <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs ${getAvatarColor(contact.name)}`}>
+              {getInitials(contact.name)}
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-foreground">Contact Details</h3>
+              <p className="text-[11px] text-foreground-secondary font-medium">Read-only view</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <button onClick={onEdit} className="rounded-lg p-1.5 text-foreground-secondary hover:text-primary hover:bg-surface-tertiary transition-colors" title="Edit Contact">
+              <Edit className="w-4 h-4" />
+            </button>
+            <button onClick={onDelete} className="rounded-lg p-1.5 text-foreground-secondary hover:text-rose-400 hover:bg-rose-500/10 transition-colors" title="Delete Contact">
+              <Trash2 className="w-4 h-4" />
+            </button>
+            <button onClick={onClose} className="rounded-lg p-1.5 ml-1 text-foreground-secondary hover:text-foreground hover:bg-surface-tertiary transition-colors">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        <div className="px-6 py-4 space-y-6">
+          <div>
+            <h4 className="text-xl font-bold text-foreground">{contact.name}</h4>
+            <p className="text-sm text-foreground-secondary">
+              {contact.role || 'No Role'} {contact.company ? `· ${contact.company}` : ''}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-[11px] font-bold text-foreground-secondary uppercase tracking-wider mb-1">Email</p>
+              {contact.email ? (
+                <CopyableText text={contact.email}>
+                  <a href={`mailto:${contact.email}`} onClick={e => e.stopPropagation()} className="text-xs font-semibold text-primary hover:underline">{contact.email}</a>
+                </CopyableText>
+              ) : (
+                <span className="text-xs font-semibold text-foreground-secondary">—</span>
+              )}
+            </div>
+            <div>
+              <p className="text-[11px] font-bold text-foreground-secondary uppercase tracking-wider mb-1">Phone</p>
+              {contact.phone ? (
+                <CopyableText text={contact.phone}>
+                  <a href={`tel:${contact.phone}`} onClick={e => e.stopPropagation()} className="text-xs font-semibold text-foreground hover:text-primary transition-colors">{contact.phone}</a>
+                </CopyableText>
+              ) : (
+                <span className="text-xs font-semibold text-foreground-secondary">—</span>
+              )}
+            </div>
+            <div>
+              <p className="text-[11px] font-bold text-foreground-secondary uppercase tracking-wider mb-1">LinkedIn</p>
+              {contact.linkedin_url ? (
+                <CopyableText text={contact.linkedin_url}>
+                  <a href={contact.linkedin_url.startsWith('http') ? contact.linkedin_url : `https://${contact.linkedin_url}`} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="text-xs font-semibold text-primary hover:underline flex items-center gap-1">
+                    View Profile ↗
+                  </a>
+                </CopyableText>
+              ) : (
+                <span className="text-xs font-semibold text-foreground-secondary">—</span>
+              )}
+            </div>
+            <div>
+              <p className="text-[11px] font-bold text-foreground-secondary uppercase tracking-wider mb-1">Tags</p>
+              <span className="text-xs font-semibold text-foreground">{tagsArr(contact).join(', ') || '—'}</span>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-[11px] font-bold text-foreground-secondary uppercase tracking-wider mb-1">Status</p>
+              <span className="text-xs font-semibold text-foreground">{contact.last_action_status || '—'}</span>
+            </div>
+            <div>
+              <p className="text-[11px] font-bold text-foreground-secondary uppercase tracking-wider mb-1">Last Contacted</p>
+              <span className="text-xs font-semibold text-foreground">{contact.manual_last_contact_date || contact.last_contacted ? formatDate(contact.manual_last_contact_date || contact.last_contacted) : '—'}</span>
+            </div>
+          </div>
+
+          {(contact.applications && contact.applications.length > 0) && (
+            <div className="space-y-2">
+              <p className="text-[11px] font-bold text-foreground-secondary uppercase tracking-wider">Linked Applications</p>
+              <div className="flex flex-col gap-2">
+                {contact.applications.map(app => (
+                  <div key={app.id} className={`flex items-center gap-2 group/appitem transition-all duration-200 ${unlinkingAppIds.includes(app.id) ? 'opacity-0 scale-95 pointer-events-none' : ''}`}>
+                    <button
+                      onClick={() => {
+                        onOpenApplication(app.id);
+                        onClose();
+                      }}
+                      className="flex-1 flex flex-col text-left p-3 rounded-xl bg-surface-secondary border border-transparent hover:border-primary/20 hover:bg-surface-tertiary transition-all"
+                    >
+                      <span className="text-xs font-bold text-primary hover:underline decoration-primary/50">
+                        {app.company}
+                      </span>
+                      <span className="text-[11px] text-foreground-secondary font-medium mt-0.5">
+                        {app.job_title}
+                      </span>
+                    </button>
+                    {onUnlinkApplication && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onUnlinkApplication(app.id);
+                        }}
+                        className="p-2.5 text-foreground-secondary hover:text-rose-400 hover:bg-rose-500/10 rounded-xl transition-all opacity-0 group-hover/appitem:opacity-100"
+                        title="Remove application link"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {contact.notes && (
+            <div>
+              <p className="text-[11px] font-bold text-foreground-secondary uppercase tracking-wider mb-1">Notes</p>
+              <p className="text-xs text-foreground bg-surface-secondary p-3 rounded-xl whitespace-pre-wrap">{contact.notes}</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function InlineLinkedinEdit({ contact, onSave }) {
@@ -408,18 +477,44 @@ export default function Contacts() {
   const [appFilter, setAppFilter] = useState('All')
   const [showAddModal, setShowAddModal] = useState(false)
   const [editContact, setEditContact] = useState(null)
+  const [detailsContact, setDetailsContact] = useState(null)
   const [deleteContactId, setDeleteContactId] = useState(null)
-  const [deleteError, setDeleteError] = useState('')
-  const [applyTargetContact, setApplyTargetContact] = useState(null)
+  const [unlinkAppId, setUnlinkAppId] = useState(null)
+  const [isUnlinkingApp, setIsUnlinkingApp] = useState(false)
+  const [unlinkingAppIds, setUnlinkingAppIds] = useState([])
+  const [deletingIds, setDeletingIds] = useState([])
+  const { addToast } = useToast()
+  const [isDeleting, setIsDeleting] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 10
+
+  const [apps, setApps] = useState([])
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await api.contacts()
+      const [res, appsRes] = await Promise.all([
+        api.contacts(),
+        api.applications().catch(() => [])
+      ])
       setContacts(res || [])
+      setApps(appsRes || [])
       setError('')
+      
+      const pendingAction = sessionStorage.getItem('applyops_pending_action')
+      if (pendingAction && res) {
+        try {
+          const action = JSON.parse(pendingAction)
+          if (action.type === 'scroll_contact' || action.type === 'details_contact') {
+            const contact = res.find(c => c.id === action.contactId)
+            if (contact) {
+              setDetailsContact(contact)
+            }
+            sessionStorage.removeItem('applyops_pending_action')
+          }
+        } catch(e) {}
+      }
+      
     } catch (err) {
       setError(err.message)
     } finally {
@@ -429,8 +524,40 @@ export default function Contacts() {
 
   useEffect(() => { load() }, [load])
 
+  const handleUnlinkApplication = (appId) => {
+    setUnlinkAppId(appId)
+  }
+
+  const confirmUnlinkApplication = async () => {
+    if (!unlinkAppId || isUnlinkingApp) return
+    setIsUnlinkingApp(true)
+    const idToRemove = unlinkAppId
+    try {
+      await api.updateApplication(idToRemove, { contact_id: "" })
+      addToast('Application unlinked', 'success')
+      setUnlinkingAppIds(prev => [...prev, idToRemove])
+      setUnlinkAppId(null)
+      
+      setTimeout(() => {
+        if (detailsContact) {
+          setDetailsContact(prev => ({
+            ...prev,
+            applications: prev.applications.filter(a => a.id !== idToRemove)
+          }))
+        }
+        setUnlinkingAppIds(prev => prev.filter(id => id !== idToRemove))
+        load()
+      }, 200)
+    } catch(err) {
+      addToast(`Failed to unlink application: ${err.message}`, 'error')
+      setUnlinkAppId(null)
+    } finally {
+      setIsUnlinkingApp(false)
+    }
+  }
+
   const handleJumpToApplication = (appId) => {
-    sessionStorage.setItem('applyops_pending_action', JSON.stringify({ type: 'edit_app', appId }))
+    sessionStorage.setItem('applyops_pending_action', JSON.stringify({ type: 'details_app', appId }))
     window.location.hash = '#/applications'
   }
 
@@ -445,21 +572,30 @@ export default function Contacts() {
   }
 
   const handleDeleteConfirm = async () => {
-    if (!deleteContactId) return
+    if (!deleteContactId || isDeleting) return
+    setIsDeleting(true)
+    const idToRemove = deleteContactId
     try {
-      await api.deleteContact(deleteContactId)
-      await load()
+      await api.deleteContact(idToRemove)
+      addToast('Contact deleted', 'success')
+      setDeletingIds(prev => [...prev, idToRemove])
       setDeleteContactId(null)
-      setDeleteError('')
+      setTimeout(() => {
+        setContacts(prev => prev.filter(c => c.id !== idToRemove))
+        setDeletingIds(prev => prev.filter(id => id !== idToRemove))
+      }, 200)
     } catch (err) {
-      setDeleteError(err.message || 'Failed to delete contact')
+      addToast(`Failed to delete contact: ${err.message}`, 'error')
+      setDeleteContactId(null)
+    } finally {
+      setIsDeleting(false)
     }
   }
 
   const handleSaveContact = async (payload) => {
     const formatted = {
       ...payload,
-      tags: typeof payload.tags === 'string' ? payload.tags.split(',').map(t => t.trim()).filter(Boolean) : payload.tags
+      tags: Array.isArray(payload.tags) ? payload.tags.join(', ') : payload.tags
     }
     if (editContact) {
       await api.updateContact(editContact.id, formatted)
@@ -473,26 +609,16 @@ export default function Contacts() {
   const handleAdd = async (payload) => {
     const formatted = {
       ...payload,
-      tags: payload.tags ? payload.tags.split(',').map(t => t.trim()).filter(Boolean) : []
+      tags: Array.isArray(payload.tags) ? payload.tags.join(', ') : payload.tags
     }
     await api.createContact(formatted)
     load()
   }
 
-  const handleConfirmMarkApplied = async (contactId, method) => {
-    try {
-      await api.contactsApi?.markAsApplied ? api.contactsApi.markAsApplied(contactId, { application_method: method }) : Promise.resolve()
-    } catch (e) {
-      setError(e.message || 'Failed to mark contact as applied')
-      throw e
-    }
-    await load()
-  }
-
   const handleUpdateLinkedin = async (contactId, newUrl) => {
-    setContacts(prev => prev.map(c => c.id === contactId ? { ...c, linkedin_url: newUrl } : c))
     try {
       await api.updateContact(contactId, { linkedin_url: newUrl })
+      setContacts(prev => prev.map(c => c.id === contactId ? { ...c, linkedin_url: newUrl } : c))
     } catch (e) {
       console.error('Failed to update linkedin', e)
     }
@@ -632,12 +758,7 @@ export default function Contacts() {
           <table className="w-full text-left text-xs whitespace-nowrap">
             <thead>
               <tr className="text-[10px] font-bold text-foreground-secondary uppercase tracking-wider">
-                <th className="py-2.5 px-3.5 font-bold">Contact</th>
-                <th className="py-2.5 px-3.5 font-bold">Company</th>
-                <th className="py-2.5 px-3.5 font-bold">Role</th>
-                <th className="py-2.5 px-3.5 font-bold">Email</th>
-                <th className="py-2.5 px-3.5 font-bold">Phone</th>
-                <th className="py-2.5 px-3.5 font-bold">LinkedIn</th>
+                <th className="py-2.5 px-3.5 font-bold min-w-[200px]">Contact</th>
                 <th className="py-2.5 px-3.5 font-bold">Application</th>
                 <th className="py-2.5 px-3.5 font-bold">Last Action</th>
                 <th className="py-2.5 px-3.5 font-bold">Last Contact</th>
@@ -647,66 +768,96 @@ export default function Contacts() {
             <tbody>
               {paginated.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="py-12 text-center text-xs text-muted">
+                  <td colSpan="5" className="py-12 text-center text-xs text-muted">
                     {loading ? 'Loading contacts…' : 'No contacts found. Try another search or filter.'}
                   </td>
                 </tr>
               ) : paginated.map(c => {
                 const isApplied = c.applied || Boolean(c.application_method) || Boolean(c.application_id)
                 return (
-                  <tr key={c.id} className="hover:bg-surface-tertiary transition-colors group rounded-xl">
+                  <tr 
+                    key={c.id} 
+                    onClick={(e) => {
+                      if (e.target.closest('button, input, select, a, [role="button"], .dropdown-trigger')) return;
+                      setDetailsContact(c);
+                    }}
+                    className={`hover:bg-surface-tertiary transition-all duration-200 group rounded-xl cursor-pointer ${deletingIds.includes(c.id) ? 'opacity-0 scale-95 -translate-y-2 pointer-events-none' : ''}`}
+                  >
                     <td className="py-3.5 px-3.5">
-                      <div className="flex items-center gap-2.5">
-                        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${getAvatarColor(c.name)}`}>
+                      <div className="flex items-start gap-3">
+                        <div
+                          className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 mt-0.5 ${getAvatarColor(c.name)}`}
+                        >
                           {getInitials(c.name)}
                         </div>
-                        <span className="font-bold text-foreground">{c.name}</span>
+                        <div className="flex flex-col gap-1">
+                          <span className="font-bold text-foreground text-sm leading-none text-left">
+                            {c.name}
+                          </span>
+                          <div className="flex flex-wrap items-center gap-1.5 text-xs text-foreground-secondary font-medium">
+                            {c.role ? <span>{c.role}</span> : <span className="opacity-50">No Role</span>}
+                            {c.company && (
+                              <>
+                                <span className="opacity-40">•</span>
+                                <span className="text-foreground">{c.company}</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </td>
-                    <td className="py-3.5 px-3.5 text-foreground-secondary font-medium">{c.company || '—'}</td>
-                    <td className="py-3.5 px-3.5 text-foreground-secondary font-medium">{c.role || '—'}</td>
-                    <td className="py-3.5 px-3.5 text-foreground-secondary font-medium">{c.email || '—'}</td>
-                    <td className="py-3.5 px-3.5 text-foreground-secondary font-medium">{c.phone || '—'}</td>
-                    <td className="py-3.5 px-3.5 text-foreground-secondary font-medium">
-                      <InlineLinkedinEdit contact={c} onSave={handleUpdateLinkedin} />
-                    </td>
                     <td className="py-3.5 px-3.5">
-                      {c.applications && c.applications.length > 0 ? (
-                        <div className="flex flex-col gap-1.5">
-                          {c.applications.map(app => (
-                            <button
-                              key={app.id}
-                              onClick={() => handleJumpToApplication(app.id)}
-                              className="text-left group/app flex flex-col hover:bg-surface-tertiary p-1.5 -ml-1.5 rounded-lg transition-colors"
-                            >
-                              <span className="text-xs font-bold text-primary group-hover/app:underline decoration-primary/50">
-                                {app.company || 'Unknown Company'}
-                              </span>
-                              <span className="text-[10px] text-foreground-secondary font-medium">
-                                {app.job_title || 'Unknown Role'}
-                              </span>
-                            </button>
-                          ))}
+                      {(c.applications && c.applications.length > 0) ? (
+                        <div className="flex flex-col gap-1 items-start">
+                          <button
+                            onClick={() => setDetailsContact(c)}
+                            className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-primary/10 text-primary w-max hover:bg-primary/20 transition-colors"
+                          >
+                            {c.applications.length} {c.applications.length === 1 ? 'application' : 'applications'}
+                          </button>
+                          <button
+                            onClick={() => handleJumpToApplication(c.applications[0].id)}
+                            className="text-left text-xs font-semibold text-foreground hover:text-primary transition-colors truncate max-w-[150px]"
+                            title={c.applications[0].company}
+                          >
+                            {c.applications[0].company}
+                          </button>
                         </div>
-                      ) : isApplied ? (
-                        <div className="flex flex-col">
-                          <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                            Applied
-                          </span>
-                          <span className="text-[10px] text-foreground-secondary opacity-70 font-medium pl-3">
-                            {c.application_method || 'LinkedIn Easy Apply'}
-                          </span>
+                      ) : c.application_id ? (
+                        <div className="flex flex-col gap-1.5">
+                          <button
+                            onClick={() => handleJumpToApplication(c.application_id)}
+                            className="text-left group/app flex flex-col hover:bg-surface-tertiary p-1.5 -ml-1.5 rounded-lg transition-colors"
+                          >
+                            <span className="text-xs font-bold text-primary group-hover/app:underline decoration-primary/50">
+                              {apps.find(a => a.id === c.application_id)?.company || 'View Application'}
+                            </span>
+                            <span className="text-[10px] text-foreground-secondary font-medium">
+                              {apps.find(a => a.id === c.application_id)?.job_title || ''}
+                            </span>
+                          </button>
                         </div>
                       ) : (
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-medium text-foreground-secondary opacity-50">Not applied</span>
-                          <button
-                            onClick={() => setApplyTargetContact(c)}
-                            className="text-[11px] font-semibold text-primary hover:underline focus:outline-none opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            Mark as applied
-                          </button>
+                        <div className="w-[180px]">
+                          <SearchableSelect
+                            options={apps.map(a => ({
+                              value: a.id,
+                              label: a.company,
+                              sublabel: a.job_title
+                            }))}
+                            value={null}
+                            onChange={val => {
+                              if (val) {
+                                api.updateContact(c.id, { application_id: val }).then(() => {
+                                  setContacts(prev => prev.map(contact => contact.id === c.id ? { ...contact, application_id: val } : contact))
+                                  load()
+                                }).catch(err => {
+                                  console.error(err)
+                                })
+                              }
+                            }}
+                            placeholder="Link application..."
+                          />
                         </div>
                       )}
                     </td>
@@ -735,9 +886,21 @@ export default function Contacts() {
                       </div>
                     </td>
                     <td className="py-3.5 px-3.5">
-                      <div className="flex flex-col">
-                        <span className="text-foreground-secondary font-medium">{formatDate(c.last_contacted)}</span>
-                        <span className="text-[10px] text-muted">{getDaysAgo(c.last_contacted)}</span>
+                      <div className="flex flex-col gap-1 max-w-[120px]">
+                        <input
+                          type="date"
+                          max={getLocalTodayStr()}
+                          className="bg-transparent border-none text-foreground-secondary font-medium text-xs focus:ring-0 p-0 hover:text-primary cursor-pointer transition-colors"
+                          value={c.manual_last_contact_date ? c.manual_last_contact_date : (c.last_contacted || '')}
+                          onChange={(e) => {
+                            const newDate = e.target.value || null
+                            setContacts(prev => prev.map(contact => contact.id === c.id ? { ...contact, manual_last_contact_date: newDate } : contact))
+                            api.updateContact(c.id, { manual_last_contact_date: newDate }).catch(err => console.error(err))
+                          }}
+                        />
+                        <span className="text-[10px] text-muted">
+                          {c.manual_last_contact_date || c.last_contacted ? getDaysAgo(c.manual_last_contact_date || c.last_contacted) : 'No activity'}
+                        </span>
                       </div>
                     </td>
                     <td className="py-3.5 px-3.5 text-right">
@@ -806,24 +969,25 @@ export default function Contacts() {
         )}
       </div>
 
-      {deleteContactId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in-80 duration-150" onClick={(e) => e.target === e.currentTarget && (setDeleteContactId(null), setDeleteError(''))}>
-          <div className="bg-surface rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden select-none border border-transparent">
-            <div className="p-6">
-              <h3 className="text-base font-bold text-foreground mb-2">Delete Contact</h3>
-              {deleteError ? (
-                <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-xs font-medium text-rose-400">{deleteError}</div>
-              ) : (
-                <p className="text-xs text-foreground-secondary mb-6">Are you sure you want to delete this contact?</p>
-              )}
-              <div className="flex items-center justify-end gap-3">
-                <button onClick={() => { setDeleteContactId(null); setDeleteError(''); }} className="px-4 py-2 text-xs font-semibold text-foreground-secondary hover:bg-surface-tertiary rounded-xl transition-colors">Cancel</button>
-                <button onClick={handleDeleteConfirm} className="px-4 py-2 text-xs font-semibold text-white bg-rose-500 hover:bg-rose-600 rounded-xl transition-colors shadow-2xs">Delete</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDeleteModal
+        isOpen={!!deleteContactId}
+        onClose={() => setDeleteContactId(null)}
+        onConfirm={handleDeleteConfirm}
+        isDeleting={isDeleting}
+        title="Delete Contact"
+        message="Are you sure you want to delete this contact?"
+      />
+
+      <ConfirmDeleteModal
+        isOpen={!!unlinkAppId}
+        onClose={() => setUnlinkAppId(null)}
+        onConfirm={confirmUnlinkApplication}
+        isDeleting={isUnlinkingApp}
+        title="Unlink Application"
+        message="Are you sure you want to unlink this application? The application record will not be deleted."
+        confirmText="Unlink"
+        confirmingText="Unlinking..."
+      />
 
       {showAddModal && (
         <ContactModal
@@ -838,20 +1002,34 @@ export default function Contacts() {
             application_method: 'LinkedIn Easy Apply',
             tags: editContact.tags ? (Array.isArray(editContact.tags) ? editContact.tags.join(', ') : editContact.tags) : '',
             notes: editContact.notes || '',
-            linkedin_url: editContact.linkedin_url || ''
+            linkedin_url: editContact.linkedin_url || '',
+            application_id: editContact.application_id || null
           } : undefined}
           onClose={() => setShowAddModal(false)}
           onSave={handleSaveContact}
+          apps={apps}
         />
       )}
 
-      {applyTargetContact && (
-        <MarkAsAppliedModal
-          contact={applyTargetContact}
-          onClose={() => setApplyTargetContact(null)}
-          onConfirm={handleConfirmMarkApplied}
+      {detailsContact && (
+        <ContactDetailsModal
+          contact={detailsContact}
+          onClose={() => setDetailsContact(null)}
+          onEdit={() => {
+            setEditContact(detailsContact);
+            setShowAddModal(true);
+            setDetailsContact(null);
+          }}
+          onDelete={() => {
+            setDeleteContactId(detailsContact.id);
+            setDetailsContact(null);
+          }}
+          onOpenApplication={handleJumpToApplication}
+          onUnlinkApplication={handleUnlinkApplication}
+          unlinkingAppIds={unlinkingAppIds}
         />
       )}
+
     </section>
   )
 }

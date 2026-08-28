@@ -1,7 +1,8 @@
 import React, { useState } from 'react'
 import Dropdown from './ui/Dropdown'
+import CountUp from './ui/CountUp'
 
-export default function ApplicationFunnel({ summary = {} }) {
+export default function ApplicationFunnel({ summary = {}, loading = false }) {
   const [hoveredIndex, setHoveredIndex] = useState(null)
   const [timeRange, setTimeRange] = useState('all')
 
@@ -124,7 +125,26 @@ export default function ApplicationFunnel({ summary = {} }) {
                   }}
                 />
 
-                {/* Number inside trapezoid */}
+                {/* Loading Spinner */}
+                <g className={`transition-opacity duration-150 ${loading ? 'opacity-100' : 'opacity-0'}`}>
+                  <circle
+                    cx={c.cx}
+                    cy={c.cy}
+                    r="8"
+                    fill="none"
+                    stroke="var(--surface-tertiary)"
+                    strokeWidth="3"
+                  />
+                  <path
+                    d={`M ${c.cx} ${c.cy - 8} A 8 8 0 0 1 ${c.cx + 8} ${c.cy}`}
+                    fill="none"
+                    stroke="var(--foreground-secondary)"
+                    strokeWidth="3"
+                    className="origin-center animate-[spin_1.5s_linear_infinite]"
+                    style={{ transformOrigin: `${c.cx}px ${c.cy}px` }}
+                  />
+                </g>
+
                 <text
                   x={c.cx}
                   y={c.cy + 5}
@@ -132,10 +152,9 @@ export default function ApplicationFunnel({ summary = {} }) {
                   fill="#FFFFFF"
                   fontSize="15"
                   fontWeight="800"
-                  className="pointer-events-none drop-shadow-xs transition-opacity duration-200"
-                  style={{ opacity: hoveredIndex === null || isHovered ? 1 : 0.6 }}
+                  className={`pointer-events-none drop-shadow-xs transition-opacity duration-150 ${loading ? 'opacity-0' : (hoveredIndex === null || isHovered ? 'opacity-100' : 'opacity-60')}`}
                 >
-                  {stage.count}
+                  <CountUp value={stage.count} duration={800} />
                 </text>
 
                 {/* Connector hairline guide line */}
@@ -162,7 +181,9 @@ export default function ApplicationFunnel({ summary = {} }) {
                   {stage.label}
                   {isHovered && (
                     <tspan fill={stage.grad[0]} fontWeight="800" dx="6">
-                      ({stage.percent}%)
+                      <tspan className={`transition-opacity duration-150 ${loading ? 'opacity-0' : 'opacity-100'}`}>
+                        (<CountUp value={`${stage.percent}%`} duration={800} />)
+                      </tspan>
                     </tspan>
                   )}
                 </text>

@@ -20,6 +20,27 @@ logger = logging.getLogger(__name__)
 def india_today() -> date:
     return datetime.now(INDIA_TIMEZONE).date()
 
+def is_within_working_hours(settings: Settings) -> bool:
+    if not settings.working_hours_start or not settings.working_hours_end:
+        return True
+    try:
+        now = datetime.now(INDIA_TIMEZONE)
+        sh, sm = map(int, settings.working_hours_start.split(":"))
+        eh, em = map(int, settings.working_hours_end.split(":"))
+        start_time = now.replace(hour=sh, minute=sm, second=0, microsecond=0)
+        end_time = now.replace(hour=eh, minute=em, second=0, microsecond=0)
+        
+        if end_time < start_time:
+            end_time += timedelta(days=1)
+            
+        current = now
+        if current < start_time and end_time < start_time:
+             current += timedelta(days=1)
+             
+        return start_time <= now <= end_time
+    except Exception:
+        return True
+
 
 def flag_ghosted_applications(today: date | None = None) -> int:
     """Mark In Progress applications Ghosted when their due date is over three days late."""
@@ -45,9 +66,12 @@ def send_due_today_reminder(
         applications = db_client.applications_due_on(user_id, reference_date)
         if applications:
             settings = db_client.get_settings(user_id)
-            if settings.telegram_chat_id:
-                telegram.send_due_today_reminder(applications, chat_id=settings.telegram_chat_id)
-                total_sent += len(applications)
+            if not settings.telegram_chat_id or not settings.followup_reminders:
+                continue
+            if not is_within_working_hours(settings):
+                continue
+            telegram.send_due_today_reminder(applications, chat_id=settings.telegram_chat_id)
+            total_sent += len(applications)
     return total_sent
 
 
@@ -62,7 +86,9 @@ def send_daily_feedback(
     for user_id in db_client.get_all_user_ids():
         try:
             settings = db_client.get_settings(user_id)
-            if not settings.telegram_chat_id:
+            if not settings.telegram_chat_id or not settings.daily_progress:
+                continue
+            if not is_within_working_hours(settings):
                 continue
 
             stats = build_daily_coaching_input(user_id, reference_date)

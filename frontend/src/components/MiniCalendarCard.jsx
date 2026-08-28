@@ -86,7 +86,6 @@ export default function MiniCalendarCard({ onViewFullCalendar }) {
         </div>
       </div>
 
-      {/* Footer Full Calendar Redirect Button — Completely Borderless Clean Spacing */}
       <div className="mt-3 pt-1 flex items-center justify-between text-xs">
         <div className="flex items-center gap-2 text-[10px] font-semibold text-foreground-secondary">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />

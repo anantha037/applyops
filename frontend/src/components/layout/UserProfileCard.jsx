@@ -1,9 +1,21 @@
 import { useState, useRef, useEffect } from 'react'
 import { LogOut, Settings as SettingsIcon, ChevronUp } from 'lucide-react'
+import { api } from '../../api/client'
 
 export default function UserProfileCard({ onViewChange, onLogout, isCollapsed }) {
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef(null)
+  const [userName, setUserName] = useState('User')
+
+  useEffect(() => {
+    let mounted = true
+    api.me().then(res => {
+      if (mounted && res && res.name) {
+        setUserName(res.name)
+      }
+    }).catch(console.error)
+    return () => { mounted = false }
+  }, [])
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -51,21 +63,21 @@ export default function UserProfileCard({ onViewChange, onLogout, isCollapsed })
         className={`flex items-center rounded-xl bg-sidebar-surface/50 hover:bg-sidebar-surface border border-sidebar-border transition-all duration-150 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 group ${
           isCollapsed ? 'w-10 h-10 justify-center p-0 mx-auto' : 'w-full gap-3 p-2'
         }`}
-        title={isCollapsed ? "Aman Raj (Job Seeker)" : undefined}
+        title={isCollapsed ? `${userName} (Job Seeker)` : undefined}
         aria-haspopup="true"
         aria-expanded={isOpen}
       >
         <div className="w-8 h-8 rounded-full bg-sidebar-surface border border-sidebar-border overflow-hidden flex-shrink-0 flex items-center justify-center">
           <img
-            src="https://api.dicebear.com/7.x/notionists/svg?seed=Aman&backgroundColor=b6e3f4"
-            alt="Aman Raj"
+            src={`https://api.dicebear.com/7.x/notionists/svg?seed=${encodeURIComponent(userName)}&backgroundColor=b6e3f4`}
+            alt={userName}
             className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
           />
         </div>
         {!isCollapsed && (
           <>
             <div className="flex-1 min-w-0">
-              <div className="text-xs font-semibold text-sidebar-text truncate">Aman Raj</div>
+              <div className="text-xs font-semibold text-sidebar-text truncate">{userName}</div>
               <div className="text-[10px] text-sidebar-text-muted truncate font-medium">Job Seeker</div>
             </div>
             <ChevronUp className={`w-4 h-4 text-sidebar-text-muted transition-transform duration-200 mr-0.5 ${isOpen ? 'rotate-180' : ''}`} />

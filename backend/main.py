@@ -70,6 +70,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
+    expose_headers=["x-contact-reused", "X-Contact-Reused"],
 )
 app.include_router(auth_router)
 app.include_router(activity_router, dependencies=[Depends(get_current_user)])

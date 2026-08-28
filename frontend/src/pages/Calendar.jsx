@@ -11,9 +11,13 @@ import 'react-big-calendar/lib/css/react-big-calendar.css'
 import { api, activityApi } from '../api/client'
 import ActivityHeatmap from '../components/ActivityHeatmap'
 import Dropdown from '../components/ui/Dropdown'
+import SearchableSelect from '../components/ui/SearchableSelect'
+import { useToast } from '../context/ToastContext'
+import ConfirmDeleteModal from '../components/ui/ConfirmDeleteModal'
 import {
   Plus, X, ChevronLeft, ChevronRight, RefreshCw,
-  Calendar as CalendarIcon, Phone, Target, ClipboardList, Bell, Sparkles, Filter
+  Calendar as CalendarIcon, Phone, Target, ClipboardList, Bell, Sparkles, Filter,
+  Send, FileText, Heart, Trophy, Trash2, Edit
 } from 'lucide-react'
 
 // ── Localizer ────────────────────────────────────────────────────────────────
@@ -21,7 +25,10 @@ const locales = { 'en-US': enUS }
 const localizer = dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales })
 
 // ── Constants & Config ───────────────────────────────────────────────────────
-const EVENT_TYPES = ['Follow-up', 'Interview', 'Application Deadline', 'Reminder', 'Personal']
+const EVENT_TYPES = [
+  'Follow-up', 'Interview', 'Application Deadline', 'Reminder', 'Personal',
+  'Recruiter Call', 'Send Email', 'Prepare for Interview', 'Send Thank-you', 'Review Offer', 'Custom'
+]
 
 const TYPE_CONFIG = {
   'Follow-up':            { color: '#6366F1', bg: 'rgba(99, 102, 241, 0.14)',  dotColor: '#818CF8', label: 'Follow-up',      Icon: Phone },
@@ -29,6 +36,12 @@ const TYPE_CONFIG = {
   'Application Deadline': { color: '#F97316', bg: 'rgba(249, 115, 22, 0.14)',  dotColor: '#FB923C', label: 'App Deadline',    Icon: ClipboardList },
   'Reminder':             { color: '#0EA5E9', bg: 'rgba(14, 165, 233, 0.14)',  dotColor: '#38BDF8', label: 'Reminder',        Icon: Bell },
   'Personal':             { color: '#10B981', bg: 'rgba(16, 185, 129, 0.14)',  dotColor: '#34D399', label: 'Personal',        Icon: Sparkles },
+  'Recruiter Call':       { color: '#8B5CF6', bg: 'rgba(139, 92, 246, 0.14)',  dotColor: '#A78BFA', label: 'Recruiter Call',  Icon: Phone },
+  'Send Email':           { color: '#3B82F6', bg: 'rgba(59, 130, 246, 0.14)',  dotColor: '#60A5FA', label: 'Send Email',      Icon: Send },
+  'Prepare for Interview':{ color: '#EC4899', bg: 'rgba(236, 72, 153, 0.14)',  dotColor: '#F472B6', label: 'Prep Interview',  Icon: FileText },
+  'Send Thank-you':       { color: '#F43F5E', bg: 'rgba(244, 63, 94, 0.14)',   dotColor: '#FB7185', label: 'Thank You',       Icon: Heart },
+  'Review Offer':         { color: '#EAB308', bg: 'rgba(234, 179, 8, 0.14)',   dotColor: '#FDE047', label: 'Review Offer',    Icon: Trophy },
+  'Custom':               { color: '#64748B', bg: 'rgba(100, 116, 139, 0.14)', dotColor: '#94A3B8', label: 'Custom',          Icon: CalendarIcon },
 }
 
 const CATEGORY_OPTIONS = [
@@ -123,7 +136,7 @@ function MiniCalendar({ selected, onSelect, eventDates = [] }) {
   )
 }
 
-function UpcomingEvents({ events = [], loading = false, selectedDate }) {
+function UpcomingEvents({ events = [], loading = false, selectedDate, onEditEvent, onDeleteEvent, deletingIds = [] }) {
   const [expandedId, setExpandedId] = useState(null)
 
   if (loading) {
@@ -189,7 +202,7 @@ function UpcomingEvents({ events = [], loading = false, selectedDate }) {
                 const TypeIcon = cfg.Icon
                 const isExpanded = expandedId === ev.id
                 return (
-                  <div key={ev.id} className="flex flex-col rounded-xl bg-surface-secondary hover:bg-surface-tertiary transition-colors group overflow-hidden">
+                  <div key={ev.id} className={`flex flex-col rounded-xl bg-surface-secondary hover:bg-surface-tertiary transition-all duration-200 group overflow-hidden ${deletingIds.includes(ev.id) ? 'opacity-0 scale-95 -translate-y-2 pointer-events-none' : ''}`}>
                     <div 
                       className="flex items-center gap-2.5 p-2.5 cursor-pointer"
                       onClick={() => setExpandedId(isExpanded ? null : ev.id)}
@@ -228,11 +241,48 @@ function UpcomingEvents({ events = [], loading = false, selectedDate }) {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation()
+                                sessionStorage.setItem('applyops_pending_action', JSON.stringify({ type: 'details_app', appId: ev.related_application_id }))
                                 window.location.hash = `#/applications`
                               }}
                               className="text-primary hover:underline font-semibold"
                             >
                               View related application &rarr;
+                            </button>
+                          </div>
+                        )}
+                        {ev.contact_id && (
+                          <div className={ev.related_application_id ? "mt-1" : "mt-2 pt-2 border-t border-border/50"}>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                sessionStorage.setItem('applyops_pending_action', JSON.stringify({ type: 'edit_contact', contactId: ev.contact_id }))
+                                window.location.hash = `#/contacts`
+                              }}
+                              className="text-cyan-400 hover:underline font-semibold"
+                            >
+                              View related contact &rarr;
+                            </button>
+                          </div>
+                        )}
+                        {ev.source === 'Manual' && (
+                          <div className="mt-2 pt-2 border-t border-border/50 flex items-center justify-end gap-3">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                onDeleteEvent(ev)
+                              }}
+                              className="text-rose-400 hover:text-rose-300 font-semibold flex items-center gap-1"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" /> Remove
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                onEditEvent(ev)
+                              }}
+                              className="text-primary hover:text-primary-hover font-semibold flex items-center gap-1"
+                            >
+                              <Edit className="w-3.5 h-3.5" /> Edit
                             </button>
                           </div>
                         )}
@@ -249,20 +299,30 @@ function UpcomingEvents({ events = [], loading = false, selectedDate }) {
   )
 }
 
-// ── Add Event Modal ──────────────────────────────────────────────────────────
-function AddEventModal({ defaultDate, onSave, onClose }) {
-  const [form, setForm] = useState({
+function EventModal({ defaultDate, editEvent, onSave, onClose, apps = [], contacts = [] }) {
+  const [form, setForm] = useState(editEvent ? {
+    title: editEvent.title,
+    event_type: editEvent.event_type || 'Reminder',
+    date: editEvent.date || fmtDate(new Date()),
+    time: editEvent.time || '',
+    notes: editEvent.notes || '',
+    related_application_id: editEvent.related_application_id || null,
+    contact_id: editEvent.contact_id || null,
+  } : {
     title: '',
     event_type: 'Reminder',
     date: defaultDate ? fmtDate(defaultDate) : fmtDate(new Date()),
     time: '',
     notes: '',
+    related_application_id: null,
+    contact_id: null,
   })
   const [saving, setSaving] = useState(false)
   const [error, setError]   = useState('')
 
   const submit = async e => {
     e.preventDefault()
+    if (saving) return
     setSaving(true)
     try {
       await onSave({ ...form, time: form.time || null })
@@ -275,7 +335,7 @@ function AddEventModal({ defaultDate, onSave, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in-80 duration-150" onClick={e => e.target === e.currentTarget && onClose()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in-80 duration-150" onMouseDown={e => e.target === e.currentTarget && onClose()}>
       <div className="bg-surface rounded-2xl border border-transparent shadow-2xl w-full max-w-md overflow-hidden select-none">
         <div className="flex items-center justify-between px-6 pt-5 pb-2">
           <div className="flex items-center gap-2.5">
@@ -283,8 +343,8 @@ function AddEventModal({ defaultDate, onSave, onClose }) {
               <CalendarIcon className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-foreground">Add Event</h3>
-              <p className="text-[11px] text-foreground-secondary font-medium">Create a new calendar entry or reminder</p>
+              <h3 className="text-base font-bold text-foreground">{editEvent ? 'Edit Event' : 'Add Event'}</h3>
+              <p className="text-[11px] text-foreground-secondary font-medium">{editEvent ? 'Update your calendar event' : 'Create a new calendar entry or reminder'}</p>
             </div>
           </div>
           <button onClick={onClose} className="rounded-lg p-1.5 text-foreground-secondary hover:text-foreground hover:bg-surface-tertiary transition-colors">
@@ -349,6 +409,35 @@ function AddEventModal({ defaultDate, onSave, onClose }) {
             />
           </div>
 
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">Link Application (Optional)</label>
+              <SearchableSelect
+                options={apps.map(a => ({
+                  value: a.id,
+                  label: a.company,
+                  sublabel: a.job_title
+                }))}
+                value={form.related_application_id || null}
+                onChange={val => setForm({ ...form, related_application_id: val })}
+                placeholder="Search apps..."
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">Link Contact (Optional)</label>
+              <SearchableSelect
+                options={contacts.map(c => ({
+                  value: c.id,
+                  label: c.name,
+                  sublabel: c.company ? `${c.role ? c.role + ' at ' : ''}${c.company}` : c.role
+                }))}
+                value={form.contact_id || null}
+                onChange={val => setForm({ ...form, contact_id: val })}
+                placeholder="Search contacts..."
+              />
+            </div>
+          </div>
+
           <div className="flex items-center justify-end gap-3 pt-2">
             <button
               type="button"
@@ -360,8 +449,9 @@ function AddEventModal({ defaultDate, onSave, onClose }) {
             <button
               type="submit"
               disabled={saving}
-              className="rounded-xl bg-primary px-5 py-2 text-xs font-semibold text-white hover:bg-primary-hover disabled:opacity-60 transition-all shadow-2xs active:scale-95"
+              className="rounded-xl bg-primary px-5 py-2 text-xs font-semibold text-white hover:bg-primary-hover disabled:opacity-60 transition-all shadow-2xs active:scale-95 flex items-center gap-2"
             >
+              {saving && <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
               {saving ? 'Saving…' : 'Save Event'}
             </button>
           </div>
@@ -398,19 +488,32 @@ export default function Calendar() {
   const [selectedDate, setSelectedDate] = useState(null)
   const [selectedCategory, setSelectedCategory] = useState('All Events')
   const [showModal, setShowModal]       = useState(false)
+  const [editEventState, setEditEventState] = useState(null)
   const [modalDate, setModalDate]       = useState(null)
   const [error, setError]               = useState('')
   const [loading, setLoading]           = useState(false)
   const [streakData, setStreakData]     = useState(null)
+  
+  const [deleteEventObj, setDeleteEventObj] = useState(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [deletingIds, setDeletingIds] = useState([])
+  const { addToast } = useToast()
+
+  const [apps, setApps] = useState([])
+  const [contacts, setContacts] = useState([])
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const [data, sData] = await Promise.all([
+      const [data, sData, appsData, contactsData] = await Promise.all([
         api.calendarEvents(),
-        activityApi.getStreak()
+        activityApi.getStreak(),
+        api.applications().catch(() => []),
+        api.contacts().catch(() => [])
       ])
       setStreakData(sData)
+      setApps(appsData)
+      setContacts(contactsData)
       const normalized = (data || []).map(ev => {
         const dStr = ev.date || (ev.start ? String(ev.start).split('T')[0] : null) || fmtDate(new Date())
         const tStr = ev.event_type || ev.type || 'Reminder'
@@ -434,8 +537,43 @@ export default function Calendar() {
   useEffect(() => { load() }, [load])
 
   const saveEvent = async payload => {
-    await api.createCalendarEvent(payload)
+    if (editEventState) {
+      await api.updateCalendarEvent(editEventState.id, payload)
+    } else {
+      await api.createCalendarEvent(payload)
+    }
     await load()
+  }
+
+  const handleDeleteEvent = async (ev) => {
+    setDeleteEventObj(ev)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteEventObj || isDeleting) return
+    setIsDeleting(true)
+    const idToRemove = deleteEventObj.id
+    try {
+      await api.deleteCalendarEvent(idToRemove)
+      addToast('Event removed', 'success')
+      setDeletingIds(prev => [...prev, idToRemove])
+      setDeleteEventObj(null)
+      setTimeout(() => {
+        setEvents(prev => prev.filter(e => e.id !== idToRemove))
+        setDeletingIds(prev => prev.filter(id => id !== idToRemove))
+      }, 200)
+    } catch (e) {
+      addToast(`Failed to delete event: ${e.message}`, 'error')
+      setDeleteEventObj(null)
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  const handleEditEvent = (ev) => {
+    setEditEventState(ev)
+    setModalDate(safeParseDate(ev.date) || new Date())
+    setShowModal(true)
   }
 
   const filteredEvents = events.filter(ev => selectedCategory === 'All Events' || ev.event_type === selectedCategory)
@@ -696,14 +834,20 @@ export default function Calendar() {
                       </button>
                     )}
                     <button
-                      onClick={() => { setModalDate(selectedDate || new Date()); setShowModal(true) }}
+                      onClick={() => { setEditEventState(null); setModalDate(selectedDate || new Date()); setShowModal(true) }}
                       className="text-[10px] text-primary hover:underline font-bold"
                     >
                       + Add
                     </button>
                   </div>
                 </div>
-                <UpcomingEvents events={filteredEvents} selectedDate={selectedDate} />
+                <UpcomingEvents 
+                  events={filteredEvents} 
+                  selectedDate={selectedDate} 
+                  onEditEvent={handleEditEvent}
+                  onDeleteEvent={handleDeleteEvent}
+                  deletingIds={deletingIds}
+                />
               </div>
             </div>
           </div>
@@ -716,12 +860,24 @@ export default function Calendar() {
       )}
 
       {showModal && (
-        <AddEventModal
+        <EventModal
           defaultDate={modalDate}
+          editEvent={editEventState}
           onSave={saveEvent}
-          onClose={() => setShowModal(false)}
+          onClose={() => { setShowModal(false); setEditEventState(null) }}
+          apps={apps}
+          contacts={contacts}
         />
       )}
+
+      <ConfirmDeleteModal
+        isOpen={!!deleteEventObj}
+        onClose={() => setDeleteEventObj(null)}
+        onConfirm={handleDeleteConfirm}
+        isDeleting={isDeleting}
+        title="Remove Event"
+        message="Are you sure you want to remove this calendar event?"
+      />
     </section>
   )
 }

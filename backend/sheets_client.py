@@ -214,9 +214,9 @@ class SheetsClient:
                 )
         return activities
 
-    def get_daily_goal(self) -> int:
+    def get_weekly_goal(self) -> int:
         """Return the configured daily goal, or zero when Settings is still blank."""
-        return self.get_settings().daily_goal
+        return self.get_settings().weekly_goal
 
     def get_settings(self) -> Settings:
         records = self._get_cached_records("Settings", self._settings)
@@ -224,11 +224,11 @@ class SheetsClient:
             return Settings()
         record = records[0]
         try:
-            daily_goal = int(record.get("Daily Goal") or 0)
+            weekly_goal = int(record.get("Daily Goal") or 0) * 5 # Approximation from old sheets format
         except (TypeError, ValueError) as exc:
             raise SheetConfigurationError("Settings 'Daily Goal' must be a whole number") from exc
         return Settings(
-            daily_goal=daily_goal,
+            weekly_goal=weekly_goal,
             working_hours_start=record.get("Working Hours Start", ""),
             working_hours_end=record.get("Working Hours End", ""),
             telegram_chat_id=record.get("Telegram Chat ID", ""),
@@ -239,7 +239,7 @@ class SheetsClient:
         settings = self.get_settings().model_copy(update=changes.model_dump(exclude_unset=True))
         self._settings().update(
             "A2:E2",
-            [[settings.daily_goal, settings.working_hours_start, settings.working_hours_end,
+            [[settings.weekly_goal, settings.working_hours_start, settings.working_hours_end,
               settings.telegram_chat_id, settings.dashboard_pin]],
             value_input_option="RAW",
         )

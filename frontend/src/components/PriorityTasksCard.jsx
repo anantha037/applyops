@@ -1,11 +1,24 @@
-import React, { useState } from 'react'
-import { Check, CheckCircle2, ArrowUpRight } from 'lucide-react'
+import React, { useState, useRef, useEffect } from 'react'
+import { Check, CheckCircle2, ArrowUpRight, Zap } from 'lucide-react'
 import Dropdown from './ui/Dropdown'
+import CountUp from './ui/CountUp'
 
-export default function PriorityTasksCard({ tasks: initialPropTasks, onViewAll }) {
+export default function PriorityTasksCard({ tasks: initialPropTasks, onCompleteTask, onViewAll, loading = false }) {
   const [tasks, setTasks] = useState(initialPropTasks || [])
   const [filterPriority, setFilterPriority] = useState('all')
   const [expandedId, setExpandedId] = useState(null)
+  const scrollRef = useRef(null)
+
+  useEffect(() => {
+    if (expandedId && scrollRef.current) {
+      const el = scrollRef.current.querySelector(`[data-task-id="${expandedId}"]`)
+      if (el) {
+        setTimeout(() => {
+          el.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+        }, 150)
+      }
+    }
+  }, [expandedId])
 
   React.useEffect(() => {
     if (initialPropTasks) {
@@ -13,12 +26,24 @@ export default function PriorityTasksCard({ tasks: initialPropTasks, onViewAll }
     }
   }, [initialPropTasks])
 
-  const toggleComplete = (id, e) => {
+  const toggleComplete = (task, e) => {
     e.stopPropagation()
-    setTasks(prev => prev.map(t => t.id === id ? { ...t, completed: !t.completed } : t))
+    if (!task.isEvent && onCompleteTask) {
+      onCompleteTask(task)
+      return
+    }
+
+    if (task.isEvent) {
+      const dismissed = JSON.parse(sessionStorage.getItem('applyops_dismissed_events') || '[]')
+      dismissed.push(task.id)
+      sessionStorage.setItem('applyops_dismissed_events', JSON.stringify(dismissed))
+    }
+
+    setTasks(prev => prev.map(t => t.id === task.id ? { ...t, completed: !t.completed } : t))
   }
 
-  const activeTasks = tasks.filter(t => !t.completed)
+  const dismissedSession = JSON.parse(sessionStorage.getItem('applyops_dismissed_events') || '[]')
+  const activeTasks = tasks.filter(t => !t.completed && !dismissedSession.includes(t.id))
   const filteredTasks = activeTasks.filter(t => {
     if (filterPriority === 'all') return true
     return t.priority.toLowerCase() === filterPriority
@@ -45,14 +70,14 @@ export default function PriorityTasksCard({ tasks: initialPropTasks, onViewAll }
   }
 
   return (
-    <div className="panel flex flex-col rounded-2xl p-5 border border-border bg-surface shadow-xs h-full select-none">
+    <div className="panel flex flex-col rounded-2xl p-5 border border-border bg-surface shadow-xs h-[320px] select-none">
       {/* Header with Title & Filter */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <h3 className="text-sm font-bold text-foreground">Priority Tasks</h3>
-          {activeTasks.length > 0 && (
+          {!loading && activeTasks.length > 0 && (
             <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-              {activeTasks.length}
+              <CountUp value={activeTasks.length} duration={800} />
             </span>
           )}
         </div>
@@ -68,15 +93,16 @@ export default function PriorityTasksCard({ tasks: initialPropTasks, onViewAll }
       </div>
 
       {/* Task List / Empty State */}
-      <div className="flex-1 flex flex-col gap-2.5 overflow-y-auto scrollbar-none min-h-[220px]">
+      <div ref={scrollRef} className="flex-1 flex flex-col gap-2.5 overflow-y-auto scrollbar-none min-h-[220px]">
         {filteredTasks.length > 0 ? (
           filteredTasks.map((task) => {
             const isExpanded = expandedId === task.id
             return (
             <div
               key={task.id}
+              data-task-id={task.id}
               onClick={() => setExpandedId(isExpanded ? null : task.id)}
-              className="group relative flex flex-col p-3 rounded-xl bg-surface-secondary hover:bg-surface-tertiary dark:hover:bg-surface-secondary border border-transparent hover:border-border/30 hover:translate-x-1.5 transition-all duration-200 ease-out cursor-pointer shadow-2xs hover:shadow-md overflow-hidden"
+              className="group relative flex flex-col shrink-0 p-3 rounded-xl bg-surface-secondary hover:bg-surface-tertiary dark:hover:bg-surface-secondary border border-transparent hover:border-border/30 hover:translate-x-1.5 transition-all duration-200 ease-out cursor-pointer shadow-2xs hover:shadow-md overflow-hidden"
             >
               {/* Left Hover Indicator Bar */}
               <div className="absolute left-0 top-2 bottom-2 w-1 bg-primary rounded-r-full opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
@@ -86,18 +112,26 @@ export default function PriorityTasksCard({ tasks: initialPropTasks, onViewAll }
                 <div className="flex items-center gap-3 min-w-0 flex-1 mr-2 pl-1">
                   {/* Company Logo Badge */}
                   <div className="w-8 h-8 rounded-lg bg-surface flex items-center justify-center flex-shrink-0 overflow-hidden text-xs font-bold text-foreground shadow-2xs group-hover:scale-110 transition-transform duration-200">
-                    <img
-                      src={`https://logo.clearbit.com/${task.domain}`}
-                      alt={task.company}
-                      className="w-full h-full object-contain p-1"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none'
-                        e.currentTarget.nextSibling.style.display = 'flex'
-                      }}
-                    />
-                    <span className="hidden w-full h-full items-center justify-center bg-primary/10 text-primary font-bold text-xs">
-                      {task.company.charAt(0)}
-                    </span>
+                    {task.isEvent ? (
+                      <span className="w-full h-full flex items-center justify-center bg-primary/10 text-primary font-bold text-lg">
+                        📅
+                      </span>
+                    ) : (
+                      <>
+                        <img
+                          src={`https://logo.clearbit.com/${task.domain}`}
+                          alt={task.company}
+                          className="w-full h-full object-contain p-1"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none'
+                            e.currentTarget.nextSibling.style.display = 'flex'
+                          }}
+                        />
+                        <span className="hidden w-full h-full items-center justify-center bg-primary/10 text-primary font-bold text-xs">
+                          {task.company.charAt(0)}
+                        </span>
+                      </>
+                    )}
                   </div>
 
                   {/* Company Name & Task Title */}
@@ -112,7 +146,7 @@ export default function PriorityTasksCard({ tasks: initialPropTasks, onViewAll }
                     </div>
                     <div className="flex items-center gap-2 mt-0.5">
                       <span className="text-[10px] font-semibold text-foreground-secondary">
-                        Due {task.dueDate}
+                        Due {task.dueDate}{task.time ? ` · ${task.time}` : ''}
                       </span>
                     </div>
                   </div>
@@ -125,17 +159,17 @@ export default function PriorityTasksCard({ tasks: initialPropTasks, onViewAll }
                   </span>
 
                   <button
-                    onClick={(e) => toggleComplete(task.id, e)}
-                    className="w-7 h-7 rounded-lg bg-surface-secondary hover:bg-emerald-500/20 text-foreground-secondary hover:text-emerald-400 flex items-center justify-center transition-all focus:outline-none shadow-2xs active:scale-95 group-hover:bg-emerald-500/10"
-                    title="Mark as completed"
-                    aria-label="Mark task completed"
+                    onClick={(e) => toggleComplete(task, e)}
+                    className="w-7 h-7 rounded-lg bg-surface-secondary hover:bg-primary/20 text-foreground-secondary hover:text-primary flex items-center justify-center transition-all focus:outline-none shadow-2xs active:scale-95 group-hover:bg-primary/10"
+                    title={task.isEvent ? "Dismiss Event" : "Quick Action"}
+                    aria-label="Quick action"
                   >
-                    <Check className="w-3.5 h-3.5" />
+                    {task.isEvent ? <Check className="w-3.5 h-3.5" /> : <Zap className="w-3.5 h-3.5" />}
                   </button>
                 </div>
               </div>
               
-              {isExpanded && task.appDetails && (
+              {isExpanded && !task.isEvent && task.appDetails && (
                 <div className="mt-3 pt-3 border-t border-border/40 text-[11px] text-foreground-secondary space-y-1.5 animate-in slide-in-from-top-2 fade-in duration-200 pl-1">
                   <div className="flex gap-2">
                     <span className="font-semibold text-foreground">Status:</span>
@@ -155,12 +189,47 @@ export default function PriorityTasksCard({ tasks: initialPropTasks, onViewAll }
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
+                        sessionStorage.setItem('applyops_pending_action', JSON.stringify({ type: 'details_app', appId: task.id }))
                         window.location.hash = `#/applications`
                       }}
                       className="text-primary hover:underline font-semibold"
                     >
-                      View application &rarr;
+                      View application details &rarr;
                     </button>
+                  </div>
+                </div>
+              )}
+
+              {isExpanded && task.isEvent && task.eventDetails && (
+                <div className="mt-3 pt-3 border-t border-border/40 text-[11px] text-foreground-secondary space-y-1.5 animate-in slide-in-from-top-2 fade-in duration-200 pl-1">
+                  {task.eventDetails.notes && (
+                    <div className="flex gap-2 flex-col mt-1 bg-surface p-2 rounded-lg border border-border/50">
+                      <span className="font-semibold text-foreground">Event Notes</span>
+                      <span className="whitespace-pre-wrap">{task.eventDetails.notes}</span>
+                    </div>
+                  )}
+                  <div className="mt-2 pt-2 flex items-center gap-4">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        window.location.hash = `#/calendar`
+                      }}
+                      className="text-primary hover:underline font-semibold"
+                    >
+                      Open Calendar &rarr;
+                    </button>
+                    {task.eventDetails.related_application_id && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          sessionStorage.setItem('applyops_pending_action', JSON.stringify({ type: 'details_app', appId: task.eventDetails.related_application_id }))
+                          window.location.hash = `#/applications`
+                        }}
+                        className="text-emerald-400 hover:underline font-semibold"
+                      >
+                        View related application &rarr;
+                      </button>
+                    )}
                   </div>
                 </div>
               )}
@@ -181,22 +250,12 @@ export default function PriorityTasksCard({ tasks: initialPropTasks, onViewAll }
       </div>
 
       {/* Footer View All Action Bar — Borderless Clean Spacing */}
-      {activeTasks.length > 0 && (
+      {!loading && activeTasks.length > 0 && (
         <div className="mt-3 pt-1 flex items-center justify-between text-xs">
           <div className="flex items-center gap-1.5 text-[11px] font-medium text-foreground-secondary">
             <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-            <span>{activeTasks.length} pending action{activeTasks.length > 1 ? 's' : ''}</span>
+            <span><CountUp value={activeTasks.length} duration={800} /> pending action{activeTasks.length !== 1 ? 's' : ''}</span>
           </div>
-          <button
-            onClick={() => {
-              if (onViewAll) onViewAll()
-              else window.location.hash = '#/applications'
-            }}
-            className="text-[11px] font-bold text-primary hover:text-primary-hover flex items-center gap-1 transition-all duration-150 focus:outline-none group/link"
-          >
-            <span className="group-hover/link:underline">View all tasks</span>
-            <ArrowUpRight className="w-3.5 h-3.5 transition-transform duration-150 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5" />
-          </button>
         </div>
       )}
     </div>

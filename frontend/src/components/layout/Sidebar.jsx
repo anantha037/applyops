@@ -39,7 +39,6 @@ const NAV_GROUPS = [
     title: "Analytics & Config",
     items: [
       { id: 'analytics', label: 'Analytics', icon: BarChart3, href: '#/analytics' },
-      { id: 'updates', label: 'Updates', icon: Sparkles, href: '#/updates' },
       { id: 'settings', label: 'Settings', icon: Settings, href: '#/settings' },
     ]
   }

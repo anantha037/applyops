@@ -62,10 +62,12 @@ from backend.r2_client import (
 
 MAX_RESUME_BYTES = 10 * 1024 * 1024  # 10 MB
 
-def get_all_user_ids() -> list[str]:
+def get_all_user_ids(*, session: Session | None = None) -> list[str]:
     """Return all active user IDs in the system."""
-    with Session(engine) as session:
-        return session.exec(select(User.id)).all()
+    if session is None:
+        with Session(engine) as s:
+            return get_all_user_ids(session=s)
+    return session.exec(select(User.id)).all()
 
 
 def _new_id() -> str:
@@ -92,6 +94,8 @@ def _app_to_pydantic(row: DBApplication) -> Application:
         stage=row.stage,
         last_touch_date=row.last_touch_date,
         next_action_due=row.next_action_due,
+        next_action_type=row.next_action_type,
+        next_action_title=row.next_action_title,
         interview_date=row.interview_date,
         interview_round=row.interview_round or "",
         interview_attended=row.interview_attended,
@@ -129,6 +133,9 @@ def find_or_create_contact(
     role: str | None = None,
     company: str | None = None,
     linkedin_url: str | None = None,
+    tags: str | None = None,
+    notes: str | None = None,
+    application_id: str | None = None,
 ) -> Contact | None:
     """Find an existing contact or create a new one.
 
@@ -181,8 +188,19 @@ def find_or_create_contact(
         if norm_role    and not existing.role:    existing.role    = norm_role;    changed = True
         if norm_company and not existing.company: existing.company = norm_company; changed = True
         if linkedin_url and not existing.linkedin_url: existing.linkedin_url = linkedin_url; changed = True
+        if tags and not existing.tags: existing.tags = tags; changed = True
+        if notes and not existing.notes: existing.notes = notes; changed = True
         if changed:
             session.add(existing)
+            
+        if application_id:
+            if not verify_owned(session, DBApplication, application_id, user_id):
+                raise ValueError("Invalid or unauthorized application_id")
+            app = session.get(DBApplication, application_id)
+            if app:
+                app.contact_id = existing.id
+                session.add(app)
+                
         return existing
 
     # --- No match → create a new contact ---
@@ -195,151 +213,209 @@ def find_or_create_contact(
         role=norm_role,
         company=norm_company,
         linkedin_url=linkedin_url,
+        tags=tags,
+        notes=notes,
         created_at=datetime.now(timezone.utc),
     )
     session.add(contact)
     session.flush()   # flush so the ID is available before the caller commits
+    
+    if application_id:
+        if not verify_owned(session, DBApplication, application_id, user_id):
+            raise ValueError("Invalid or unauthorized application_id")
+        app = session.get(DBApplication, application_id)
+        if app:
+            app.contact_id = contact.id
+            session.add(app)
+            
     return contact
 
-def list_contacts(user_id: str) -> list[ContactView]:
+def list_contacts(user_id: str, *, session: Session | None = None) -> list[ContactView]:
     """Return all contacts, enriched with activity data for last_contacted/responded."""
-    with Session(engine) as session:
-        # Load all contacts
-        contacts = session.exec(select(Contact).where(Contact.user_id == user_id)).all()
-        
-        # Load all activities to compute last_contacted and responded
-        activities = session.exec(
-            select(ActivityLog).where(
-                ActivityLog.user_id == user_id,
-                ActivityLog.contact_id.is_not(None)
-            )
-        ).all()
-        
-        # Group activities by contact_id
-        from collections import defaultdict
-        act_by_contact = defaultdict(list)
-        for act in activities:
-            act_by_contact[act.contact_id].append(act)
-            
-        # Get all linked applications
-        apps = session.exec(
-            select(DBApplication).where(
-                DBApplication.user_id == user_id,
-                DBApplication.contact_id.is_not(None)
-            )
-        ).all()
-        app_by_contact = defaultdict(list)
-        for app in apps:
-            app_by_contact[app.contact_id].append({
-                "id": app.id,
-                "company": app.company or "",
-                "job_title": app.job_title or ""
-            })
-            
-        results = []
-        for c in contacts:
-            c_acts = act_by_contact[c.id]
-            last_contact = None
-            if c_acts:
-                last_contact = max(a.timestamp for a in c_acts).date().isoformat()
-            
-            responded = any(
-                a.action_type in ("Call Connected", "Interview Completed", "Email Reply Received") 
-                for a in c_acts
-            )
-            
-            linked_apps = app_by_contact[c.id]
-
-            results.append(ContactView(
-                id=c.id,
-                name=c.name or "",
-                company=c.company or "",
-                role=c.role or "",
-                email=c.email or "",
-                phone=c.phone or "",
-                tags=c.tags or "",
-                notes=c.notes or "",
-                linkedin_url=c.linkedin_url or "",
-                source="postgres",
-                application_id=linked_apps[0]["id"] if linked_apps else None,
-                applications=linked_apps,
-                last_contacted=last_contact,
-                responded=responded,
-                last_action_status=c.last_action_status,
-                last_action_date=c.last_action_date.isoformat() if c.last_action_date else None,
-            ))
-            
-        return results
-
-
-def update_contact(user_id: str, contact_id: str, changes: dict) -> ContactView | None:
-    """Update a contact directly."""
-    with Session(engine) as session:
-        row = session.get(Contact, contact_id)
-        if row is None or row.user_id != user_id:
-            return None
-            
-        scalar_fields = (
-            "name", "company", "role", "email", "phone", "tags", "notes",
-            "linkedin_url", "last_action_status", "last_action_date"
+    if session is None:
+        with Session(engine) as s:
+            return list_contacts(user_id=user_id, session=s)
+    # Load all contacts
+    contacts = session.exec(select(Contact).where(Contact.user_id == user_id)).all()
+    
+    # Load all activities to compute last_contacted and responded
+    activities = session.exec(
+        select(ActivityLog).where(
+            ActivityLog.user_id == user_id,
+            ActivityLog.contact_id.is_not(None)
         )
-        for field in scalar_fields:
-            if field in changes:
-                setattr(row, field, changes[field] if changes[field] != "" else None)
-                
-        # If the user manually updated the status, bump the date to today
-        if "last_action_status" in changes and "last_action_date" not in changes:
-            row.last_action_date = utc_now().date()
-                
-        session.add(row)
-        session.commit()
-        session.refresh(row)
+    ).all()
+    
+    # Group activities by contact_id
+    from collections import defaultdict
+    act_by_contact = defaultdict(list)
+    for act in activities:
+        act_by_contact[act.contact_id].append(act)
         
-        # Enumerate activities to construct the proper ContactView response
-        activities = session.exec(
-            select(ActivityLog).where(ActivityLog.contact_id == row.id)
-        ).all()
+    # Get all linked applications
+    apps = session.exec(
+        select(DBApplication).where(
+            DBApplication.user_id == user_id,
+            DBApplication.contact_id.is_not(None)
+        )
+    ).all()
+    app_by_contact = defaultdict(list)
+    for app in apps:
+        app_by_contact[app.contact_id].append({
+            "id": app.id,
+            "company": app.company or "",
+            "job_title": app.job_title or ""
+        })
+        
+    results = []
+    for c in contacts:
+        c_acts = act_by_contact[c.id]
         last_contact = None
-        if activities:
-            last_contact = max(a.timestamp for a in activities).date().isoformat()
-        responded = any(
-            a.action_type in ("Call Connected", "Interview Completed", "Email Reply Received")
-            for a in activities
-        )
-        app = session.exec(select(DBApplication).where(DBApplication.contact_id == row.id)).first()
+        if c_acts:
+            last_contact = max(a.timestamp for a in c_acts).date().isoformat()
         
-        return ContactView(
-            id=row.id,
-            name=row.name or "",
-            company=row.company or "",
-            role=row.role or "",
-            email=row.email or "",
-            phone=row.phone or "",
-            tags=row.tags or "",
-            notes=row.notes or "",
-            linkedin_url=row.linkedin_url or "",
+        responded = any(
+            a.action_type in ("Call Connected", "Interview Completed", "Email Reply Received") 
+            for a in c_acts
+        )
+        
+        linked_apps = app_by_contact[c.id]
+
+        results.append(ContactView(
+            id=c.id,
+            name=c.name or "",
+            company=c.company or "",
+            role=c.role or "",
+            email=c.email or "",
+            phone=c.phone or "",
+            tags=c.tags or "",
+            notes=c.notes or "",
+            linkedin_url=c.linkedin_url or "",
             source="postgres",
-            application_id=app.id if app else None,
+            application_id=linked_apps[0]["id"] if linked_apps else None,
+            applications=linked_apps,
             last_contacted=last_contact,
             responded=responded,
-            last_action_status=row.last_action_status,
-            last_action_date=row.last_action_date.isoformat() if row.last_action_date else None,
-        )
+            last_action_status=c.last_action_status,
+            last_action_date=c.last_action_date.isoformat() if c.last_action_date else None,
+            manual_last_contact_date=c.manual_last_contact_date.isoformat() if c.manual_last_contact_date else None,
+        ))
+        
+    return results
 
 
-def delete_contact(user_id: str, contact_id: str) -> None:
-    """Delete a contact if not referenced by applications."""
-    with Session(engine) as session:
-        contact = session.exec(select(Contact).where(Contact.user_id == user_id, Contact.id == contact_id)).first()
-        if not contact:
-            raise ValueError("Contact not found")
+def update_contact(user_id: str, contact_id: str, changes: dict, *, session: Session | None = None) -> ContactView | None:
+    """Update a contact directly."""
+    if session is None:
+        with Session(engine) as s:
+            return update_contact(user_id=user_id, contact_id=contact_id, changes=changes, session=s)
+    row = session.get(Contact, contact_id)
+    if row is None or row.user_id != user_id:
+        return None
+        
+    scalar_fields = (
+        "name", "company", "role", "email", "phone", "tags", "notes",
+        "linkedin_url", "last_action_status", "last_action_date", "manual_last_contact_date"
+    )
+    for field in scalar_fields:
+        if field in changes:
+            setattr(row, field, changes[field] if changes[field] != "" else None)
+            
+    # If the user manually updated the status, bump the date to today
+    if "last_action_status" in changes and "last_action_date" not in changes:
+        row.last_action_date = utc_now().date()
+        
+    if "application_id" in changes:
+        app_id = changes["application_id"]
+        if app_id == "":
+            # Unlink from all applications? The user didn't ask for unlinking from ContactView, but let's clear it if they send ""
+            apps = session.exec(select(DBApplication).where(DBApplication.contact_id == row.id)).all()
+            for app in apps:
+                app.contact_id = None
+                session.add(app)
+        elif app_id is not None:
+            if not verify_owned(session, DBApplication, app_id, user_id):
+                raise ValueError("Invalid or unauthorized application_id")
+            app = session.get(DBApplication, app_id)
+            if app:
+                app.contact_id = row.id
+                session.add(app)
+            
+    session.add(row)
+    session.commit()
+    session.refresh(row)
+    
+    # Enumerate activities to construct the proper ContactView response
+    activities = session.exec(
+        select(ActivityLog).where(ActivityLog.contact_id == row.id)
+    ).all()
+    last_contact = None
+    if activities:
+        last_contact = max(a.timestamp for a in activities).date().isoformat()
+    responded = any(
+        a.action_type in ("Call Connected", "Interview Completed", "Email Reply Received")
+        for a in activities
+    )
+    app = session.exec(select(DBApplication).where(DBApplication.contact_id == row.id)).first()
+    
+    return ContactView(
+        id=row.id,
+        name=row.name or "",
+        company=row.company or "",
+        role=row.role or "",
+        email=row.email or "",
+        phone=row.phone or "",
+        tags=row.tags or "",
+        notes=row.notes or "",
+        linkedin_url=row.linkedin_url or "",
+        source="postgres",
+        application_id=app.id if app else None,
+        last_contacted=last_contact,
+        responded=responded,
+        last_action_status=row.last_action_status,
+        last_action_date=row.last_action_date.isoformat() if row.last_action_date else None,
+        manual_last_contact_date=row.manual_last_contact_date.isoformat() if row.manual_last_contact_date else None,
+    )
 
-        apps_count = session.exec(select(func.count(DBApplication.id)).where(DBApplication.contact_id == contact_id)).one()
-        if apps_count > 0:
-            raise ValueError(f"Cannot delete this contact because it is attached to {apps_count} application(s).")
 
-        session.delete(contact)
-        session.commit()
+def delete_contact(user_id: str, contact_id: str, *, session: Session | None = None) -> None:
+    """Delete a contact, unlinking it from any applications first.
+
+    Contacts and applications are independent entities.  Deleting a contact
+    must never cascade-delete an application.  Instead we null out the
+    application.contact_id FK before removing the contact row.  The
+    application's own calendar_events and activity_logs are left untouched.
+    """
+    if session is None:
+        with Session(engine) as s:
+            return delete_contact(user_id=user_id, contact_id=contact_id, session=s)
+    contact = session.exec(select(Contact).where(Contact.user_id == user_id, Contact.id == contact_id)).first()
+    if not contact:
+        raise ValueError("Contact not found")
+
+    # Unlink — set contact_id = null on every application that points here
+    linked_apps = session.exec(select(DBApplication).where(DBApplication.contact_id == contact_id)).all()
+    for app in linked_apps:
+        app.contact_id = None
+        session.add(app)
+
+    # Null out contact_id on activity_log rows that reference this contact.
+    # These records belong to the application context and must survive.
+    linked_acts = session.exec(select(ActivityLog).where(ActivityLog.contact_id == contact_id)).all()
+    for act in linked_acts:
+        act.contact_id = None
+        session.add(act)
+
+    # Same for calendar_events — a follow-up tied to an application may also
+    # carry contact_id; null it out rather than delete the event.
+    linked_evts = session.exec(select(DBCalendarEvent).where(DBCalendarEvent.contact_id == contact_id)).all()
+    for evt in linked_evts:
+        evt.contact_id = None
+        session.add(evt)
+
+    session.delete(contact)
+    session.commit()
+
 
 
 # ---------------------------------------------------------------------------
@@ -350,23 +426,33 @@ def list_applications(
     user_id: str,
     status: str | None = None,
     stage:  str | None = None,
+    *,
+    session: Session | None = None
 ) -> list[Application]:
-    with Session(engine) as session:
-        stmt = select(DBApplication).where(DBApplication.user_id == user_id)
-        if status:
-            stmt = stmt.where(DBApplication.status == status)
-        if stage:
-            stmt = stmt.where(DBApplication.stage == stage)
-        rows = session.exec(stmt).all()
-        return [_app_to_pydantic(r) for r in rows]
+    if session is None:
+        with Session(engine) as s:
+            return list_applications(user_id, status, stage, session=s)
+            
+    stmt = select(DBApplication).where(DBApplication.user_id == user_id)
+    if status:
+        stmt = stmt.where(DBApplication.status == status)
+    if stage:
+        stmt = stmt.where(DBApplication.stage == stage)
+        
+    stmt = stmt.order_by(col(DBApplication.date_applied).desc())
+    
+    rows = session.exec(stmt).all()
+    return [_app_to_pydantic(r) for r in rows]
 
 
-def get_application(user_id: str, application_id: str) -> Application | None:
-    with Session(engine) as session:
-        row = session.get(DBApplication, application_id)
-        if not row or row.user_id != user_id:
-            return None
-        return _app_to_pydantic(row)
+def get_application(user_id: str, application_id: str, *, session: Session | None = None) -> Application | None:
+    if session is None:
+        with Session(engine) as s:
+            return get_application(user_id=user_id, application_id=application_id, session=s)
+    row = session.get(DBApplication, application_id)
+    if not row or row.user_id != user_id:
+        return None
+    return _app_to_pydantic(row)
 
 
 def create_application(
@@ -379,59 +465,73 @@ def create_application(
     contact_role:  str | None = None,
     contact_linkedin: str | None = None,
     resume_id:     str | None = None,
+    session: Session | None = None,
 ) -> Application:
     """Create a new application row.
 
     Inline contact fields trigger find_or_create_contact().  resume_id must
     reference an existing resumes row (or be None).
     """
-    with Session(engine) as session:
-        contact_id: str | None = None
-        if any([contact_name, contact_email, contact_phone, contact_linkedin]):
-            contact = find_or_create_contact(
-                session,
-                user_id,
-                name=contact_name,
-                email=contact_email,
-                phone=contact_phone,
-                role=contact_role,
-                company=payload.get("company"),
-                linkedin_url=contact_linkedin,
-            )
-            contact_id = contact.id if contact else None
+    if session is None:
+        with Session(engine) as s:
+            return create_application(user_id, payload, contact_name=contact_name, contact_email=contact_email, contact_phone=contact_phone, contact_role=contact_role, contact_linkedin=contact_linkedin, resume_id=resume_id, session=s)
+            
+    contact_id: str | None = payload.get("contact_id")
+    if contact_id == "":
+        contact_id = None
+    
+    # Verify explicit contact_id ownership
+    if contact_id is not None:
+        if not verify_owned(session, Contact, contact_id, user_id):
+            raise ValueError("Invalid or unauthorized contact_id")
 
-        if resume_id is not None:
-            resume_row = session.get(Resume, resume_id)
-            if not resume_row or resume_row.user_id != user_id:
-                raise ValueError("Invalid or unauthorized resume_id")
-
-        app_id = payload.get("id") or _new_id()
-        row = DBApplication(
-            id=app_id,
-            user_id=user_id,
-            date_applied=payload["date_applied"],
-            company=payload["company"],
-            job_title=payload["job_title"],
-            jd_summary=payload.get("jd_summary") or None,
-            location=payload.get("location") or None,
-            application_method=payload.get("application_method") or None,
-            contact_id=contact_id,
-            resume_id=resume_id,
-            ctc=payload.get("ctc") or None,
-            status=payload.get("status", "Not Contacted"),
-            stage=payload.get("stage", "Applied"),
-            last_touch_date=payload.get("last_touch_date"),
-            next_action_due=payload.get("next_action_due"),
-            interview_date=payload.get("interview_date"),
-            interview_round=payload.get("interview_round") or None,
-            interview_attended=payload.get("interview_attended"),
-            latest_update=payload.get("latest_update") or None,
-            remarks=payload.get("remarks") or None,
+    if not contact_id and any([contact_name, contact_email, contact_phone, contact_linkedin]):
+        contact = find_or_create_contact(
+            session,
+            user_id,
+            name=contact_name,
+            email=contact_email,
+            phone=contact_phone,
+            role=contact_role,
+            company=payload.get("company"),
+            linkedin_url=contact_linkedin,
         )
-        session.add(row)
-        session.commit()
-        session.refresh(row)
-        return _app_to_pydantic(row)
+        contact_id = contact.id if contact else None
+
+    if resume_id is not None:
+        resume_row = session.get(Resume, resume_id)
+        if not resume_row or resume_row.user_id != user_id:
+            raise ValueError("Invalid or unauthorized resume_id")
+
+    app_id = payload.get("id") or _new_id()
+    row = DBApplication(
+        id=app_id,
+        user_id=user_id,
+        date_applied=payload["date_applied"],
+        company=payload["company"],
+        job_title=payload["job_title"],
+        jd_summary=payload.get("jd_summary") or None,
+        location=payload.get("location") or None,
+        application_method=payload.get("application_method") or None,
+        contact_id=contact_id,
+        resume_id=resume_id,
+        ctc=payload.get("ctc") or None,
+        status=payload.get("status", "Not Contacted"),
+        stage=payload.get("stage", "Applied"),
+        last_touch_date=payload.get("last_touch_date"),
+        next_action_due=payload.get("next_action_due"),
+        next_action_type=payload.get("next_action_type"),
+        next_action_title=payload.get("next_action_title"),
+        interview_date=payload.get("interview_date"),
+        interview_round=payload.get("interview_round") or None,
+        interview_attended=payload.get("interview_attended"),
+        latest_update=payload.get("latest_update") or None,
+        remarks=payload.get("remarks") or None,
+    )
+    session.add(row)
+    session.commit()
+    session.refresh(row)
+    return _app_to_pydantic(row)
 
 
 def update_application(
@@ -445,126 +545,163 @@ def update_application(
     contact_role:  str | None = None,
     contact_linkedin: str | None = None,
     resume_id:     str | None = None,
+    session: Session | None = None,
 ) -> Application | None:
     """Patch an existing application."""
-    with Session(engine) as session:
-        row = session.get(DBApplication, application_id)
-        if row is None or row.user_id != user_id:
-            return None
+    if session is None:
+        with Session(engine) as s:
+            return update_application(user_id, application_id, changes, contact_name=contact_name, contact_email=contact_email, contact_phone=contact_phone, contact_role=contact_role, contact_linkedin=contact_linkedin, resume_id=resume_id, session=s)
+        
+    row = session.get(DBApplication, application_id)
+    if row is None or row.user_id != user_id:
+        return None
 
-        # Handle contact linkage
-        if any([contact_name, contact_email, contact_phone, contact_linkedin]):
-            contact = find_or_create_contact(
-                session,
-                user_id,
-                name=contact_name,
-                email=contact_email,
-                phone=contact_phone,
-                role=contact_role,
-                company=changes.get("company") or row.company,
-                linkedin_url=contact_linkedin,
-            )
-            row.contact_id = contact.id if contact else row.contact_id
-
-        # Handle resume linkage
-        if resume_id is not None:
-            resume_row = session.get(Resume, resume_id)
-            if not resume_row or resume_row.user_id != user_id:
-                raise ValueError("Invalid or unauthorized resume_id")
-            row.resume_id = resume_id
-
-        # Apply scalar field updates
-        scalar_fields = (
-            "date_applied", "company", "job_title", "jd_summary",
-            "location", "application_method", "ctc", "status", "stage",
-            "last_touch_date", "next_action_due", "interview_date",
-            "interview_round", "interview_attended", "latest_update", "remarks",
+    # Handle explicit contact_id linkage
+    if "contact_id" in changes:
+        new_contact_id = changes["contact_id"]
+        if new_contact_id == "":
+            row.contact_id = None
+        else:
+            if new_contact_id is not None:
+                if not verify_owned(session, Contact, new_contact_id, user_id):
+                    raise ValueError("Invalid or unauthorized contact_id")
+            row.contact_id = new_contact_id
+    # Handle inline contact fields linkage
+    elif any([contact_name, contact_email, contact_phone, contact_linkedin]):
+        contact = find_or_create_contact(
+            session,
+            user_id,
+            name=contact_name,
+            email=contact_email,
+            phone=contact_phone,
+            role=contact_role,
+            company=changes.get("company") or row.company,
+            linkedin_url=contact_linkedin,
         )
-        for field in scalar_fields:
-            if field in changes:
-                setattr(row, field, changes[field] if changes[field] != "" else None)
+        row.contact_id = contact.id if contact else row.contact_id
 
-        session.add(row)
-        session.commit()
-        session.refresh(row)
-        return _app_to_pydantic(row)
+    # Handle resume linkage
+    if resume_id is not None:
+        resume_row = session.get(Resume, resume_id)
+        if not resume_row or resume_row.user_id != user_id:
+            raise ValueError("Invalid or unauthorized resume_id")
+        row.resume_id = resume_id
+
+    # Apply scalar field updates
+    scalar_fields = (
+        "date_applied", "company", "job_title", "jd_summary",
+        "location", "application_method", "ctc", "status", "stage",
+        "last_touch_date", "next_action_due", "next_action_type", "next_action_title",
+        "interview_date", "interview_round", "interview_attended", 
+        "latest_update", "remarks",
+    )
+    for field in scalar_fields:
+        if field in changes:
+            setattr(row, field, changes[field] if changes[field] != "" else None)
+
+    session.add(row)
+    session.commit()
+    session.refresh(row)
+    return _app_to_pydantic(row)
 
 
-def delete_application(user_id: str, application_id: str) -> bool:
-    with Session(engine) as session:
-        row = session.get(DBApplication, application_id)
-        if row is None or row.user_id != user_id:
-            return False
+def delete_application(user_id: str, application_id: str, *, session: Session | None = None) -> bool:
+    if session is None:
+        with Session(engine) as s:
+            return delete_application(user_id=user_id, application_id=application_id, session=s)
+    row = session.get(DBApplication, application_id)
+    if row is None or row.user_id != user_id:
+        return False
 
-        # Manually cascade delete calendar events and activity logs to avoid IntegrityError
-        # and prevent leaving orphaned records.
-        events = session.exec(select(DBCalendarEvent).where(DBCalendarEvent.related_application_id == application_id)).all()
-        for ev in events:
+    # Manually cascade delete calendar events and activity logs to avoid IntegrityError
+    # and prevent leaving orphaned records.
+    events = session.exec(select(DBCalendarEvent).where(DBCalendarEvent.related_application_id == application_id)).all()
+    for ev in events:
+        if ev.source == "Auto":
             session.delete(ev)
+        else:
+            ev.related_application_id = None
+            session.add(ev)
 
-        activities = session.exec(select(ActivityLog).where(ActivityLog.application_id == application_id)).all()
-        for act in activities:
-            session.delete(act)
+    activities = session.exec(select(ActivityLog).where(ActivityLog.application_id == application_id)).all()
+    for act in activities:
+        session.delete(act)
 
-        session.delete(row)
-        session.commit()
-        return True
+    session.delete(row)
+    session.commit()
+    return True
 
 
-def applications_due_on(user_id: str, target_date: date) -> list[Application]:
-    with Session(engine) as session:
-        stmt = select(DBApplication).where(
-            DBApplication.user_id == user_id,
-            DBApplication.next_action_due == target_date
-        )
-        rows = session.exec(stmt).all()
-        return [_app_to_pydantic(r) for r in rows]
+def applications_due_on(user_id: str, target_date: date, *, session: Session | None = None) -> list[Application]:
+    if session is None:
+        with Session(engine) as s:
+            return applications_due_on(user_id, target_date, session=s)
+            
+    stmt = select(DBApplication).where(
+        DBApplication.user_id == user_id,
+        DBApplication.next_action_due == target_date
+    )
+    rows = session.exec(stmt).all()
+    return [_app_to_pydantic(r) for r in rows]
 
 
 # ---------------------------------------------------------------------------
 # Activity log
 # ---------------------------------------------------------------------------
 
-def create_activity(user_id: str, activity_id: str, payload: ActivityCreate) -> Activity:
+def create_activity(user_id: str, activity_id: str, payload: ActivityCreate, *, session: Session | None = None) -> Activity:
     """Create an activity log entry."""
-    with Session(engine) as session:
-        # Look up the application's contact_id for denormalisation
-        contact_id: str | None = None
-        if payload.application_id:
-            app_row = session.get(DBApplication, payload.application_id)
-            if app_row and app_row.user_id == user_id:
-                contact_id = app_row.contact_id
+    if session is None:
+        with Session(engine) as s:
+            return create_activity(user_id=user_id, activity_id=activity_id, payload=payload, session=s)
+    # Look up the application's contact_id for denormalisation
+    contact_id: str | None = None
+    if payload.application_id:
+        app_row = session.get(DBApplication, payload.application_id)
+        if app_row and app_row.user_id == user_id:
+            contact_id = app_row.contact_id
 
-        now = utc_now()
-        row = ActivityLog(
-            id=activity_id,
-            user_id=user_id,
-            timestamp=now,
-            application_id=payload.application_id or None,
-            company=payload.company or None,
-            action_type=payload.action_type,
-            contact_id=contact_id,
-            notes=payload.notes or None,
-        )
-        session.add(row)
-        
-        # Auto-bump contact last_action_status if appropriate
-        if contact_id:
-            contact = session.get(Contact, contact_id)
-            if contact:
-                contact.last_action_date = now.date()
-                if payload.action_type in ("Email Sent", "LinkedIn Message", "Call Dialed") and contact.last_action_status == "Not Contacted":
-                    contact.last_action_status = "Outreach Sent"
-                elif payload.action_type == "Email Reply Received" and contact.last_action_status in ("Not Contacted", "Outreach Sent"):
-                    contact.last_action_status = "In Conversation"
-                elif payload.action_type == "Call Connected" and contact.last_action_status in ("Not Contacted", "Outreach Sent"):
-                    contact.last_action_status = "In Conversation"
-                elif payload.action_type == "Interview Completed" and contact.last_action_status not in ("Closed", "Ghosted", "Not Interested"):
-                    contact.last_action_status = "Interviewing"
-                session.add(contact)
-                
-        session.commit()
-        session.refresh(row)
+    now = utc_now()
+    row = ActivityLog(
+        id=activity_id,
+        user_id=user_id,
+        timestamp=now,
+        application_id=payload.application_id or None,
+        company=payload.company or None,
+        action_type=payload.action_type,
+        contact_id=contact_id,
+        notes=payload.notes or None,
+    )
+    session.add(row)
+    
+    # Auto-bump contact last_action_status if appropriate
+    if contact_id:
+        contact = session.get(Contact, contact_id)
+        if contact:
+            contact.last_action_date = now.date()
+            if payload.action_type in ("Email Sent", "LinkedIn Message", "Call Dialed") and contact.last_action_status == "Not Contacted":
+                contact.last_action_status = "Outreach Sent"
+            elif payload.action_type == "Email Reply Received" and contact.last_action_status in ("Not Contacted", "Outreach Sent"):
+                contact.last_action_status = "In Conversation"
+            elif payload.action_type == "Call Connected" and contact.last_action_status in ("Not Contacted", "Outreach Sent"):
+                contact.last_action_status = "In Conversation"
+            elif payload.action_type == "Interview Completed" and contact.last_action_status not in ("Closed", "Ghosted", "Not Interested"):
+                contact.last_action_status = "Interviewing"
+            session.add(contact)
+            
+    # Auto-bump application status if appropriate
+    if payload.application_id and app_row:
+        if app_row.status not in ("Offer Received", "Rejected", "Ghosted"):
+            if payload.action_type in ("Email Reply Received", "Call Connected"):
+                if app_row.status == "Not Contacted":
+                    app_row.status = "In Progress"
+            elif payload.action_type in ("Interview Scheduled", "Interview Completed"):
+                if app_row.status in ("Not Contacted", "In Progress"):
+                    app_row.status = "Interviewing"
+        session.add(app_row)
+
+    session.commit()
+    session.refresh(row)
 
     return Activity(
         id=row.id,
@@ -576,10 +713,13 @@ def create_activity(user_id: str, activity_id: str, payload: ActivityCreate) -> 
     )
 
 
-def list_activity(user_id: str, activity_date: date | None = None) -> list[Activity]:
-    with Session(engine) as session:
-        stmt = select(ActivityLog).where(ActivityLog.user_id == user_id).order_by(col(ActivityLog.timestamp).desc())
-        rows = session.exec(stmt).all()
+def list_activity(user_id: str, activity_date: date | None = None, *, session: Session | None = None) -> list[Activity]:
+    if session is None:
+        with Session(engine) as s:
+            return list_activity(user_id, activity_date, session=s)
+            
+    stmt = select(ActivityLog).where(ActivityLog.user_id == user_id).order_by(col(ActivityLog.timestamp).desc())
+    rows = session.exec(stmt).all()
 
     result = []
     for row in rows:
@@ -600,51 +740,62 @@ def list_activity(user_id: str, activity_date: date | None = None) -> list[Activ
     return result
 
 
+def verify_owned(session: Session, model_class, record_id: str, user_id: str) -> bool:
+    """Verify that a given record exists and belongs to the specified user."""
+    row = session.get(model_class, record_id)
+    return row is not None and getattr(row, "user_id", None) == user_id
+
+
 # ---------------------------------------------------------------------------
 # Settings
 # ---------------------------------------------------------------------------
 
-def get_settings(user_id: str) -> Settings:
-    with Session(engine) as session:
-        stmt = select(DBSettings).where(DBSettings.user_id == user_id)
-        row = session.exec(stmt).first()
-        if row is None:
-            return Settings()
-        return Settings(
-            daily_goal=row.daily_goal,
-            working_hours_start=row.working_hours_start,
-            working_hours_end=row.working_hours_end,
-            telegram_chat_id=row.telegram_chat_id,
-            dashboard_pin=row.dashboard_pin,
-            app_reminders=row.app_reminders,
-            followup_reminders=row.followup_reminders,
-            interview_reminders=row.interview_reminders,
-            daily_progress=row.daily_progress,
-            streak_alerts=row.streak_alerts,
-        )
+def get_settings(user_id: str, *, session: Session | None = None) -> Settings:
+    if session is None:
+        with Session(engine) as s:
+            return get_settings(user_id, session=s)
+            
+    stmt = select(DBSettings).where(DBSettings.user_id == user_id)
+    row = session.exec(stmt).first()
+    if row is None:
+        return Settings()
+    return Settings(
+        weekly_goal=row.weekly_goal,
+        working_hours_start=row.working_hours_start,
+        working_hours_end=row.working_hours_end,
+        telegram_chat_id=row.telegram_chat_id,
+        dashboard_pin=row.dashboard_pin,
+        app_reminders=row.app_reminders,
+        followup_reminders=row.followup_reminders,
+        interview_reminders=row.interview_reminders,
+        daily_progress=row.daily_progress,
+        streak_alerts=row.streak_alerts,
+    )
 
 
-def get_daily_goal(user_id: str) -> int:
-    return get_settings(user_id).daily_goal
+def get_weekly_goal(user_id: str, *, session: Session | None = None) -> int:
+    return get_settings(user_id, session=session).weekly_goal
 
 
-def update_settings(user_id: str, changes: SettingsUpdate) -> Settings:
-    with Session(engine) as session:
-        row = session.exec(select(DBSettings).where(DBSettings.user_id == user_id)).first()
-        if row is None:
-            row = DBSettings(user_id=user_id)
-            session.add(row)
-
-        updates = changes.model_dump(exclude_unset=True)
-        for field, value in updates.items():
-            setattr(row, field, value)
-
+def update_settings(user_id: str, changes: SettingsUpdate, *, session: Session | None = None) -> Settings:
+    if session is None:
+        with Session(engine) as s:
+            return update_settings(user_id=user_id, changes=changes, session=s)
+    row = session.exec(select(DBSettings).where(DBSettings.user_id == user_id)).first()
+    if row is None:
+        row = DBSettings(user_id=user_id)
         session.add(row)
-        session.commit()
-        session.refresh(row)
+
+    updates = changes.model_dump(exclude_unset=True)
+    for field, value in updates.items():
+        setattr(row, field, value)
+
+    session.add(row)
+    session.commit()
+    session.refresh(row)
 
     return Settings(
-        daily_goal=row.daily_goal,
+        weekly_goal=row.weekly_goal,
         working_hours_start=row.working_hours_start,
         working_hours_end=row.working_hours_end,
         telegram_chat_id=row.telegram_chat_id,
@@ -665,66 +816,109 @@ def list_calendar_events(
     user_id: str,
     start: date | None = None,
     end:   date | None = None,
+    *,
+    session: Session | None = None,
 ) -> list[CalendarEvent]:
-    with Session(engine) as session:
-        stmt = select(DBCalendarEvent).where(DBCalendarEvent.user_id == user_id).order_by(DBCalendarEvent.event_date)
-        if start:
-            stmt = stmt.where(DBCalendarEvent.event_date >= start)
-        if end:
-            stmt = stmt.where(DBCalendarEvent.event_date <= end)
-        rows = session.exec(stmt).all()
-        return [_calendar_to_pydantic(r) for r in rows]
+    if session is None:
+        with Session(engine) as s:
+            return list_calendar_events(user_id=user_id, start=start, end=end, session=s)
+    
+    stmt = select(DBCalendarEvent).where(DBCalendarEvent.user_id == user_id).order_by(DBCalendarEvent.event_date)
+    if start:
+        stmt = stmt.where(DBCalendarEvent.event_date >= start)
+    if end:
+        stmt = stmt.where(DBCalendarEvent.event_date <= end)
+    rows = session.exec(stmt).all()
+    return [_calendar_to_pydantic(r) for r in rows]
 
 
-def get_calendar_event(user_id: str, event_id: str) -> CalendarEvent | None:
-    with Session(engine) as session:
-        row = session.get(DBCalendarEvent, event_id)
-        if row is None or row.user_id != user_id:
-            return None
-        return _calendar_to_pydantic(row)
+def get_calendar_event(user_id: str, event_id: str, *, session: Session | None = None) -> CalendarEvent | None:
+    if session is None:
+        with Session(engine) as s:
+            return get_calendar_event(user_id=user_id, event_id=event_id, session=s)
+    row = session.get(DBCalendarEvent, event_id)
+    if row is None or row.user_id != user_id:
+        return None
+    return _calendar_to_pydantic(row)
 
 
-def create_calendar_event(user_id: str, event: CalendarEvent) -> CalendarEvent:
-    with Session(engine) as session:
-        row = DBCalendarEvent(
-            id=event.id,
-            user_id=user_id,
-            title=event.title,
-            event_type=event.event_type,
-            event_date=event.date,
-            time=event.time,
-            related_application_id=event.related_application_id,
-            notes=event.notes or None,
-            source=event.source,
-        )
-        session.add(row)
-        session.commit()
-        session.refresh(row)
+def create_calendar_event(user_id: str, event: CalendarEvent, *, session: Session | None = None) -> CalendarEvent:
+    if session is None:
+        with Session(engine) as s:
+            return create_calendar_event(user_id=user_id, event=event, session=s)
+    rel_app_id = event.related_application_id if event.related_application_id != "" else None
+    if rel_app_id:
+        if not verify_owned(session, DBApplication, rel_app_id, user_id):
+            raise ValueError("Invalid or unauthorized related_application_id")
+            
+    contact_id = getattr(event, "contact_id", None)
+    contact_id = contact_id if contact_id != "" else None
+    if contact_id:
+        if not verify_owned(session, Contact, contact_id, user_id):
+            raise ValueError("Invalid or unauthorized contact_id")
+
+    row = DBCalendarEvent(
+        id=event.id,
+        user_id=user_id,
+        title=event.title,
+        event_type=event.event_type,
+        event_date=event.date,
+        time=event.time,
+        related_application_id=rel_app_id,
+        contact_id=contact_id,
+        notes=event.notes or None,
+        source=event.source,
+    )
+    session.add(row)
+    session.commit()
+    session.refresh(row)
     return event
 
 
-def update_calendar_event(user_id: str, event: CalendarEvent) -> CalendarEvent | None:
-    with Session(engine) as session:
-        row = session.get(DBCalendarEvent, event.id)
-        if row is None or row.user_id != user_id:
-            return None
-        row.title = event.title
-        row.event_type = event.event_type
-        row.event_date = event.date
-        row.time = event.time
-        row.notes = event.notes or None
-        session.add(row)
-        session.commit()
+def update_calendar_event(user_id: str, event: CalendarEvent, *, session: Session | None = None) -> CalendarEvent | None:
+    if session is None:
+        with Session(engine) as s:
+            return update_calendar_event(user_id=user_id, event=event, session=s)
+    row = session.get(DBCalendarEvent, event.id)
+    if row is None or row.user_id != user_id:
+        return None
+        
+    if event.related_application_id is not None and event.related_application_id != row.related_application_id:
+        if event.related_application_id == "":
+            row.related_application_id = None
+        else:
+            if not verify_owned(session, DBApplication, event.related_application_id, user_id):
+                raise ValueError("Invalid or unauthorized related_application_id")
+            row.related_application_id = event.related_application_id
+        
+    contact_id = getattr(event, "contact_id", None)
+    if contact_id is not None and contact_id != getattr(row, "contact_id", None):
+        if contact_id == "":
+            row.contact_id = None
+        else:
+            if not verify_owned(session, Contact, contact_id, user_id):
+                raise ValueError("Invalid or unauthorized contact_id")
+            row.contact_id = contact_id
+
+    row.title = event.title
+    row.event_type = event.event_type
+    row.event_date = event.date
+    row.time = event.time
+    row.notes = event.notes or None
+    session.add(row)
+    session.commit()
     return event
 
 
-def delete_calendar_event(user_id: str, event_id: str) -> bool:
-    with Session(engine) as session:
-        row = session.get(DBCalendarEvent, event_id)
-        if row is None or row.user_id != user_id:
-            return False
-        session.delete(row)
-        session.commit()
+def delete_calendar_event(user_id: str, event_id: str, *, session: Session | None = None) -> bool:
+    if session is None:
+        with Session(engine) as s:
+            return delete_calendar_event(user_id=user_id, event_id=event_id, session=s)
+    row = session.get(DBCalendarEvent, event_id)
+    if row is None or row.user_id != user_id:
+        return False
+    session.delete(row)
+    session.commit()
     return True
 
 
@@ -748,34 +942,72 @@ def sync_followup_event(
     application_id: str,
     company: str,
     next_action_due: date | None,
+    next_action_type: str | None = None,
+    next_action_title: str | None = None,
     event_id_factory=lambda: str(uuid.uuid4()),
+    *,
+    session: Session | None = None,
 ) -> None:
-    with Session(engine) as session:
-        existing = _find_auto_event(session, user_id, application_id, CalendarEventType.FOLLOW_UP)
-        if next_action_due is None:
-            if existing:
-                session.delete(existing)
-                session.commit()
-            return
+    """Keep the auto-generated follow-up calendar event in sync."""
+    if session is None:
+        with Session(engine) as s:
+            return sync_followup_event(user_id, application_id, company, next_action_due, next_action_type, next_action_title, event_id_factory, session=s)
+            
+    stmt = select(DBCalendarEvent).where(
+        DBCalendarEvent.user_id == user_id,
+        DBCalendarEvent.related_application_id == application_id,
+        DBCalendarEvent.source == CalendarEventSource.AUTO,
+        DBCalendarEvent.event_type != CalendarEventType.INTERVIEW
+    )
+    existing = session.exec(stmt).first()
 
-        title = f"{company} - Follow-up"
+    if next_action_due is None:
         if existing:
-            existing.event_date = next_action_due
-            existing.title = title
-            session.add(existing)
-        else:
-            row = DBCalendarEvent(
-                id=event_id_factory(),
-                user_id=user_id,
-                title=title,
-                event_type=CalendarEventType.FOLLOW_UP,
-                event_date=next_action_due,
-                related_application_id=application_id,
-                notes=None,
-                source=CalendarEventSource.AUTO,
-            )
-            session.add(row)
-        session.commit()
+            session.delete(existing)
+            session.commit()
+        return
+
+    title = next_action_title or f"{company} - Follow-up"
+
+    # Coerce frontend action-type strings to valid CalendarEventType values.
+    # The frontend uses human labels ('Follow Up', 'Recruiter Call', …) that
+    # don't match the DB enum.  Map anything that isn't already a valid type
+    # to the nearest sensible CalendarEventType.
+    _TYPE_MAP: dict[str, str] = {
+        "follow up":              CalendarEventType.FOLLOW_UP,
+        "follow-up":              CalendarEventType.FOLLOW_UP,
+        "recruiter call":         CalendarEventType.RECRUITER_CALL,
+        "send email":             CalendarEventType.SEND_EMAIL,
+        "send thank-you":         CalendarEventType.SEND_THANK_YOU,
+        "prepare for interview":  CalendarEventType.PREPARE_FOR_INTERVIEW,
+        "review offer":           CalendarEventType.REVIEW_OFFER,
+        "custom":                 CalendarEventType.CUSTOM,
+    }
+    valid_types = {e.value for e in CalendarEventType}
+    raw_type = (next_action_type or "").strip()
+    if raw_type in valid_types:
+        event_type: str = raw_type
+    else:
+        event_type = _TYPE_MAP.get(raw_type.lower(), CalendarEventType.FOLLOW_UP)
+
+    if existing:
+        existing.event_date = next_action_due
+        existing.title = title
+        existing.event_type = event_type
+        session.add(existing)
+    else:
+        row = DBCalendarEvent(
+            id=event_id_factory(),
+            user_id=user_id,
+            title=title,
+            event_type=event_type,
+            event_date=next_action_due,
+            related_application_id=application_id,
+            notes=None,
+            source=CalendarEventSource.AUTO,
+        )
+        session.add(row)
+    session.commit()
 
 
 def sync_interview_event(
@@ -785,181 +1017,196 @@ def sync_interview_event(
     interview_date: date | None,
     interview_round: str,
     event_id_factory=lambda: str(uuid.uuid4()),
+    *,
+    session: Session | None = None,
 ) -> None:
-    with Session(engine) as session:
-        existing = _find_auto_event(session, user_id, application_id, CalendarEventType.INTERVIEW)
-        if interview_date is None:
-            if existing:
-                session.delete(existing)
-                session.commit()
-            return
-
-        title = f"{company} - {interview_round or 'Interview'}"
+    if session is None:
+        with Session(engine) as s:
+            return sync_interview_event(user_id, application_id, company, interview_date, interview_round, event_id_factory, session=s)
+            
+    existing = _find_auto_event(session, user_id, application_id, CalendarEventType.INTERVIEW)
+    if interview_date is None:
         if existing:
-            existing.event_date = interview_date
-            existing.title = title
-            session.add(existing)
-        else:
-            row = DBCalendarEvent(
-                id=event_id_factory(),
-                user_id=user_id,
-                title=title,
-                event_type=CalendarEventType.INTERVIEW,
-                event_date=interview_date,
-                related_application_id=application_id,
-                notes=None,
-                source=CalendarEventSource.AUTO,
-            )
-            session.add(row)
-        session.commit()
+            session.delete(existing)
+            session.commit()
+        return
+
+    title = f"{company} - {interview_round or 'Interview'}"
+    if existing:
+        existing.event_date = interview_date
+        existing.title = title
+        session.add(existing)
+    else:
+        row = DBCalendarEvent(
+            id=event_id_factory(),
+            user_id=user_id,
+            title=title,
+            event_type=CalendarEventType.INTERVIEW,
+            event_date=interview_date,
+            related_application_id=application_id,
+            notes=None,
+            source=CalendarEventSource.AUTO,
+        )
+        session.add(row)
+    session.commit()
 
 
 # ---------------------------------------------------------------------------
 # Daily snapshots & Analytics
 # ---------------------------------------------------------------------------
 
-def get_current_pipeline_stats(user_id: str) -> dict:
+def get_current_pipeline_stats(user_id: str, *, session: Session | None = None) -> dict:
     """Return lightweight aggregate queries for current pipeline stats."""
-    with Session(engine) as session:
-        # Applications counts
-        app_counts = session.exec(
-            select(DBApplication.status, func.count(DBApplication.id))
-            .where(DBApplication.user_id == user_id)
-            .group_by(DBApplication.status)
-        ).all()
-        counts = {status: count for status, count in app_counts}
-        total = sum(counts.values())
+    if session is None:
+        with Session(engine) as s:
+            return get_current_pipeline_stats(user_id=user_id, session=s)
+    
+    # Applications counts
+    app_counts = session.exec(
+        select(DBApplication.status, func.count(DBApplication.id))
+        .where(DBApplication.user_id == user_id)
+        .group_by(DBApplication.status)
+    ).all()
+    counts = {status: count for status, count in app_counts}
+    total = sum(counts.values())
 
-        # Response rate
-        total_contacted = session.exec(
-            select(func.count(DBApplication.id))
-            .where(
-                DBApplication.user_id == user_id,
-                DBApplication.status != "Not Contacted"
-            )
-        ).one()
-        
-        responded_subq = select(ActivityLog.application_id).where(
-            ActivityLog.user_id == user_id,
-            col(ActivityLog.action_type).in_(["Call Connected", "Interview Completed"]),
-            ActivityLog.application_id.is_not(None)
-        ).distinct()
-        
-        contacted_and_responded = session.exec(
-            select(func.count(DBApplication.id))
-            .where(
-                DBApplication.user_id == user_id,
-                DBApplication.status != "Not Contacted",
-                col(DBApplication.id).in_(responded_subq)
-            )
-        ).one()
-        
-        response_rate = (contacted_and_responded / total_contacted * 100) if total_contacted > 0 else 0.0
-        
-        # Activity counts
-        act_counts = session.exec(
-            select(ActivityLog.action_type, func.count(ActivityLog.id))
-            .where(ActivityLog.user_id == user_id)
-            .group_by(ActivityLog.action_type)
-        ).all()
-        activities = {atype: count for atype, count in act_counts}
-        
+    # Response rate
+    total_contacted = session.exec(
+    select(func.count(DBApplication.id))
+    .where(
+        DBApplication.user_id == user_id,
+        DBApplication.status != "Not Contacted"
+    )
+    ).one()
+    
+    responded_subq = select(ActivityLog.application_id).where(
+    ActivityLog.user_id == user_id,
+    col(ActivityLog.action_type).in_(["Call Connected", "Interview Completed"]),
+    ActivityLog.application_id.is_not(None)
+    ).distinct()
+    
+    contacted_and_responded = session.exec(
+    select(func.count(DBApplication.id))
+    .where(
+        DBApplication.user_id == user_id,
+        DBApplication.status != "Not Contacted",
+        col(DBApplication.id).in_(responded_subq)
+    )
+    ).one()
+    
+    response_rate = (contacted_and_responded / total_contacted * 100) if total_contacted > 0 else 0.0
+    
+    # Activity counts
+    act_counts = session.exec(
+    select(ActivityLog.action_type, func.count(ActivityLog.id))
+    .where(ActivityLog.user_id == user_id)
+    .group_by(ActivityLog.action_type)
+    ).all()
+    activities = {atype: count for atype, count in act_counts}
+    
     return {
-        "Total": total,
-        "Not Contacted": counts.get("Not Contacted", 0),
-        "In Progress": counts.get("In Progress", 0),
-        "Interviewing": counts.get("Interviewing", 0),
-        "Offer Received": counts.get("Offer Received", 0),
-        "Rejected": counts.get("Rejected", 0),
-        "Ghosted": counts.get("Ghosted", 0),
-        "response_rate": response_rate,
-        "calls_dialed": activities.get("Call Dialed", 0),
-        "calls_connected": activities.get("Call Connected", 0),
-        "interviews_attended": activities.get("Interview Completed", 0)
+    "Total": total,
+    "Not Contacted": counts.get("Not Contacted", 0),
+    "In Progress": counts.get("In Progress", 0),
+    "Interviewing": counts.get("Interviewing", 0),
+    "Offer Received": counts.get("Offer Received", 0),
+    "Rejected": counts.get("Rejected", 0),
+    "Ghosted": counts.get("Ghosted", 0),
+    "response_rate": response_rate,
+    "calls_dialed": activities.get("Call Dialed", 0),
+    "calls_connected": activities.get("Call Connected", 0),
+    "interviews_attended": activities.get("Interview Completed", 0)
     }
 
-def get_application_sources(user_id: str) -> dict[str, int]:
+def get_application_sources(user_id: str, *, session: Session | None = None) -> dict[str, int]:
     """Aggregate counts by application_method."""
-    with Session(engine) as session:
-        rows = session.exec(
-            select(DBApplication.application_method, func.count(DBApplication.id))
-            .where(DBApplication.user_id == user_id)
-            .group_by(DBApplication.application_method)
-        ).all()
-        sources = {}
-        for method, count in rows:
-            name = method if method else "Others"
-            sources[name] = sources.get(name, 0) + count
-        return sources
+    if session is None:
+        with Session(engine) as s:
+            return get_application_sources(user_id=user_id, session=s)
+    
+    rows = session.exec(
+        select(DBApplication.application_method, func.count(DBApplication.id))
+        .where(DBApplication.user_id == user_id)
+        .group_by(DBApplication.application_method)
+    ).all()
+    sources = {}
+    for method, count in rows:
+        name = method if method else "Others"
+        sources[name] = sources.get(name, 0) + count
+    return sources
 
-def list_daily_snapshots(user_id: str) -> list[DailySnapshot]:
-    with Session(engine) as session:
-        rows = session.exec(
-            select(DBDailySnapshot)
-            .where(DBDailySnapshot.user_id == user_id)
-            .order_by(DBDailySnapshot.snapshot_date)
-        ).all()
-        return [
-            DailySnapshot(
-                date=r.snapshot_date,
-                total_applications=r.total_applications,
-                not_contacted=r.not_contacted,
-                in_progress=r.in_progress,
-                interviewing=r.interviewing,
-                offer_received=r.offer_received,
-                rejected=r.rejected,
-                ghosted=r.ghosted,
-                response_rate=r.response_rate,
-                calls_dialed=r.calls_dialed,
-                calls_connected=r.calls_connected,
-                interviews_attended=r.interviews_attended,
-            )
-            for r in rows
-        ]
+def list_daily_snapshots(user_id: str, *, session: Session | None = None) -> list[DailySnapshot]:
+    if session is None:
+        with Session(engine) as s:
+            return list_daily_snapshots(user_id=user_id, session=s)
+    rows = session.exec(
+        select(DBDailySnapshot)
+        .where(DBDailySnapshot.user_id == user_id)
+        .order_by(DBDailySnapshot.snapshot_date)
+    ).all()
+    return [
+        DailySnapshot(
+            date=r.snapshot_date,
+            total_applications=r.total_applications,
+            not_contacted=r.not_contacted,
+            in_progress=r.in_progress,
+            interviewing=r.interviewing,
+            offer_received=r.offer_received,
+            rejected=r.rejected,
+            ghosted=r.ghosted,
+            response_rate=r.response_rate,
+            calls_dialed=r.calls_dialed,
+            calls_connected=r.calls_connected,
+            interviews_attended=r.interviews_attended,
+        )
+        for r in rows
+    ]
 
 
-def save_daily_snapshot(user_id: str, snapshot: DailySnapshot) -> None:
+def save_daily_snapshot(user_id: str, snapshot: DailySnapshot, *, session: Session | None = None) -> None:
     """Upsert: update today's row if it exists, else insert."""
-    with Session(engine) as session:
-        existing = session.exec(
-            select(DBDailySnapshot).where(
-                DBDailySnapshot.user_id == user_id,
-                DBDailySnapshot.snapshot_date == snapshot.date
-            )
-        ).first()
+    if session is None:
+        with Session(engine) as s:
+            return save_daily_snapshot(user_id=user_id, snapshot=snapshot, session=s)
+    existing = session.exec(
+        select(DBDailySnapshot).where(
+            DBDailySnapshot.user_id == user_id,
+            DBDailySnapshot.snapshot_date == snapshot.date
+        )
+    ).first()
 
-        if existing:
-            existing.total_applications  = snapshot.total_applications
-            existing.not_contacted       = snapshot.not_contacted
-            existing.in_progress         = snapshot.in_progress
-            existing.interviewing        = snapshot.interviewing
-            existing.offer_received      = snapshot.offer_received
-            existing.rejected            = snapshot.rejected
-            existing.ghosted             = snapshot.ghosted
-            existing.response_rate       = snapshot.response_rate
-            existing.calls_dialed        = snapshot.calls_dialed
-            existing.calls_connected     = snapshot.calls_connected
-            existing.interviews_attended = snapshot.interviews_attended
-            session.add(existing)
-        else:
-            row = DBDailySnapshot(
-                id=_new_id(),
-                user_id=user_id,
-                snapshot_date=snapshot.date,
-                total_applications=snapshot.total_applications,
-                not_contacted=snapshot.not_contacted,
-                in_progress=snapshot.in_progress,
-                interviewing=snapshot.interviewing,
-                offer_received=snapshot.offer_received,
-                rejected=snapshot.rejected,
-                ghosted=snapshot.ghosted,
-                response_rate=snapshot.response_rate,
-                calls_dialed=snapshot.calls_dialed,
-                calls_connected=snapshot.calls_connected,
-                interviews_attended=snapshot.interviews_attended,
-            )
-            session.add(row)
-        session.commit()
+    if existing:
+        existing.total_applications  = snapshot.total_applications
+        existing.not_contacted       = snapshot.not_contacted
+        existing.in_progress         = snapshot.in_progress
+        existing.interviewing        = snapshot.interviewing
+        existing.offer_received      = snapshot.offer_received
+        existing.rejected            = snapshot.rejected
+        existing.ghosted             = snapshot.ghosted
+        existing.response_rate       = snapshot.response_rate
+        existing.calls_dialed        = snapshot.calls_dialed
+        existing.calls_connected     = snapshot.calls_connected
+        existing.interviews_attended = snapshot.interviews_attended
+        session.add(existing)
+    else:
+        row = DBDailySnapshot(
+            id=_new_id(),
+            user_id=user_id,
+            snapshot_date=snapshot.date,
+            total_applications=snapshot.total_applications,
+            not_contacted=snapshot.not_contacted,
+            in_progress=snapshot.in_progress,
+            interviewing=snapshot.interviewing,
+            offer_received=snapshot.offer_received,
+            rejected=snapshot.rejected,
+            ghosted=snapshot.ghosted,
+            response_rate=snapshot.response_rate,
+            calls_dialed=snapshot.calls_dialed,
+            calls_connected=snapshot.calls_connected,
+            interviews_attended=snapshot.interviews_attended,
+        )
+        session.add(row)
+    session.commit()
 
 
 # ---------------------------------------------------------------------------
@@ -1071,12 +1318,14 @@ def upload_resume(
     )
 
 
-def list_resumes(user_id: str) -> list[ResumeMeta]:
+def list_resumes(user_id: str, *, session: Session | None = None) -> list[ResumeMeta]:
     """List all resume metadata rows, newest first."""
-    with Session(engine) as session:
-        rows = session.exec(
-            select(Resume).where(Resume.user_id == user_id).order_by(col(Resume.uploaded_at).desc())
-        ).all()
+    if session is None:
+        with Session(engine) as s:
+            return list_resumes(user_id=user_id, session=s)
+    rows = session.exec(
+        select(Resume).where(Resume.user_id == user_id).order_by(col(Resume.uploaded_at).desc())
+    ).all()
     return [
         ResumeMeta(
             id=r.id,
@@ -1109,24 +1358,26 @@ def get_resume_presigned_url(
     )
     return url
 
-def delete_resume(user_id: str, resume_id: str) -> None:
-    with Session(engine) as session:
-        resume = session.exec(select(Resume).where(Resume.user_id == user_id, Resume.id == resume_id)).first()
-        if not resume:
-            raise ValueError("Resume not found")
-            
-        apps_count = session.exec(select(func.count(Application.id)).where(Application.resume_id == resume_id)).one()
-        if apps_count > 0:
-            raise ValueError(f"Cannot delete this resume because it is attached to {apps_count} application(s).")
-            
-        client = get_r2_client()
-        client.delete_object(
-            Bucket=R2_BUCKET_NAME,
-            Key=resume.storage_key,
-        )
+def delete_resume(user_id: str, resume_id: str, *, session: Session | None = None) -> None:
+    if session is None:
+        with Session(engine) as s:
+            return delete_resume(user_id=user_id, resume_id=resume_id, session=s)
+    resume = session.exec(select(Resume).where(Resume.user_id == user_id, Resume.id == resume_id)).first()
+    if not resume:
+        raise ValueError("Resume not found")
         
-        session.delete(resume)
-        session.commit()
+    apps_count = session.exec(select(func.count(DBApplication.id)).where(DBApplication.resume_id == resume_id)).one()
+    if apps_count > 0:
+        raise ValueError(f"Cannot delete this resume because it is attached to {apps_count} application(s).")
+        
+    client = get_r2_client()
+    client.delete_object(
+        Bucket=R2_BUCKET_NAME,
+        Key=resume.storage_key,
+    )
+    
+    session.delete(resume)
+    session.commit()
 
 
 

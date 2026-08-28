@@ -1,20 +1,20 @@
 import React, { useState } from 'react'
 import Dropdown from './ui/Dropdown'
+import ValueLoader from './ui/ValueLoader'
 
-export default function ApplicationsByStatus({ summary = {} }) {
+export default function ApplicationsByStatus({ summary = {}, loading = false }) {
   const [hoveredIndex, setHoveredIndex] = useState(null)
   const [timeRange, setTimeRange] = useState('month')
 
   const funnel = summary.funnel || {}
 
   const defaultStatusData = [
-    { label: 'Not Contacted', count: funnel['Not Contacted'] ?? 0, color: '#64748B' },
+    { label: 'Not Contacted', count: funnel['Not Contacted'] ?? 0, color: '#EAB308' },
     { label: 'In Progress',   count: funnel['In Progress'] ?? 0,   color: '#2563EB' },
     { label: 'Interviewing',  count: funnel['Interviewing'] ?? 0,  color: '#8B5CF6' },
     { label: 'Offer Received',count: funnel['Offer Received'] ?? 0, color: '#10B981' },
     { label: 'Rejected',      count: funnel['Rejected'] ?? 0,       color: '#EF4444' },
     { label: 'Ghosted',       count: funnel['Ghosted'] ?? 0,      color: '#F97316' },
-    { label: 'Closed',        count: funnel['Closed'] ?? 0,       color: '#0D9488' },
   ]
 
   const total = defaultStatusData.reduce((acc, item) => acc + item.count, 0) || 1
@@ -62,10 +62,10 @@ export default function ApplicationsByStatus({ summary = {} }) {
       </div>
 
       {/* Main Content Area: Donut Chart + Legend Grid */}
-      <div className="flex-1 flex flex-col sm:flex-row items-center justify-between gap-6 my-auto pt-2">
+      <div className="flex-1 flex flex-col xl:flex-row items-center justify-center xl:justify-between gap-6 my-auto pt-2 min-w-0">
         {/* Donut Chart Container */}
-        <div className="relative w-44 h-44 flex-shrink-0 flex items-center justify-center">
-          <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
+        <div className="relative w-36 h-36 2xl:w-44 2xl:h-44 flex-shrink-0 flex items-center justify-center">
+          <svg viewBox="0 0 100 100" className={`w-full h-full transform -rotate-90 ${loading ? 'animate-[spin_1.5s_linear_infinite] transition-opacity duration-300' : ''}`}>
             {/* Background track circle */}
             <circle
               cx="50"
@@ -76,6 +76,20 @@ export default function ApplicationsByStatus({ summary = {} }) {
               strokeWidth="14"
               opacity="0.5"
             />
+            {/* Indeterminate spinner track while loading */}
+            {loading && (
+              <circle
+                cx="50"
+                cy="50"
+                r={radius}
+                fill="transparent"
+                stroke="var(--foreground-secondary)"
+                strokeWidth="14"
+                strokeDasharray={`${radius * Math.PI} ${radius * Math.PI}`}
+                strokeDashoffset="0"
+                className="opacity-40"
+              />
+            )}
 
             {/* Interactive Donut Segments */}
             {segments.map((seg) => {
@@ -106,16 +120,19 @@ export default function ApplicationsByStatus({ summary = {} }) {
           {/* Center Dynamic Label */}
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none transition-all duration-200">
             <span className="text-2xl font-extrabold text-foreground tracking-tight leading-none">
-              {activeItem ? activeItem.count : total}
+              {/* Do not show the value loader spinner here, the ring itself is spinning */}
+              <span className={`transition-opacity duration-150 ${loading ? 'opacity-0' : 'opacity-100'}`}>
+                {loading ? <span className="invisible">0</span> : <ValueLoader loading={false} value={activeItem ? activeItem.count : total} />}
+              </span>
             </span>
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-foreground-secondary mt-1 max-w-[80px] truncate">
+            <span className={`text-[10px] font-semibold uppercase tracking-wider text-foreground-secondary mt-1 max-w-[80px] truncate transition-opacity duration-150 ${loading ? 'opacity-0' : 'opacity-100'}`}>
               {activeItem ? activeItem.label : 'Total'}
             </span>
           </div>
         </div>
 
         {/* Status Legend List */}
-        <div className="flex-1 w-full space-y-1.5">
+        <div className="flex-1 w-full min-w-0 space-y-1.5">
           {segments.map((seg) => {
             const isHovered = hoveredIndex === seg.index
             return (
@@ -140,8 +157,8 @@ export default function ApplicationsByStatus({ summary = {} }) {
                   <span className="truncate font-medium">{seg.label}</span>
                 </div>
                 <div className="flex items-center gap-1 font-semibold text-foreground flex-shrink-0 ml-2">
-                  <span>{seg.count}</span>
-                  <span className="text-[11px] text-foreground-secondary font-normal">({seg.percent}%)</span>
+                  <span><ValueLoader loading={loading} value={seg.count} spinnerClass="h-3 w-3" /></span>
+                  <span className="text-[11px] text-foreground-secondary font-normal">(<ValueLoader loading={loading} value={`${seg.percent}%`} spinnerClass="h-3 w-3" />)</span>
                 </div>
               </div>
             )

@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react'
-import { api } from '../api/client'
+import { api, activityApi } from '../api/client'
 import Dropdown from '../components/ui/Dropdown'
+import SearchableSelect from '../components/ui/SearchableSelect'
 import ManageResumesModal from '../components/ManageResumesModal'
 import {
   Plus, X, Search, Check, AlertCircle, Calendar, Sparkles,
   Briefcase, Send, Clock, CalendarCheck, Trophy, XCircle, Ghost, ChevronDown, ChevronUp,
   FileText, Eye, Download, Edit, Trash2
 } from 'lucide-react'
+import { useToast } from '../context/ToastContext'
+import ConfirmDeleteModal from '../components/ui/ConfirmDeleteModal'
 
 
 const METHODS = ['Company Website', 'LinkedIn', 'Referral', 'Wellfound', 'Indeed', 'Naukri', 'Other']
@@ -42,7 +45,7 @@ const STATUS_TRIGGER_CLASSES = {
 }
 
 const STATUS_DROPDOWN_OPTIONS = [
-  { label: 'Not Contacted', value: 'Not Contacted', dotColor: 'bg-slate-400' },
+  { label: 'Not Contacted', value: 'Not Contacted', dotColor: 'bg-yellow-500' },
   { label: 'In Progress',   value: 'In Progress',   dotColor: 'bg-info' },
   { label: 'Interviewing',  value: 'Interviewing',  dotColor: 'bg-primary' },
   { label: 'Offer Received',value: 'Offer Received',dotColor: 'bg-emerald-400' },
@@ -60,10 +63,21 @@ const STAGE_DROPDOWN_OPTIONS = [
   { label: 'Closed', value: 'Closed' }
 ]
 
+function getLocalDayStr(d) {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function getLocalTodayStr() {
+  return getLocalDayStr(new Date());
+}
+
 function getFutureDateStr(daysAhead) {
   const d = new Date()
   d.setDate(d.getDate() + daysAhead)
-  return d.toISOString().split('T')[0]
+  return getLocalDayStr(d)
 }
 
 function formatDateDisplay(dateStr) {
@@ -128,7 +142,7 @@ function NextActionCell({ action, onClick }) {
     )
   }
 
-  const today = new Date().toISOString().split('T')[0]
+  const today = getLocalTodayStr()
   const isOverdue = action.date && action.date < today && !action.completed
   const isToday = action.date && action.date === today && !action.completed
   const isCompleted = action.completed
@@ -136,36 +150,36 @@ function NextActionCell({ action, onClick }) {
   let statusBadge = null
   if (isCompleted) {
     statusBadge = (
-      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 font-bold text-[11px]">
-        <Check className="w-3.5 h-3.5" />
-        Completed
+      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 font-bold text-[11px] max-w-[250px] truncate" title={action.title}>
+        <Check className="w-3.5 h-3.5 flex-shrink-0" />
+        <span className="truncate">{action.title ? `${action.title} · Completed` : 'Completed'}</span>
       </span>
     )
   } else if (isOverdue) {
     statusBadge = (
-      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-400 font-bold text-[11px]">
-        <AlertCircle className="w-3.5 h-3.5" />
-        Overdue · {formatDateDisplay(action.date)}
+      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-400 font-bold text-[11px] max-w-[250px] truncate" title={action.title}>
+        <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+        <span className="truncate">{action.title ? `${action.title} · ${formatDateDisplay(action.date)}` : `Overdue · ${formatDateDisplay(action.date)}`}</span>
       </span>
     )
   } else if (isToday) {
     statusBadge = (
-      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-400 font-bold text-[11px]">
-        <Clock className="w-3.5 h-3.5" />
-        Today {action.time ? `· ${action.time}` : ''}
+      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-400 font-bold text-[11px] max-w-[250px] truncate" title={action.title}>
+        <Clock className="w-3.5 h-3.5 flex-shrink-0" />
+        <span className="truncate">{action.title ? `${action.title} · Today` : `Today ${action.time ? `· ${action.time}` : ''}`}</span>
       </span>
     )
   } else {
     statusBadge = (
-      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-surface-secondary text-foreground-secondary hover:text-foreground font-semibold text-[11px] transition-colors">
-        <Calendar className="w-3.5 h-3.5 opacity-70" />
-        {formatDateDisplay(action.date)} {action.time ? `· ${action.time}` : ''}
+      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-surface-secondary text-foreground-secondary hover:text-foreground font-semibold text-[11px] transition-colors max-w-[250px] truncate" title={action.title}>
+        <Calendar className="w-3.5 h-3.5 opacity-70 flex-shrink-0" />
+        <span className="truncate">{action.title ? `${action.title} · ${formatDateDisplay(action.date)}` : `${formatDateDisplay(action.date)} ${action.time ? `· ${action.time}` : ''}`}</span>
       </span>
     )
   }
 
   return (
-    <div onClick={onClick} className="inline-block cursor-pointer hover:opacity-90 transition-opacity">
+    <div onClick={(e) => { e.stopPropagation(); onClick(); }} className="inline-block cursor-pointer hover:opacity-90 transition-opacity">
       {statusBadge}
     </div>
   )
@@ -189,7 +203,7 @@ function ViewResumeModal({ resume, onClose, onDownload }) {
   if (!resume) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in-80 duration-150" onClick={e => e.target === e.currentTarget && onClose()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in-80 duration-150" onMouseDown={e => e.target === e.currentTarget && onClose()}>
       <div className="bg-surface rounded-2xl border border-border shadow-2xl w-full max-w-4xl h-[90vh] flex flex-col overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-surface-secondary">
           <div className="flex items-center gap-3">
@@ -254,8 +268,8 @@ function EditNextActionModal({ app, onClose, onSave, onRemove }) {
 
   const existing = app.next_action || {
     id: `act_${Date.now()}`,
-    type: 'Follow Up',
-    title: 'Follow up with recruiter',
+    type: app.next_action_type || 'Follow Up',
+    title: app.next_action_title || 'Follow up with recruiter',
     date: app.next_action_due || getFutureDateStr(2),
     time: '10:00 AM',
     completed: false
@@ -268,20 +282,54 @@ function EditNextActionModal({ app, onClose, onSave, onRemove }) {
     time: existing.time || '10:00 AM',
     completed: existing.completed || false
   })
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState('')
 
-  const submit = e => {
+  const submit = async e => {
     e.preventDefault()
-    onSave(app.id, {
-      ...existing,
-      ...form,
-      title: form.title || form.type
-    })
-    onClose()
+    if (isSubmitting) return
+    setIsSubmitting(true)
+    setError('')
+    try {
+      await onSave(app.id, {
+        ...existing,
+        ...form,
+        title: form.title || form.type
+      })
+      onClose()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleRemove = async () => {
+    if (isSubmitting) return
+    setIsSubmitting(true)
+    setError('')
+    try {
+      await onRemove(app.id)
+      onClose()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleTypeChange = (newType) => {
     let suggestedTitle = form.title
-    if (!form.title || form.title === form.type || form.title === 'Follow up with recruiter') {
+    const knownDefaults = [
+      'Follow up with recruiter',
+      'Recruiter introductory call',
+      'Send status check email',
+      'Prepare for interview',
+      'Send thank-you email',
+      'Review offer details',
+      form.type
+    ]
+    if (!form.title || knownDefaults.includes(form.title)) {
       if (newType === 'Follow Up') suggestedTitle = 'Follow up with recruiter'
       else if (newType === 'Recruiter Call') suggestedTitle = 'Recruiter introductory call'
       else if (newType === 'Send Email') suggestedTitle = 'Send status check email'
@@ -293,7 +341,7 @@ function EditNextActionModal({ app, onClose, onSave, onRemove }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in-80 duration-150" onClick={e => e.target === e.currentTarget && onClose()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in-80 duration-150" onMouseDown={e => e.target === e.currentTarget && onClose()}>
       <div className="bg-surface rounded-2xl border border-white/5 shadow-2xl w-full max-w-md overflow-hidden select-none">
         <div className="flex items-center justify-between px-6 pt-5 pb-2">
           <div className="flex items-center gap-2.5">
@@ -311,6 +359,7 @@ function EditNextActionModal({ app, onClose, onSave, onRemove }) {
         </div>
 
         <form onSubmit={submit} className="px-6 py-4 space-y-4">
+          {error && <p className="text-xs text-rose-400 bg-rose-500/10 rounded-xl p-3 border border-rose-500/20">{error}</p>}
           <div>
             <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">Action Type</label>
             <Dropdown
@@ -339,6 +388,7 @@ function EditNextActionModal({ app, onClose, onSave, onRemove }) {
               <input
                 type="date"
                 required
+                min={getLocalTodayStr()}
                 className="w-full rounded-xl border border-transparent bg-surface-secondary hover:bg-surface-tertiary px-3.5 py-2.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-all [color-scheme:dark]"
                 value={form.date}
                 onChange={e => setForm({ ...form, date: e.target.value })}
@@ -373,8 +423,9 @@ function EditNextActionModal({ app, onClose, onSave, onRemove }) {
             {app.next_action ? (
               <button
                 type="button"
-                onClick={() => { onRemove(app.id); onClose() }}
-                className="text-xs font-semibold text-rose-400 hover:underline focus:outline-none"
+                disabled={isSubmitting}
+                onClick={handleRemove}
+                className="text-xs font-semibold text-rose-400 hover:underline focus:outline-none disabled:opacity-60"
               >
                 Remove Action
               </button>
@@ -390,9 +441,11 @@ function EditNextActionModal({ app, onClose, onSave, onRemove }) {
               </button>
               <button
                 type="submit"
-                className="rounded-xl bg-primary px-5 py-2 text-xs font-semibold text-white hover:bg-primary-hover transition-all shadow-2xs active:scale-95"
+                disabled={isSubmitting}
+                className="rounded-xl bg-primary px-5 py-2 text-xs font-semibold text-white hover:bg-primary-hover transition-all shadow-2xs active:scale-95 disabled:opacity-60 flex items-center gap-2"
               >
-                Save Action
+                {isSubmitting && <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                {isSubmitting ? 'Saving...' : 'Save Action'}
               </button>
             </div>
           </div>
@@ -403,9 +456,26 @@ function EditNextActionModal({ app, onClose, onSave, onRemove }) {
 }
 
 function StatusSuggestionModal({ prompt, onClose, onAccept, onKeep, onRemove, onCustomize }) {
+  const [localError, setLocalError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+
   if (!prompt) return null
 
   const { app, newStatus, suggestedAction, isRejectedPrompt, isOfferPrompt } = prompt
+
+  const handleAction = async (actionFn) => {
+    if (submitting) return
+    setSubmitting(true)
+    setLocalError('')
+    try {
+      await actionFn()
+      onClose()
+    } catch (e) {
+      setLocalError(e.message)
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   if (isRejectedPrompt || isOfferPrompt) {
     const isOffer = isOfferPrompt
@@ -420,8 +490,9 @@ function StatusSuggestionModal({ prompt, onClose, onAccept, onKeep, onRemove, on
       : 'bg-rose-500 hover:bg-rose-600'
 
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in-80 duration-150" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in-80 duration-150" onMouseDown={e => e.target === e.currentTarget && onClose()}>
         <div className="bg-surface rounded-2xl border border-white/5 shadow-2xl w-full max-w-md p-6 select-none">
+          {localError && <p className="mb-4 text-xs text-rose-400 bg-rose-500/10 rounded-xl p-3 border border-rose-500/20">{localError}</p>}
           <div className="flex items-center gap-3 mb-3">
             <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${iconStyle}`}>
               <Icon className="w-5 h-5" />
@@ -438,14 +509,16 @@ function StatusSuggestionModal({ prompt, onClose, onAccept, onKeep, onRemove, on
 
           <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/5">
             <button
-              onClick={() => { onKeep(); onClose() }}
-              className="rounded-xl px-4 py-2 text-xs font-semibold text-foreground-secondary hover:bg-surface-tertiary transition-colors"
+              disabled={submitting}
+              onClick={() => handleAction(onKeep)}
+              className="rounded-xl px-4 py-2 text-xs font-semibold text-foreground-secondary hover:bg-surface-tertiary transition-colors disabled:opacity-60"
             >
               Keep Completed
             </button>
             <button
-              onClick={() => { onRemove(); onClose() }}
-              className={`rounded-xl px-4 py-2 text-xs font-semibold text-white transition-all shadow-2xs active:scale-95 ${removeBtnStyle}`}
+              disabled={submitting}
+              onClick={() => handleAction(onRemove)}
+              className={`rounded-xl px-4 py-2 text-xs font-semibold text-white transition-all shadow-2xs active:scale-95 disabled:opacity-60 ${removeBtnStyle}`}
             >
               Remove Reminder
             </button>
@@ -456,8 +529,9 @@ function StatusSuggestionModal({ prompt, onClose, onAccept, onKeep, onRemove, on
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in-80 duration-150" onClick={e => e.target === e.currentTarget && onClose()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in-80 duration-150" onMouseDown={e => e.target === e.currentTarget && onClose()}>
       <div className="bg-surface rounded-2xl border border-white/5 shadow-2xl w-full max-w-md p-6 select-none">
+        {localError && <p className="mb-4 text-xs text-rose-400 bg-rose-500/10 rounded-xl p-3 border border-rose-500/20">{localError}</p>}
         <div className="flex items-center gap-3 mb-3">
           <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
             <Sparkles className="w-5 h-5" />
@@ -478,8 +552,9 @@ function StatusSuggestionModal({ prompt, onClose, onAccept, onKeep, onRemove, on
 
         <div className="flex flex-col gap-2 pt-2">
           <button
-            onClick={() => { onAccept(suggestedAction); onClose() }}
-            className="w-full rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-white hover:bg-primary-hover transition-all shadow-2xs active:scale-95 flex items-center justify-center gap-1.5"
+            disabled={submitting}
+            onClick={() => handleAction(() => onAccept(suggestedAction))}
+            className="w-full rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-white hover:bg-primary-hover transition-all shadow-2xs active:scale-95 flex items-center justify-center gap-1.5 disabled:opacity-60"
           >
             <Check className="w-3.5 h-3.5" />
             <span>Use Suggested Action</span>
@@ -487,14 +562,16 @@ function StatusSuggestionModal({ prompt, onClose, onAccept, onKeep, onRemove, on
           
           <div className="grid grid-cols-2 gap-2 mt-1">
             <button
-              onClick={() => { onKeep(); onClose() }}
-              className="rounded-xl px-3 py-2 text-xs font-semibold text-foreground-secondary bg-surface-secondary hover:bg-surface-secondary transition-colors"
+              disabled={submitting}
+              onClick={() => handleAction(onKeep)}
+              className="rounded-xl px-3 py-2 text-xs font-semibold text-foreground-secondary bg-surface-secondary hover:bg-surface-secondary transition-colors disabled:opacity-60"
             >
               Keep Current Action
             </button>
             <button
-              onClick={() => { onCustomize(suggestedAction); onClose() }}
-              className="rounded-xl px-3 py-2 text-xs font-semibold text-primary bg-primary/10 hover:bg-primary/20 transition-colors"
+              disabled={submitting}
+              onClick={() => handleAction(() => onCustomize(suggestedAction))}
+              className="rounded-xl px-3 py-2 text-xs font-semibold text-primary bg-primary/10 hover:bg-primary/20 transition-colors disabled:opacity-60"
             >
               Customize
             </button>
@@ -509,26 +586,36 @@ function PostCreateBanner({ info, onDismiss, onEdit }) {
   if (!info) return null
 
   return (
-    <div className="mb-5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 p-4 flex items-center justify-between text-xs text-emerald-400 animate-in fade-in-50 duration-200">
-      <div className="flex items-center gap-3">
-        <div className="w-8 h-8 rounded-xl bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
+    <div className="mb-5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 p-4 flex items-start justify-between gap-3 text-xs text-emerald-400">
+      <div className="flex items-start gap-3">
+        <div className="w-8 h-8 rounded-xl bg-emerald-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
           <Check className="w-4 h-4 text-emerald-400" />
         </div>
         <div>
           <p className="font-bold text-foreground">Application Created: {info.company} ({info.job_title})</p>
-          <p className="text-[11px] text-foreground-secondary mt-0.5">
-            Next action scheduled: <strong className="text-foreground">{info.next_action?.title}</strong> on {formatDateDisplay(info.next_action?.date)} at {info.next_action?.time}
-          </p>
+          {info.next_action && (
+            <p className="text-[11px] text-foreground-secondary mt-0.5">
+              Next action scheduled: <strong className="text-foreground">{info.next_action?.title}</strong> on {formatDateDisplay(info.next_action?.date)} at {info.next_action?.time}
+            </p>
+          )}
+          {info.reusedContact && (
+            <p className="text-[11px] text-sky-400 mt-1 flex items-center gap-1">
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-sky-400 flex-shrink-0" />
+              Linked to existing contact: <strong>{info.reusedContact}</strong>
+            </p>
+          )}
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
-        <button
-          onClick={onEdit}
-          className="px-3 py-1.5 rounded-xl bg-primary text-white text-[11px] font-bold hover:bg-primary-hover transition-all"
-        >
-          Edit Action
-        </button>
+      <div className="flex items-center gap-2 flex-shrink-0">
+        {info.next_action && (
+          <button
+            onClick={onEdit}
+            className="px-3 py-1.5 rounded-xl bg-primary text-white text-[11px] font-bold hover:bg-primary-hover transition-all"
+          >
+            Edit Action
+          </button>
+        )}
         <button
           onClick={onDismiss}
           className="p-1.5 text-foreground-secondary hover:text-foreground rounded-lg transition-colors"
@@ -540,13 +627,29 @@ function PostCreateBanner({ info, onDismiss, onEdit }) {
   )
 }
 
-function ApplicationModal({ isEdit, isOpen, onClose, onSubmit, form, setForm, resumes = [], onUploadResume, onManageResumes }) {
+function ApplicationModal({ isEdit, isOpen, onClose, onSubmit, onDelete, form, setForm, resumes = [], contacts = [], onUploadResume, onManageResumes, isSubmitting, isUploadingResume }) {
+  const [localError, setLocalError] = useState('')
+
+  useEffect(() => {
+    if (isOpen) setLocalError('')
+  }, [isOpen])
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setLocalError('')
+    try {
+      await onSubmit(e)
+    } catch (err) {
+      setLocalError(err.message)
+    }
+  }
+
   if (!isOpen) return null
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in-80 duration-150"
-      onClick={e => e.target === e.currentTarget && onClose()}
+      onMouseDown={e => e.target === e.currentTarget && onClose()}
     >
       <div className="bg-surface rounded-2xl border border-white/5 shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto scrollbar-none select-none">
         <div className="flex items-center justify-between px-6 pt-5 pb-2">
@@ -567,7 +670,8 @@ function ApplicationModal({ isEdit, isOpen, onClose, onSubmit, form, setForm, re
           </button>
         </div>
 
-        <form onSubmit={onSubmit} className="px-6 py-4 space-y-4">
+        <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4">
+          {localError && <p className="text-xs text-rose-400 bg-rose-500/10 rounded-xl p-3 border border-rose-500/20">{localError}</p>}
           <div>
             <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">Company Name *</label>
             <input
@@ -596,6 +700,7 @@ function ApplicationModal({ isEdit, isOpen, onClose, onSubmit, form, setForm, re
               <input
                 type="date"
                 required
+                max={getLocalTodayStr()}
                 className="w-full rounded-xl border border-transparent bg-surface-secondary hover:bg-surface-tertiary px-3.5 py-2.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-all [color-scheme:dark]"
                 value={form.date_applied || ''}
                 onChange={e => setForm({ ...form, date_applied: e.target.value })}
@@ -609,6 +714,37 @@ function ApplicationModal({ isEdit, isOpen, onClose, onSubmit, form, setForm, re
                 value={form.location}
                 onChange={e => setForm({ ...form, location: e.target.value })}
               />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">Status</label>
+              <Dropdown
+                options={STATUS_DROPDOWN_OPTIONS}
+                value={form.status || 'Not Contacted'}
+                onChange={val => setForm({ ...form, status: val })}
+                className="w-full"
+                align="left"
+                triggerClassName="bg-surface-secondary text-foreground hover:bg-surface-tertiary border border-transparent"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">Stage</label>
+              {['Offer Received', 'Rejected', 'Ghosted'].includes(form.status) ? (
+                <div className="w-full h-[38px] px-3.5 flex items-center bg-surface-secondary/50 rounded-xl text-foreground-secondary/50 text-xs font-semibold border border-transparent cursor-not-allowed select-none">
+                  Closed
+                </div>
+              ) : (
+                <Dropdown
+                  options={STAGE_DROPDOWN_OPTIONS}
+                  value={form.stage || 'Applied'}
+                  onChange={val => setForm({ ...form, stage: val })}
+                  className="w-full"
+                  align="left"
+                  triggerClassName="bg-surface-secondary text-foreground hover:bg-surface-tertiary border border-transparent"
+                />
+              )}
             </div>
           </div>
 
@@ -634,6 +770,16 @@ function ApplicationModal({ isEdit, isOpen, onClose, onSubmit, form, setForm, re
             )}
           </div>
 
+          <div>
+            <label className="block text-xs font-semibold text-foreground-secondary mb-1.5">Remarks (Optional)</label>
+            <textarea
+              placeholder="Any notes about this application..."
+              className="w-full rounded-xl border border-transparent bg-surface-secondary hover:bg-surface-tertiary px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary transition-all min-h-[60px]"
+              value={form.remarks || ''}
+              onChange={e => setForm({ ...form, remarks: e.target.value })}
+            />
+          </div>
+
           <div className="pt-2 border-t border-white/5 space-y-3">
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
@@ -650,55 +796,86 @@ function ApplicationModal({ isEdit, isOpen, onClose, onSubmit, form, setForm, re
 
             {form.has_contact && (
               <div className="space-y-3 p-3.5 rounded-xl bg-surface-secondary border border-transparent">
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-foreground-secondary mb-1">Name</label>
-                    <input
-                      placeholder="e.g. Jane Doe"
-                      className="w-full rounded-lg border border-transparent bg-surface-secondary px-3 py-1.5 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary"
-                      value={form.contact_name}
-                      onChange={e => setForm({ ...form, contact_name: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-foreground-secondary mb-1">Role</label>
-                    <input
-                      placeholder="e.g. Recruiter"
-                      className="w-full rounded-lg border border-transparent bg-surface-secondary px-3 py-1.5 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary"
-                      value={form.contact_role}
-                      onChange={e => setForm({ ...form, contact_role: e.target.value })}
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-foreground-secondary mb-1">Email</label>
-                    <input
-                      type="email"
-                      placeholder="jane@example.com"
-                      className="w-full rounded-lg border border-transparent bg-surface-secondary px-3 py-1.5 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary"
-                      value={form.contact_email}
-                      onChange={e => setForm({ ...form, contact_email: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-foreground-secondary mb-1">Phone</label>
-                    <input
-                      placeholder="+1234567890"
-                      className="w-full rounded-lg border border-transparent bg-surface-secondary px-3 py-1.5 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary"
-                      value={form.contact_phone}
-                      onChange={e => setForm({ ...form, contact_phone: e.target.value })}
-                    />
-                  </div>
-                </div>
                 <div>
-                  <label className="block text-[11px] font-semibold text-foreground-secondary mb-1">LinkedIn Profile</label>
-                  <input
-                    placeholder="https://linkedin.com/in/..."
-                    className="w-full rounded-lg border border-transparent bg-surface-secondary px-3 py-1.5 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary"
-                    value={form.contact_linkedin}
-                    onChange={e => setForm({ ...form, contact_linkedin: e.target.value })}
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-[11px] font-semibold text-foreground-secondary">Link Existing Contact</label>
+                    {form.contact_id && (
+                      <a href={`#/contacts`} className="text-[10px] font-bold text-primary hover:text-primary-hover transition-colors">
+                        Go to Contact →
+                      </a>
+                    )}
+                  </div>
+                  <SearchableSelect
+                    options={contacts.map(c => ({
+                      value: c.id,
+                      label: c.name,
+                      sublabel: c.company ? `${c.role ? c.role + ' at ' : ''}${c.company}` : c.role
+                    }))}
+                    value={form.contact_id || null}
+                    onChange={val => setForm({ ...form, contact_id: val })}
+                    placeholder="Search and link a contact..."
                   />
+                </div>
+                
+                <div className={`space-y-3 pt-3 border-t border-white/5 transition-opacity ${form.contact_id ? 'opacity-30 pointer-events-none' : 'opacity-100'}`}>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-[11px] font-semibold text-foreground-secondary">Or create new contact inline</label>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-foreground-secondary mb-1">Name</label>
+                      <input
+                        placeholder="e.g. Jane Doe"
+                        className="w-full rounded-lg border border-transparent bg-surface-secondary px-3 py-1.5 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-surface-tertiary"
+                        value={form.contact_name}
+                        onChange={e => setForm({ ...form, contact_name: e.target.value })}
+                        disabled={!!form.contact_id}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-foreground-secondary mb-1">Role</label>
+                      <input
+                        placeholder="e.g. Recruiter"
+                        className="w-full rounded-lg border border-transparent bg-surface-secondary px-3 py-1.5 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-surface-tertiary"
+                        value={form.contact_role}
+                        onChange={e => setForm({ ...form, contact_role: e.target.value })}
+                        disabled={!!form.contact_id}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-foreground-secondary mb-1">Email</label>
+                      <input
+                        type="email"
+                        placeholder="jane@example.com"
+                        className="w-full rounded-lg border border-transparent bg-surface-secondary px-3 py-1.5 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-surface-tertiary"
+                        value={form.contact_email}
+                        onChange={e => setForm({ ...form, contact_email: e.target.value })}
+                        disabled={!!form.contact_id}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-foreground-secondary mb-1">Phone</label>
+                      <input
+                        placeholder="+1234567890"
+                        className="w-full rounded-lg border border-transparent bg-surface-secondary px-3 py-1.5 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-surface-tertiary"
+                        value={form.contact_phone}
+                        onChange={e => setForm({ ...form, contact_phone: e.target.value })}
+                        disabled={!!form.contact_id}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-foreground-secondary mb-1">LinkedIn Profile</label>
+                    <input
+                      placeholder="https://linkedin.com/in/..."
+                      className="w-full rounded-lg border border-transparent bg-surface-secondary px-3 py-1.5 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-surface-tertiary"
+                      value={form.contact_linkedin}
+                      onChange={e => setForm({ ...form, contact_linkedin: e.target.value })}
+                      disabled={!!form.contact_id}
+                    />
+                  </div>
                 </div>
               </div>
             )}
@@ -729,17 +906,24 @@ function ApplicationModal({ isEdit, isOpen, onClose, onSubmit, form, setForm, re
               
               <div className="pt-1">
                 <label className="block text-[11px] font-semibold text-foreground-secondary mb-1">Or upload new resume PDF</label>
-                <input 
-                  type="file" 
-                  accept=".pdf"
-                  onChange={e => {
-                    if (e.target.files && e.target.files.length > 0) {
-                      onUploadResume(e.target.files[0])
-                      e.target.value = null
-                    }
-                  }}
-                  className="w-full text-xs text-foreground-secondary file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
-                />
+                {isUploadingResume ? (
+                  <div className="flex items-center gap-2 text-xs text-primary font-bold py-1.5">
+                    <div className="w-3.5 h-3.5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                    Uploading...
+                  </div>
+                ) : (
+                  <input 
+                    type="file" 
+                    accept=".pdf"
+                    onChange={e => {
+                      if (e.target.files && e.target.files.length > 0) {
+                        onUploadResume(e.target.files[0])
+                        e.target.value = null
+                      }
+                    }}
+                    className="w-full text-xs text-foreground-secondary file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
+                  />
+                )}
               </div>
             </div>
           </div>
@@ -767,9 +951,23 @@ function ApplicationModal({ isEdit, isOpen, onClose, onSubmit, form, setForm, re
                     value={form.next_action_type}
                     onChange={val => {
                       let title = form.next_action_title
-                      if (val === 'Follow Up') title = 'Follow up with recruiter'
-                      else if (val === 'Prepare for Interview') title = 'Prepare for interview'
-                      else if (val === 'Review Offer') title = 'Review offer details'
+                      const knownDefaults = [
+                        'Follow up with recruiter',
+                        'Recruiter introductory call',
+                        'Send status check email',
+                        'Prepare for interview',
+                        'Send thank-you email',
+                        'Review offer details',
+                        form.next_action_type
+                      ]
+                      if (!title || knownDefaults.includes(title)) {
+                        if (val === 'Follow Up') title = 'Follow up with recruiter'
+                        else if (val === 'Recruiter Call') title = 'Recruiter introductory call'
+                        else if (val === 'Send Email') title = 'Send status check email'
+                        else if (val === 'Prepare for Interview') title = 'Prepare for interview'
+                        else if (val === 'Send Thank-you') title = 'Send thank-you email'
+                        else if (val === 'Review Offer') title = 'Review offer details'
+                      }
                       setForm({ ...form, next_action_type: val, next_action_title: title })
                     }}
                     className="w-full"
@@ -793,6 +991,7 @@ function ApplicationModal({ isEdit, isOpen, onClose, onSubmit, form, setForm, re
                     <label className="block text-[11px] font-semibold text-foreground-secondary mb-1">Date</label>
                     <input
                       type="date"
+                      min={getLocalTodayStr()}
                       className="w-full rounded-lg border border-transparent bg-surface-secondary px-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary [color-scheme:dark]"
                       value={form.next_action_date}
                       onChange={e => setForm({ ...form, next_action_date: e.target.value })}
@@ -814,20 +1013,35 @@ function ApplicationModal({ isEdit, isOpen, onClose, onSubmit, form, setForm, re
             )}
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-xl px-4 py-2 text-xs font-semibold text-foreground-secondary hover:bg-surface-tertiary transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="rounded-xl bg-primary px-5 py-2 text-xs font-semibold text-white hover:bg-primary-hover transition-all shadow-2xs active:scale-95"
-            >
-              Create Application
-            </button>
+          <div className={`flex items-center pt-3 ${isEdit ? 'justify-between' : 'justify-end'}`}>
+            {isEdit && (
+              <button
+                type="button"
+                onClick={onDelete}
+                className="rounded-xl p-2 text-rose-400 hover:text-white hover:bg-rose-500 transition-colors flex items-center gap-1.5"
+                title="Delete Application"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span className="text-xs font-semibold">Delete</span>
+              </button>
+            )}
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-xl px-4 py-2 text-xs font-semibold text-foreground-secondary hover:bg-surface-tertiary transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="rounded-xl bg-primary px-5 py-2 text-xs font-semibold text-white hover:bg-primary-hover transition-all shadow-2xs active:scale-95 disabled:opacity-60 flex items-center gap-2"
+              >
+                {isSubmitting && <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                {isSubmitting ? 'Saving...' : (isEdit ? 'Save Changes' : 'Create Application')}
+              </button>
+            </div>
           </div>
         </form>
       </div>
@@ -835,14 +1049,225 @@ function ApplicationModal({ isEdit, isOpen, onClose, onSubmit, form, setForm, re
   )
 }
 
+function ApplicationDetailsModal({ app, onClose, onEdit, onDelete, contacts = [], onUnlinkContact, unlinkingIds = [] }) {
+  const [activities, setActivities] = useState([])
+  const [loadingActivities, setLoadingActivities] = useState(true)
+
+  useEffect(() => {
+    if (app) {
+      setLoadingActivities(true)
+      activityApi.getActivity('all')
+        .then(data => {
+          setActivities(data.filter(a => a.application_id === app.id))
+        })
+        .catch(err => console.error("Failed to load activity history", err))
+        .finally(() => setLoadingActivities(false))
+    }
+  }, [app])
+
+  if (!app) return null
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in-80 duration-150" onMouseDown={e => e.target === e.currentTarget && onClose()}>
+      <div className="bg-surface rounded-2xl border border-white/5 shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto scrollbar-none select-none">
+        <div className="flex items-center justify-between px-6 pt-5 pb-2">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+              <Briefcase className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-foreground">Application Details</h3>
+              <p className="text-[11px] text-foreground-secondary font-medium">Read-only view</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="rounded-lg p-1.5 text-foreground-secondary hover:text-foreground hover:bg-surface-tertiary transition-colors">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="px-6 py-4 space-y-6">
+          <div>
+            <h4 className="text-xl font-bold text-foreground">{app.job_title}</h4>
+            <p className="text-sm text-foreground-secondary">{app.company} {app.location ? `· ${app.location}` : ''}</p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-[11px] font-bold text-foreground-secondary uppercase tracking-wider mb-1">Status</p>
+              <div className="flex items-center gap-2">
+                <ApplicationStatusIcon status={app.status} />
+                <span className="text-xs font-semibold text-foreground">{app.status}</span>
+              </div>
+            </div>
+            <div>
+              <p className="text-[11px] font-bold text-foreground-secondary uppercase tracking-wider mb-1">Stage</p>
+              <span className="text-xs font-semibold text-foreground">{app.stage}</span>
+            </div>
+            <div>
+              <p className="text-[11px] font-bold text-foreground-secondary uppercase tracking-wider mb-1">Applied On</p>
+              <span className="text-xs font-semibold text-foreground">{app.date_applied || '—'}</span>
+            </div>
+            <div>
+              <p className="text-[11px] font-bold text-foreground-secondary uppercase tracking-wider mb-1">Method</p>
+              <span className="text-xs font-semibold text-foreground">{app.application_method || '—'}</span>
+            </div>
+          </div>
+
+          {app.next_action && (
+            <div className="p-3.5 rounded-xl bg-surface-secondary border border-transparent space-y-1">
+              <p className="text-[11px] font-bold text-primary uppercase tracking-wider">Next Action</p>
+              <p className="font-bold text-foreground text-sm">{app.next_action.title}</p>
+              <p className="text-foreground-secondary font-medium text-xs">
+                {formatDateDisplay(app.next_action.date)} {app.next_action.time ? `· ${app.next_action.time}` : ''}
+                {app.next_action.completed ? ' (Completed)' : ''}
+              </p>
+            </div>
+          )}
+
+          {(app.contact_name || app.contact_email || app.contact_id) && (
+            <div className={`p-3.5 rounded-xl bg-surface-secondary border border-transparent space-y-2 relative group/contact transition-all duration-200 ${unlinkingIds.includes(app.id) ? 'opacity-0 scale-95 pointer-events-none' : ''}`}>
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] font-bold text-foreground-secondary uppercase tracking-wider">Contact</p>
+                {onUnlinkContact && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onUnlinkContact(app.id);
+                    }}
+                    className="text-foreground-secondary hover:text-rose-400 p-1 -mr-1 -mt-1 rounded-md transition-colors opacity-0 group-hover/contact:opacity-100"
+                    title="Remove contact"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+              {(() => {
+                const c = contacts.find(contact => contact.id === app.contact_id) || app;
+                const name = c.name || c.contact_name;
+                const role = c.role || c.contact_role;
+                const email = c.email || c.contact_email;
+                const phone = c.phone || c.contact_phone;
+                const linkedin = c.linkedin_url || c.contact_linkedin;
+                
+                return (
+                  <>
+                    {name && (
+                      <p className="text-sm font-bold text-foreground">
+                        {name}
+                        {role && <span className="text-xs font-medium text-foreground-secondary ml-1.5">· {role}</span>}
+                      </p>
+                    )}
+                    <div className="flex flex-col gap-1">
+                      {email && (
+                        <a href={`mailto:${email}`} className="text-xs text-primary hover:underline font-medium">{email}</a>
+                      )}
+                      {phone && (
+                        <a href={`tel:${phone}`} className="text-xs text-foreground-secondary hover:text-foreground font-medium">{phone}</a>
+                      )}
+                      {linkedin && (
+                        <a href={linkedin} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline font-medium">LinkedIn ↗</a>
+                      )}
+                    </div>
+                  </>
+                );
+              })()}
+              {app.contact_id && (
+                <div className="pt-2 mt-1 border-t border-border/10">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      sessionStorage.setItem('applyops_pending_action', JSON.stringify({ type: 'details_contact', contactId: app.contact_id }))
+                      window.location.hash = '#/contacts'
+                      onClose()
+                    }}
+                    className="text-[11px] font-semibold text-primary hover:underline flex items-center gap-1"
+                  >
+                    View in Contacts ↗
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {app.remarks && (
+            <div>
+              <p className="text-[11px] font-bold text-foreground-secondary uppercase tracking-wider mb-1">Remarks</p>
+              <p className="text-xs text-foreground bg-surface-secondary p-3 rounded-xl">{app.remarks}</p>
+            </div>
+          )}
+
+          <div className="pt-2">
+            <p className="text-[11px] font-bold text-foreground-secondary uppercase tracking-wider mb-3">Activity History</p>
+            {loadingActivities ? (
+              <div className="flex justify-center py-4"><div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" /></div>
+            ) : activities.length > 0 ? (
+              <div className="space-y-4">
+                {activities.map((act, i) => (
+                  <div key={act.id} className="relative pl-4">
+                    <div className="absolute left-0 top-1.5 w-1.5 h-1.5 rounded-full bg-primary/50 ring-4 ring-background" />
+                    {i !== activities.length - 1 && <div className="absolute left-[2.5px] top-3 bottom-[-16px] w-[1px] bg-border/50" />}
+                    
+                    <div className="text-xs font-semibold text-foreground flex items-center justify-between">
+                      <span>{act.action_type}</span>
+                      <span className="text-[10px] text-foreground-secondary font-medium">
+                        {new Date(act.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                      </span>
+                    </div>
+                    {act.notes && (
+                      <p className="text-xs text-foreground-secondary mt-1">{act.notes}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-foreground-secondary italic">No activity logged yet.</p>
+            )}
+          </div>
+
+
+          <div className="pt-4 border-t border-white/5 flex items-center justify-between">
+            <button
+              type="button"
+              onClick={() => { onClose(); onDelete(); }}
+              className="rounded-xl px-4 py-2 text-xs font-semibold text-rose-400 hover:text-white hover:bg-rose-500 transition-colors flex items-center gap-1.5"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span>Delete</span>
+            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-xl px-4 py-2 text-xs font-semibold text-foreground-secondary hover:bg-surface-tertiary transition-colors"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={() => { onClose(); onEdit(); }}
+                className="rounded-xl bg-primary px-5 py-2 text-xs font-semibold text-white hover:bg-primary-hover transition-all shadow-2xs active:scale-95 flex items-center gap-1.5"
+              >
+                <Edit className="w-4 h-4" />
+                <span>Edit</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 const EMPTY_FORM = {
-  date_applied: new Date().toISOString().split('T')[0],
+  date_applied: getLocalTodayStr(),
   company: '',
   job_title: '',
   location: '',
   application_method: 'LinkedIn',
   application_method_other: '',
   has_contact: false,
+  contact_id: null,
   contact_name: '',
   contact_role: '',
   contact_email: '',
@@ -853,7 +1278,10 @@ const EMPTY_FORM = {
   next_action_type: 'Follow Up',
   next_action_title: 'Follow up with recruiter',
   next_action_date: getFutureDateStr(2),
-  next_action_time: '10:00 AM'
+  next_action_time: '10:00 AM',
+  status: 'Not Contacted',
+  stage: 'Applied',
+  remarks: ''
 }
 const INITIAL_LIMIT = 5
 
@@ -864,7 +1292,13 @@ export default function Applications() {
   const [loading, setLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
   const [editApp, setEditApp] = useState(null)
+  const [detailsApp, setDetailsApp] = useState(null)
+  const [deletingIds, setDeletingIds] = useState([])
   const [deleteAppId, setDeleteAppId] = useState(null)
+  const [unlinkContactAppId, setUnlinkContactAppId] = useState(null)
+  const [isUnlinkingContact, setIsUnlinkingContact] = useState(false)
+  const [unlinkingContactAppIds, setUnlinkingContactAppIds] = useState([])
+  const { addToast } = useToast()
   const [previewResume, setPreviewResume] = useState(null)
   const [editActionApp, setEditActionApp] = useState(null)
   const [statusPrompt, setStatusPrompt] = useState(null)
@@ -878,6 +1312,10 @@ export default function Applications() {
   const [showManageResumes, setShowManageResumes] = useState(false)
   
   const [resumes, setResumes] = useState([])
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isUploadingResume, setIsUploadingResume] = useState(false)
+
+  const [contacts, setContacts] = useState([])
 
   const load = () => {
     setLoading(true)
@@ -886,10 +1324,15 @@ export default function Applications() {
       api.listResumes().catch(e => {
         console.error("Failed to load resumes", e)
         return []
+      }),
+      api.contacts().catch(e => {
+        console.error("Failed to load contacts", e)
+        return []
       })
     ])
-    .then(([fetchedApps, fetchedResumes]) => {
+    .then(([fetchedApps, fetchedResumes, fetchedContacts]) => {
       setResumes(fetchedResumes)
+      setContacts(fetchedContacts)
       const appsWithResumes = fetchedApps.map(app => {
         if (app.resume_id) {
           const resObj = fetchedResumes.find(r => r.id === app.resume_id)
@@ -918,9 +1361,18 @@ export default function Applications() {
               setForm({
                 ...EMPTY_FORM,
                 ...targetApp,
-                has_contact: !!(targetApp.contact_name || targetApp.contact_email || targetApp.contact_phone || targetApp.contact_linkedin)
+                has_contact: !!(targetApp.contact_id || targetApp.contact_name || targetApp.contact_email || targetApp.contact_phone || targetApp.contact_linkedin),
+                enable_next_action: !!targetApp.next_action_due,
+                next_action_date: targetApp.next_action_due || '',
+                next_action_type: targetApp.next_action_type || 'Follow Up',
+                next_action_title: targetApp.next_action_title || 'Follow up with recruiter'
               })
               setShowAddModal(true)
+            }
+          } else if (pendingAction.type === 'details_app') {
+            const targetApp = appsWithResumes.find(a => a.id === pendingAction.appId)
+            if (targetApp) {
+              setDetailsApp(targetApp)
             }
           } else if (pendingAction.type === 'new_from_contact') {
             const contact = pendingAction.contact
@@ -962,12 +1414,21 @@ export default function Applications() {
       ...app,
       application_method: method,
       application_method_other: methodOther,
-      has_contact: !!(app.contact_name || app.contact_email || app.contact_phone || app.contact_linkedin)
+      has_contact: !!(app.contact_id || app.contact_name || app.contact_email || app.contact_phone || app.contact_linkedin),
+      enable_next_action: !!app.next_action_due,
+      next_action_date: app.next_action_due || '',
+      next_action_type: app.next_action_type || 'Follow Up',
+      next_action_title: app.next_action_title || 'Follow up with recruiter',
+      status: app.status || 'Not Contacted',
+      stage: app.stage || 'Applied',
+      remarks: app.remarks || ''
     })
     setShowAddModal(true)
   }
 
   const handleUploadResume = async (file) => {
+    if (isUploadingResume) return
+    setIsUploadingResume(true)
     try {
       const result = await api.uploadResume(file)
       setResumes(prev => [...prev, result])
@@ -980,6 +1441,8 @@ export default function Applications() {
       } else {
         setError(e.message)
       }
+    } finally {
+      setIsUploadingResume(false)
     }
   }
 
@@ -989,8 +1452,91 @@ export default function Applications() {
     }
   }
 
-  const submit = e => {
-    e.preventDefault()
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteAppId || isDeleting) return
+    setIsDeleting(true)
+    const idToRemove = deleteAppId
+    try {
+      await api.deleteApplication(idToRemove)
+      addToast('Application deleted', 'success')
+      setDeletingIds(prev => [...prev, idToRemove])
+      
+      if (editApp?.id === idToRemove) {
+        setEditApp(null)
+        setShowAddModal(false)
+      }
+      if (editActionApp?.id === idToRemove) setEditActionApp(null)
+      if (statusPrompt?.app?.id === idToRemove) setStatusPrompt(null)
+      
+      setDeleteAppId(null)
+      setTimeout(() => {
+        setApps(prev => prev.filter(a => a.id !== idToRemove))
+        setDeletingIds(prev => prev.filter(id => id !== idToRemove))
+      }, 200)
+    } catch (err) {
+      addToast(`Failed to delete application: ${err.message}`, 'error')
+      setDeleteAppId(null)
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  const handleUnlinkContact = (appId) => {
+    setUnlinkContactAppId(appId)
+  }
+
+  const confirmUnlinkContact = async () => {
+    if (!unlinkContactAppId || isUnlinkingContact) return
+    setIsUnlinkingContact(true)
+    const idToRemove = unlinkContactAppId
+    try {
+      await api.updateApplication(idToRemove, {
+        contact_id: "",
+        contact_name: "",
+        contact_email: "",
+        contact_phone: "",
+        contact_role: "",
+        contact_linkedin: ""
+      })
+      addToast('Contact removed from application', 'success')
+      setUnlinkingContactAppIds(prev => [...prev, idToRemove])
+      setUnlinkContactAppId(null)
+      setTimeout(() => {
+        setApps(prev => prev.map(a => a.id === idToRemove ? {
+          ...a,
+          contact_id: null,
+          contact_name: "",
+          contact_email: "",
+          contact_phone: "",
+          contact_role: "",
+          contact_linkedin: ""
+        } : a))
+        if (detailsApp && detailsApp.id === idToRemove) {
+          setDetailsApp(prev => ({
+            ...prev,
+            contact_id: null,
+            contact_name: "",
+            contact_email: "",
+            contact_phone: "",
+            contact_role: "",
+            contact_linkedin: ""
+          }))
+        }
+        setUnlinkingContactAppIds(prev => prev.filter(id => id !== idToRemove))
+      }, 200)
+    } catch (err) {
+      addToast(`Failed to remove contact: ${err.message}`, 'error')
+      setUnlinkContactAppId(null)
+    } finally {
+      setIsUnlinkingContact(false)
+    }
+  }
+
+  const submit = async e => {
+    e?.preventDefault?.()
+    if (isSubmitting) return
     
     const isDuplicate = apps.find(a => 
       a.company?.trim().toLowerCase() === form.company?.trim().toLowerCase() && 
@@ -1002,6 +1548,8 @@ export default function Applications() {
         return
       }
     }
+
+    setIsSubmitting(true)
 
     const nextActionObj = form.enable_next_action ? {
       id: `act_${Date.now()}`,
@@ -1021,84 +1569,104 @@ export default function Applications() {
       application_method: form.application_method === 'Other' ? form.application_method_other : form.application_method,
       next_action: nextActionObj,
       next_action_due: nextActionObj?.date || null,
-      ...(form.has_contact ? {
-        contact_name: form.contact_name,
-        contact_role: form.contact_role,
-        contact_email: form.contact_email,
-        contact_phone: form.contact_phone,
-        contact_linkedin: form.contact_linkedin
-      } : {}),
-      ...(form.resume_id ? { resume_id: form.resume_id } : {})
+      next_action_type: nextActionObj?.type || null,
+      next_action_title: nextActionObj?.title || null,
+      ...(form.has_contact ? (
+        form.contact_id ? { contact_id: form.contact_id } : {
+          contact_name: form.contact_name,
+          contact_role: form.contact_role,
+          contact_email: form.contact_email,
+          contact_phone: form.contact_phone,
+          contact_linkedin: form.contact_linkedin
+        }
+      ) : { contact_id: null }),
+      ...(form.resume_id ? { resume_id: form.resume_id } : {}),
+      status: form.status,
+      stage: form.stage,
+      remarks: form.remarks
     }
 
-    if (editApp) {
-      api.updateApplication(editApp.id, payload)
-        .then(() => {
-          setForm(EMPTY_FORM)
-          setShowAddModal(false)
-          setEditApp(null)
-          load()
+    try {
+      if (editApp) {
+        await api.updateApplication(editApp.id, payload)
+        setForm(EMPTY_FORM)
+        setShowAddModal(false)
+        setEditApp(null)
+        load()
+      } else {
+        const newApp = await api.createApplication(payload)
+        setForm({
+          ...EMPTY_FORM,
+          next_action_date: getFutureDateStr(2)
         })
-        .catch(e => setError(e.message))
-    } else {
-      api.createApplication(payload)
-        .then(newApp => {
-          setForm({
-            ...EMPTY_FORM,
-            next_action_date: getFutureDateStr(2)
+        setShowAddModal(false)
+        if (nextActionObj) {
+          setCreatedBannerInfo({
+            company: newApp.company,
+            job_title: newApp.job_title,
+            next_action: nextActionObj,
+            appId: newApp.id,
+            reusedContact: newApp._reusedContact || null
           })
-          setShowAddModal(false)
-          if (nextActionObj) {
-            setCreatedBannerInfo({
-              company: newApp.company,
-              job_title: newApp.job_title,
-              next_action: nextActionObj,
-              appId: newApp.id
-            })
+        } else {
+          // No banner will appear, so use toast to notify of contact reuse
+          if (newApp._reusedContact) {
+            addToast(`Linked to existing contact: ${newApp._reusedContact}`, 'info')
           }
-          load()
-        })
-        .catch(e => setError(e.message))
+        }
+        load()
+      }
+    } catch (e) {
+      throw e
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
-  const saveNextAction = (appId, actionObj) => {
+  const saveNextAction = async (appId, actionObj) => {
     const updates = {
       next_action: actionObj,
-      next_action_due: actionObj?.date || null
+      next_action_due: actionObj?.date || null,
+      next_action_type: actionObj?.type || null,
+      next_action_title: actionObj?.title || null
     }
+    await api.updateApplication(appId, updates)
     setApps(prev => prev.map(a => a.id === appId ? { ...a, ...updates } : a))
-    api.updateApplication(appId, updates).catch(e => setError(e.message))
   }
 
-  const removeNextAction = (appId) => {
+  const removeNextAction = async (appId) => {
     const updates = {
       next_action: null,
-      next_action_due: null
+      next_action_due: null,
+      next_action_type: null,
+      next_action_title: null
     }
-    setApps(prev => prev.map(a => a.id === appId ? { ...a, ...updates } : a))
-    api.updateApplication(appId, updates).catch(e => setError(e.message))
+    try {
+      await api.updateApplication(appId, updates)
+      setApps(prev => prev.map(a => a.id === appId ? { ...a, ...updates } : a))
+    } catch (e) {
+      throw e
+    }
   }
 
-  const updateAppStatus = (appId, newStatus) => {
+  const updateAppStatus = async (appId, newStatus) => {
     const targetApp = apps.find(a => a.id === appId)
     if (!targetApp) return
 
     const updates = { status: newStatus }
-    if (newStatus === 'Offer Received') {
-      updates.stage = 'Closed'
-      if (targetApp.next_action) {
-        updates.next_action = { ...targetApp.next_action, time: null, completed: true }
-      }
-    } else if (newStatus === 'Rejected') {
-      updates.stage = 'Closed'
+    if (['Offer Received', 'Rejected', 'Ghosted'].includes(newStatus)) {
       if (targetApp.next_action) {
         updates.next_action = { ...targetApp.next_action, time: null, completed: true }
       }
     }
 
-    setApps(prev => prev.map(a => a.id === appId ? { ...a, ...updates } : a))
-    api.updateApplication(appId, updates).catch(e => setError(e.message))
+    try {
+      await api.updateApplication(appId, updates)
+      setApps(prev => prev.map(a => a.id === appId ? { ...a, ...updates } : a))
+    } catch (e) {
+      setError(e.message)
+      return
+    }
 
     if (newStatus === 'Interviewing' && targetApp.status !== 'Interviewing') {
       setStatusPrompt({
@@ -1143,20 +1711,32 @@ export default function Applications() {
     }
   }
 
-  const updateAppRemarks = (appId, newRemarks) => {
-    setApps(prev => prev.map(a => a.id === appId ? { ...a, remarks: newRemarks } : a))
-    api.updateApplication(appId, { remarks: newRemarks }).catch(e => setError(e.message))
+  const updateAppRemarks = async (appId, newRemarks) => {
+    try {
+      await api.updateApplication(appId, { remarks: newRemarks })
+      setApps(prev => prev.map(a => a.id === appId ? { ...a, remarks: newRemarks } : a))
+    } catch (e) {
+      setError(e.message)
+    }
   }
 
-  const updateAppLocation = (appId, newLocation) => {
-    setApps(prev => prev.map(a => a.id === appId ? { ...a, location: newLocation } : a))
-    api.updateApplication(appId, { location: newLocation }).catch(e => setError(e.message))
+  const updateAppLocation = async (appId, newLocation) => {
+    try {
+      await api.updateApplication(appId, { location: newLocation })
+      setApps(prev => prev.map(a => a.id === appId ? { ...a, location: newLocation } : a))
+    } catch (e) {
+      setError(e.message)
+    }
   }
 
-  const updateAppStage = (appId, newStage) => {
+  const updateAppStage = async (appId, newStage) => {
     const updates = { stage: newStage }
-    setApps(prev => prev.map(a => a.id === appId ? { ...a, ...updates } : a))
-    api.updateApplication(appId, updates).catch(e => setError(e.message))
+    try {
+      await api.updateApplication(appId, updates)
+      setApps(prev => prev.map(a => a.id === appId ? { ...a, ...updates } : a))
+    } catch (e) {
+      setError(e.message)
+    }
   }
 
   const handleDownloadResume = async (res) => {
@@ -1186,7 +1766,8 @@ export default function Applications() {
 
   const filtered = apps.filter(a => {
     const matchStatus = filterStatus === 'All' || a.status === filterStatus
-    const matchStage = filterStage === 'All' || a.stage === filterStage
+    const isTerminalStatus = ['Offer Received', 'Rejected', 'Ghosted'].includes(a.status)
+    const matchStage = filterStage === 'All' || (isTerminalStatus ? filterStage === 'Closed' : a.stage === filterStage)
     const matchSearch = !search || [a.company, a.job_title].some(f => f?.toLowerCase().includes(search.toLowerCase()))
     let matchDate = true
     if (filterDateRange !== 'All Time') {
@@ -1263,20 +1844,25 @@ export default function Applications() {
       />
 
 
-      {deleteAppId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in-80 duration-150" onClick={(e) => e.target === e.currentTarget && setDeleteAppId(null)}>
-          <div className="bg-surface rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden select-none border border-transparent">
-            <div className="p-6">
-              <h3 className="text-base font-bold text-foreground mb-2">Delete Application</h3>
-              <p className="text-xs text-foreground-secondary mb-6">Are you sure you want to delete this application? All related calendar events and activity logs will also be permanently deleted.</p>
-              <div className="flex items-center justify-end gap-3">
-                <button onClick={() => setDeleteAppId(null)} className="px-4 py-2 text-xs font-semibold text-foreground-secondary hover:bg-surface-tertiary rounded-xl transition-colors">Cancel</button>
-                <button onClick={handleDeleteConfirm} className="px-4 py-2 text-xs font-semibold text-white bg-rose-500 hover:bg-rose-600 rounded-xl transition-colors shadow-2xs">Delete</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDeleteModal
+        isOpen={!!deleteAppId}
+        onClose={() => setDeleteAppId(null)}
+        onConfirm={handleDeleteConfirm}
+        isDeleting={isDeleting}
+        title="Delete Application"
+        message="Are you sure you want to delete this application? All related calendar events and activity logs will also be permanently deleted."
+      />
+
+      <ConfirmDeleteModal
+        isOpen={!!unlinkContactAppId}
+        onClose={() => setUnlinkContactAppId(null)}
+        onConfirm={confirmUnlinkContact}
+        isDeleting={isUnlinkingContact}
+        title="Unlink Contact"
+        message="Are you sure you want to unlink this contact from the application? The contact details will be removed."
+        confirmText="Unlink"
+        confirmingText="Unlinking..."
+      />
 
       <ApplicationModal
         isEdit={!!editApp}
@@ -1286,11 +1872,15 @@ export default function Applications() {
           setEditApp(null)
         }}
         onSubmit={submit}
+        onDelete={() => setDeleteAppId(editApp?.id)}
         form={form}
         setForm={setForm}
         resumes={resumes}
+        contacts={contacts}
         onUploadResume={handleUploadResume}
         onManageResumes={() => setShowManageResumes(true)}
+        isSubmitting={isSubmitting}
+        isUploadingResume={isUploadingResume}
       />
 
       <ManageResumesModal
@@ -1300,6 +1890,24 @@ export default function Applications() {
         setResumes={setResumes}
         onResumeDeleted={handleResumeDeleted}
       />
+
+      {detailsApp && (
+        <ApplicationDetailsModal
+          app={detailsApp}
+          contacts={contacts}
+          onUnlinkContact={handleUnlinkContact}
+          unlinkingIds={unlinkingContactAppIds}
+          onClose={() => setDetailsApp(null)}
+          onEdit={() => {
+            handleEditClick(detailsApp);
+            setDetailsApp(null);
+          }}
+          onDelete={() => {
+            setDeleteAppId(detailsApp.id);
+            setDetailsApp(null);
+          }}
+        />
+      )}
 
       {editActionApp && (
         <EditNextActionModal
@@ -1314,22 +1922,24 @@ export default function Applications() {
         <StatusSuggestionModal
           prompt={statusPrompt}
           onClose={() => setStatusPrompt(null)}
-          onAccept={(action, customizedObj) => {
+          onAccept={async (action, customizedObj) => {
             if (action === 'customize') {
               setEditActionApp({
                 ...statusPrompt.app,
                 next_action: customizedObj
               })
             } else {
-              saveNextAction(statusPrompt.app.id, action)
+              await saveNextAction(statusPrompt.app.id, action)
             }
           }}
-          onKeep={() => {}}
-          onRemove={() => removeNextAction(statusPrompt.app.id)}
-          onCustomize={(actionObj) => {
+          onKeep={async () => {}}
+          onRemove={async () => {
+            await removeNextAction(statusPrompt.app.id)
+          }}
+          onCustomize={(suggestedAction) => {
             setEditActionApp({
               ...statusPrompt.app,
-              next_action: actionObj
+              next_action: suggestedAction
             })
           }}
         />
@@ -1425,107 +2035,80 @@ export default function Applications() {
           <table className="w-full text-left text-xs">
             <thead>
               <tr className="text-[10px] font-extrabold uppercase tracking-wider text-foreground-secondary">
-                <th className="px-5 py-3.5 font-extrabold">Company</th>
-                <th className="px-5 py-3.5 font-extrabold">Role</th>
-                <th className="px-5 py-3.5 font-extrabold">Location</th>
+                <th className="px-5 py-3.5 font-extrabold">Application</th>
                 <th className="px-5 py-3.5 font-extrabold">Status</th>
                 <th className="px-5 py-3.5 font-extrabold">Stage</th>
-                <th className="px-5 py-3.5 font-extrabold">Applied On</th>
                 <th className="px-5 py-3.5 font-extrabold">Next Action</th>
                 <th className="px-5 py-3.5 font-extrabold">Remarks</th>
                 <th className="px-5 py-3.5 font-extrabold">Resume</th>
-                  <th className="px-5 py-3.5 font-extrabold text-right">Actions</th>
-
-                      <td className="px-5 py-4">
-                        <div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => handleEditClick(app)} className="p-1.5 text-foreground-secondary hover:text-primary hover:bg-surface-secondary rounded-lg transition-colors" title="Edit Application">
-                            <Edit className="w-4 h-4" />
-                          </button>
-                          <button onClick={() => setDeleteAppId(app.id)} className="p-1.5 text-foreground-secondary hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors" title="Delete Application">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                      <td className="px-5 py-4"><div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity"><button onClick={() => handleEditClick(app)} className="p-1.5 text-foreground-secondary hover:text-primary hover:bg-surface-secondary rounded-lg transition-colors" title="Edit Application"><Edit className="w-4 h-4" /></button><button onClick={() => setDeleteAppId(app.id)} className="p-1.5 text-foreground-secondary hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors" title="Delete Application"><Trash2 className="w-4 h-4" /></button></div></td>
-                    </tr>
-
+              </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-white/5">
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i} className="animate-pulse">
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-xl bg-surface-secondary" />
-                        <div className="h-3 w-24 rounded bg-surface-secondary" />
+                        <div className="w-8 h-8 rounded-xl bg-surface-secondary flex-shrink-0" />
+                        <div className="flex flex-col gap-2">
+                          <div className="h-3 w-32 rounded bg-surface-secondary" />
+                          <div className="h-2 w-24 rounded bg-surface-secondary" />
+                        </div>
                       </div>
                     </td>
                     <td className="px-5 py-4">
-                      <div className="h-3 w-32 rounded bg-surface-secondary" />
+                      <div className="h-6 w-24 rounded-full bg-surface-secondary" />
                     </td>
                     <td className="px-5 py-4">
-                      <div className="h-3 w-20 rounded bg-surface-secondary" />
+                      <div className="h-5 w-20 rounded bg-surface-secondary" />
                     </td>
                     <td className="px-5 py-4">
-                      <div className="h-5 w-20 rounded-full bg-surface-secondary" />
+                      <div className="h-5 w-24 rounded bg-surface-secondary" />
                     </td>
                     <td className="px-5 py-4">
-                      <div className="h-3 w-16 rounded bg-surface-secondary" />
+                      <div className="h-5 w-32 rounded bg-surface-secondary" />
                     </td>
                     <td className="px-5 py-4">
-                      <div className="h-3 w-20 rounded bg-surface-secondary" />
+                      <div className="h-4 w-16 rounded bg-surface-secondary" />
                     </td>
-                    <td className="px-5 py-4">
-                      <div className="h-4 w-24 rounded bg-surface-secondary" />
-                    </td>
-                    <td className="px-5 py-4">
-                      <div className="h-5 w-16 rounded bg-surface-secondary" />
-                    </td>
-                    <td className="px-5 py-4"><div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity"><button onClick={() => handleEditClick(app)} className="p-1.5 text-foreground-secondary hover:text-primary hover:bg-surface-secondary rounded-lg transition-colors" title="Edit Application"><Edit className="w-4 h-4" /></button><button onClick={() => setDeleteAppId(app.id)} className="p-1.5 text-foreground-secondary hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors" title="Delete Application"><Trash2 className="w-4 h-4" /></button></div></td>
                   </tr>
                 ))
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-16 text-center text-xs text-muted">
+                  <td colSpan={6} className="py-16 text-center text-xs text-muted">
                     No applications match the current filter parameters.
                   </td>
-                  <td className="px-5 py-4"><div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity"><button onClick={() => handleEditClick(app)} className="p-1.5 text-foreground-secondary hover:text-primary hover:bg-surface-secondary rounded-lg transition-colors" title="Edit Application"><Edit className="w-4 h-4" /></button><button onClick={() => setDeleteAppId(app.id)} className="p-1.5 text-foreground-secondary hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors" title="Delete Application"><Trash2 className="w-4 h-4" /></button></div></td>
                 </tr>
               ) : (
                 visible.map(app => {
                   const res = app.resume
                   return (
-                    <tr key={app.id} className="group hover:bg-surface-tertiary transition-colors duration-150">
+                    <tr 
+                      key={app.id} 
+                      onClick={(e) => {
+                        if (e.target.closest('button, input, select, a, [role="button"], .dropdown-trigger')) return;
+                        setDetailsApp(app);
+                      }}
+                      className={`group hover:bg-surface-tertiary transition-all duration-200 cursor-pointer ${deletingIds.includes(app.id) ? 'opacity-0 scale-95 -translate-y-2 pointer-events-none' : ''}`}
+                    >
                       <td className="px-5 py-4">
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-start gap-3">
                           <ApplicationStatusIcon status={app.status} />
-                          <span className="font-bold text-foreground text-xs">{app.company}</span>
+                          <div className="flex flex-col gap-1 mt-0.5">
+                            <span className="font-bold text-foreground text-sm leading-none">{app.company}</span>
+                            <div className="flex flex-wrap items-center gap-1.5 text-xs text-foreground-secondary font-medium">
+                              <span className="text-foreground">{app.job_title}</span>
+                              {app.location && (
+                                <>
+                                  <span className="opacity-40">•</span>
+                                  <span>{app.location}</span>
+                                </>
+                              )}
+                              <span className="opacity-40">•</span>
+                              <span title={`Applied on ${app.date_applied || 'Unknown'}`}>{formatDateDisplay(app.date_applied) || 'No date'}</span>
+                            </div>
+                          </div>
                         </div>
-                      </td>
-
-                      <td className="px-5 py-4">
-                        <div className="flex flex-col gap-0.5">
-                          <span className="font-medium text-foreground">{app.job_title}</span>
-                          {app.application_method && (
-                            <span className="text-[10px] text-foreground-secondary/70">{app.application_method}</span>
-                          )}
-                        </div>
-                      </td>
-
-                      <td className="px-5 py-4">
-                        <input
-                          className="bg-transparent text-xs font-medium text-foreground placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-primary rounded px-2 py-1 w-full max-w-[120px] transition-all hover:bg-surface-tertiary"
-                          placeholder="Add location..."
-                          defaultValue={app.location || ''}
-                          onBlur={e => {
-                            if (e.target.value !== (app.location || '')) {
-                              updateAppLocation(app.id, e.target.value)
-                            }
-                          }}
-                          onKeyDown={e => {
-                            if (e.key === 'Enter') e.target.blur()
-                          }}
-                        />
                       </td>
 
                       <td className="px-5 py-4">
@@ -1540,21 +2123,25 @@ export default function Applications() {
                       </td>
 
                       <td className="px-5 py-4">
-                        <Dropdown
-                          size="sm"
-                          options={STAGE_DROPDOWN_OPTIONS}
-                          value={app.stage}
-                          triggerClassName="bg-surface-secondary text-foreground-secondary hover:text-foreground hover:bg-surface-secondary"
-                          onChange={val => updateAppStage(app.id, val)}
-                          align="left"
-                        />
+                        {['Offer Received', 'Rejected', 'Ghosted'].includes(app.status) ? (
+                          <div className="inline-flex items-center justify-center px-2.5 py-1.5 rounded-lg bg-surface-secondary/40 text-foreground-secondary/40 text-[11px] font-semibold cursor-not-allowed border border-transparent select-none whitespace-nowrap">
+                            Closed
+                          </div>
+                        ) : (
+                          <Dropdown
+                            size="sm"
+                            options={STAGE_DROPDOWN_OPTIONS}
+                            value={app.stage}
+                            triggerClassName="bg-surface-secondary text-foreground-secondary hover:text-foreground hover:bg-surface-secondary"
+                            onChange={val => updateAppStage(app.id, val)}
+                            align="left"
+                          />
+                        )}
                       </td>
-
-                      <td className="px-5 py-4 text-foreground-secondary font-medium">{app.date_applied ?? '—'}</td>
 
                       <td className="px-5 py-4">
                         <NextActionCell
-                          action={app.next_action || (app.next_action_due ? { date: app.next_action_due, title: 'Follow up' } : null)}
+                          action={app.next_action || (app.next_action_due ? { date: app.next_action_due, title: app.next_action_title || 'Follow up', type: app.next_action_type || 'Follow-up' } : null)}
                           onClick={() => setEditActionApp(app)}
                         />
                       </td>
@@ -1603,7 +2190,6 @@ export default function Applications() {
                           <span className="text-xs font-medium text-foreground-secondary/50">No resume</span>
                         )}
                       </td>
-                      <td className="px-5 py-4"><div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity"><button onClick={() => handleEditClick(app)} className="p-1.5 text-foreground-secondary hover:text-primary hover:bg-surface-secondary rounded-lg transition-colors" title="Edit Application"><Edit className="w-4 h-4" /></button><button onClick={() => setDeleteAppId(app.id)} className="p-1.5 text-foreground-secondary hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors" title="Delete Application"><Trash2 className="w-4 h-4" /></button></div></td>
                     </tr>
                   )
                 })

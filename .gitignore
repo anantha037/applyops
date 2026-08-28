@@ -6,3 +6,11 @@ __pycache__/
 node_modules/
 dist/
 credentials/
+scratch/
+*_output.txt
+pre_*.txt
+post_*.txt
+triggers.txt
+_test_*.py
+_diag_*.py
+_check_*.py

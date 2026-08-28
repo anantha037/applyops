@@ -61,7 +61,7 @@ def build_daily_coaching_input(
         if text.strip()
     ]
     remarks.extend(event.notes for event in activity if event.notes and event.notes.strip())
-    goal = db_client.get_daily_goal(user_id)
+    goal = db_client.get_weekly_goal(user_id)
     return DailyCoachingInput(
         date=report_date,
         goal=goal,

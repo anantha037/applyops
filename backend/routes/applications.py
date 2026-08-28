@@ -7,10 +7,12 @@ from uuid import uuid4
 from collections import defaultdict
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status, Query
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status, Query
 
 from backend.auth import get_current_user
 from backend.db.models import User
+from backend.db.session import get_session
+from sqlmodel import Session
 from backend.models import (
     Application,
     ApplicationCreate,
@@ -29,57 +31,113 @@ def list_applications(
     user: User = Depends(get_current_user),
     status: str | None = Query(default=None),
     stage: str | None = Query(default=None),
+    session: Session = Depends(get_session),
 ) -> list[Application]:
-    return db_client.list_applications(user.id, status=status, stage=stage)
+    return db_client.list_applications(user.id, status=status, stage=stage, session=session)
 
 
-@router.post("/applications", response_model=Application, status_code=status.HTTP_201_CREATED)
-def create_application(payload: ApplicationCreate, request: Request, user: User = Depends(get_current_user)) -> Application:
+@router.post("/applications", status_code=status.HTTP_201_CREATED)
+def create_application(payload: ApplicationCreate, request: Request, response: Response, user: User = Depends(get_current_user), session: Session = Depends(get_session)):
     last_touch_date = payload.last_touch_date or payload.date_applied
     application_data = payload.model_dump()
     application_data["last_touch_date"] = last_touch_date
-    application_data["next_action_due"] = calculate_next_action_due(
-        ApplicationStage(payload.stage), last_touch_date, payload.status
-    )
+
+    # Check if we are about to reuse an existing contact by email
+    reused_contact_name = None
+    if payload.contact_email and payload.contact_email.strip():
+        from sqlmodel import select, col
+        from backend.db.models import Contact
+        norm_email = payload.contact_email.strip().lower()
+        existing = session.exec(select(Contact).where(Contact.user_id == user.id, col(Contact.email).ilike(norm_email))).first()
+        if existing:
+            reused_contact_name = existing.name
+
+    if payload.next_action_due is not None:
+        if payload.next_action_due < date.today():
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Next action date cannot be in the past"
+            )
+        application_data["next_action_due"] = payload.next_action_due
+    else:
+        application_data["next_action_due"] = calculate_next_action_due(
+            ApplicationStage(payload.stage), last_touch_date, payload.status
+        )
+
     application_data["id"] = str(uuid4())
     
-    application = db_client.create_application(
-        user.id,
-        application_data,
-        contact_name=payload.contact_name,
-        contact_email=payload.contact_email,
-        contact_phone=payload.contact_phone,
-        contact_role=payload.contact_role,
-        contact_linkedin=payload.contact_linkedin,
-        resume_id=payload.resume_id,
-    )
+    try:
+        application = db_client.create_application(
+            user.id,
+            application_data,
+            contact_name=payload.contact_name,
+            contact_email=payload.contact_email,
+            contact_phone=payload.contact_phone,
+            contact_role=payload.contact_role,
+            contact_linkedin=payload.contact_linkedin,
+            resume_id=payload.resume_id,
+            session=session,
+        )
+    except ValueError as e:
+        if "unauthorized" in str(e).lower():
+            raise HTTPException(status_code=403, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e))
     
     # Auto-sync calendar events
     db_client.sync_followup_event(
-        user.id, application.id, application.company, application.next_action_due, lambda: str(uuid4())
+        user.id, 
+        application.id, 
+        application.company, 
+        application.next_action_due, 
+        next_action_type=application.next_action_type,
+        next_action_title=application.next_action_title,
+        event_id_factory=lambda: str(uuid4()),
+        session=session,
     )
     if application.interview_date:
         db_client.sync_interview_event(
             user.id, application.id, application.company,
             application.interview_date, application.interview_round,
             lambda: str(uuid4()),
+            session=session,
         )
-    return application
+        
+    ret = application.model_dump()
+    if reused_contact_name:
+        ret["_reusedContact"] = reused_contact_name
+        
+    return ret
 
 
 @router.patch("/applications/{application_id}", response_model=Application)
 def update_application(
-    application_id: str, payload: ApplicationUpdate, request: Request, user: User = Depends(get_current_user)
+    application_id: str, payload: ApplicationUpdate, request: Request, user: User = Depends(get_current_user), session: Session = Depends(get_session)
 ) -> Application:
-    existing = db_client.get_application(user.id, application_id)
+    existing = db_client.get_application(user.id, application_id, session=session)
     if existing is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Application not found")
 
     changes = payload.model_dump(exclude_unset=True)
     print("PATCH changes:", changes)
     
+    # Validate next_action_due only if it's explicitly being changed to a new past date
+    if "next_action_due" in changes:
+        new_val = changes["next_action_due"]
+        if new_val is not None and new_val < date.today() and new_val != existing.next_action_due:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Next action date cannot be in the past"
+            )
+
     # We must calculate next_action_due if relevant fields changed
-    if {"stage", "last_touch_date", "status"} & changes.keys():
+    # BUT only if the client did NOT explicitly send a next_action_due.
+    # Full edit modals send next_action_due explicitly, so we honor what the user saw/picked.
+    # Quick stage dropdowns omit next_action_due, so we auto-recalculate.
+    stage_changed = "stage" in changes and changes["stage"] != existing.stage
+    status_changed = "status" in changes and changes["status"] != existing.status
+    last_touch_changed = "last_touch_date" in changes and changes["last_touch_date"] != existing.last_touch_date
+
+    if (stage_changed or status_changed or last_touch_changed) and "next_action_due" not in changes:
         stage = ApplicationStage(changes.get("stage", existing.stage))
         last_touch = changes.get("last_touch_date", existing.last_touch_date)
         status_val = changes.get("status", existing.status)
@@ -93,36 +151,51 @@ def update_application(
     contact_linkedin = changes.pop("contact_linkedin", None)
     resume_id = changes.pop("resume_id", None)
 
-    result = db_client.update_application(
-        user.id,
-        application_id, 
-        changes,
-        contact_name=contact_name,
-        contact_email=contact_email,
-        contact_phone=contact_phone,
-        contact_role=contact_role,
-        contact_linkedin=contact_linkedin,
-        resume_id=resume_id,
-    )
+    try:
+        result = db_client.update_application(
+            user.id,
+            application_id, 
+            changes,
+            contact_name=contact_name,
+            contact_email=contact_email,
+            contact_phone=contact_phone,
+            contact_role=contact_role,
+            contact_linkedin=contact_linkedin,
+            resume_id=resume_id,
+            session=session,
+        )
+    except ValueError as e:
+        if "unauthorized" in str(e).lower():
+            raise HTTPException(status_code=403, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e))
+
     if result is None:
         _not_found()
         
     # Auto-sync calendar events whenever relevant fields change
-    if {"stage", "last_touch_date", "status", "next_action_due", "interview_date", "interview_round"} & changes.keys():
+    if {"stage", "last_touch_date", "status", "next_action_due", "next_action_type", "next_action_title", "interview_date", "interview_round"} & changes.keys():
         db_client.sync_followup_event(
-            user.id, result.id, result.company, result.next_action_due, lambda: str(uuid4())
+            user.id, 
+            result.id, 
+            result.company, 
+            result.next_action_due, 
+            next_action_type=result.next_action_type,
+            next_action_title=result.next_action_title,
+            event_id_factory=lambda: str(uuid4()),
+            session=session
         )
         db_client.sync_interview_event(
             user.id, result.id, result.company,
             result.interview_date, result.interview_round or "",
             lambda: str(uuid4()),
+            session=session
         )
     return result
 
 
 @router.delete("/applications/{application_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_application(application_id: str, request: Request, user: User = Depends(get_current_user)) -> None:
-    if not db_client.delete_application(user.id, application_id):
+def delete_application(application_id: str, request: Request, user: User = Depends(get_current_user), session: Session = Depends(get_session)) -> None:
+    if not db_client.delete_application(user.id, application_id, session=session):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Application not found")
 
 

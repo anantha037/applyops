@@ -13,7 +13,11 @@ import {
   CheckCircle2, 
   ShieldCheck, 
   SlidersHorizontal,
-  User
+  User,
+  AlertCircle,
+  MessageSquare,
+  Lightbulb,
+  ArrowUpRight
 } from 'lucide-react'
 
 export default function Settings() {
@@ -32,10 +36,19 @@ export default function Settings() {
     daily_calls_goal: 0,
     working_hours_start: '09:00',
     working_hours_end: '21:00',
+    telegram_chat_id: '',
     name: ''
   })
 
   const [notifications, setNotifications] = useState({
+    app_reminders: true,
+    followup_reminders: true,
+    interview_reminders: true,
+    daily_progress: true,
+    streak_alerts: true
+  })
+
+  const [initialNotifications, setInitialNotifications] = useState({
     app_reminders: true,
     followup_reminders: true,
     interview_reminders: true,
@@ -54,16 +67,25 @@ export default function Settings() {
     Promise.all([api.settings(), api.me()])
       .then(([res, meRes]) => {
         if (active && res && meRes) {
-          const loadedGoal = res.weekly_goal ?? (res.daily_goal ? res.daily_goal * 5 : 25)
           const loaded = {
-            weekly_goal: loadedGoal,
+            weekly_goal: res.weekly_goal || 25,
             daily_calls_goal: res.daily_calls_goal || 0,
             working_hours_start: res.working_hours_start || '09:00',
             working_hours_end: res.working_hours_end || '21:00',
+            telegram_chat_id: res.telegram_chat_id || '',
             name: meRes.name || ''
+          }
+          const loadedNotifs = {
+            app_reminders: res.app_reminders ?? true,
+            followup_reminders: res.followup_reminders ?? true,
+            interview_reminders: res.interview_reminders ?? true,
+            daily_progress: res.daily_progress ?? true,
+            streak_alerts: res.streak_alerts ?? true
           }
           setSettings(loaded)
           setInitialSettings(loaded)
+          setNotifications(loadedNotifs)
+          setInitialNotifications(loadedNotifs)
         }
       })
       .catch(e => {
@@ -83,7 +105,8 @@ export default function Settings() {
     settings.daily_calls_goal !== initialSettings.daily_calls_goal ||
     settings.working_hours_start !== initialSettings.working_hours_start ||
     settings.working_hours_end !== initialSettings.working_hours_end ||
-    settings.name !== initialSettings.name
+    settings.name !== initialSettings.name ||
+    JSON.stringify(notifications) !== JSON.stringify(initialNotifications)
 
   const isTimeInvalid = 
     settings.working_hours_start && 
@@ -110,13 +133,14 @@ export default function Settings() {
 
   const handleCancel = () => {
     setSettings(initialSettings)
+    setNotifications(initialNotifications)
     setMessage('')
     setIsError(false)
   }
 
   const save = e => {
     e.preventDefault()
-    if (isTimeInvalid) return
+    if (isTimeInvalid || saving) return
 
     setSaving(true)
     setMessage('')
@@ -125,7 +149,8 @@ export default function Settings() {
         weekly_goal: settings.weekly_goal,
         daily_calls_goal: settings.daily_calls_goal,
         working_hours_start: settings.working_hours_start,
-        working_hours_end: settings.working_hours_end
+        working_hours_end: settings.working_hours_end,
+        ...notifications
       }),
       settings.name !== initialSettings.name ? api.updateMe({ name: settings.name }) : Promise.resolve(null)
     ])
@@ -136,10 +161,20 @@ export default function Settings() {
           daily_calls_goal: s.daily_calls_goal ?? settings.daily_calls_goal,
           working_hours_start: s.working_hours_start || settings.working_hours_start,
           working_hours_end: s.working_hours_end || settings.working_hours_end,
+          telegram_chat_id: s.telegram_chat_id || settings.telegram_chat_id,
           name: meRes ? meRes.name : settings.name
+        }
+        const updatedNotifs = {
+          app_reminders: s.app_reminders ?? notifications.app_reminders,
+          followup_reminders: s.followup_reminders ?? notifications.followup_reminders,
+          interview_reminders: s.interview_reminders ?? notifications.interview_reminders,
+          daily_progress: s.daily_progress ?? notifications.daily_progress,
+          streak_alerts: s.streak_alerts ?? notifications.streak_alerts
         }
         setSettings(updated)
         setInitialSettings(updated)
+        setNotifications(updatedNotifs)
+        setInitialNotifications(updatedNotifs)
         updateWeeklyGoal(updatedGoal)
         setMessage('Settings saved successfully.')
         setIsError(false)
@@ -170,7 +205,7 @@ export default function Settings() {
         </p>
       </div>
 
-      <div className="flex items-center gap-1.5 p-1 bg-surface-secondary rounded-xl w-fit overflow-x-auto scrollbar-none">
+      <div className="flex items-center gap-1.5 p-1 bg-surface-secondary rounded-xl w-fit overflow-x-auto scrollbar-none shrink-0">
         <button
           type="button"
           onClick={() => setActiveSection('goals')}
@@ -373,12 +408,12 @@ export default function Settings() {
                     type="button"
                     onClick={() => toggleNotification('app_reminders')}
                     className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out focus:outline-none ${
-                      settings.app_reminders ? 'bg-primary' : 'bg-surface-tertiary'
+                      notifications.app_reminders ? 'bg-primary' : 'bg-surface-tertiary'
                     }`}
                   >
                     <span
                       className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-xs transition duration-200 ease-in-out my-0.5 ${
-                        settings.app_reminders ? 'translate-x-5.5' : 'translate-x-0.5'
+                        notifications.app_reminders ? 'translate-x-5.5' : 'translate-x-0.5'
                       }`}
                     />
                   </button>
@@ -396,12 +431,12 @@ export default function Settings() {
                     type="button"
                     onClick={() => toggleNotification('followup_reminders')}
                     className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out focus:outline-none ${
-                      settings.followup_reminders ? 'bg-primary' : 'bg-surface-tertiary'
+                      notifications.followup_reminders ? 'bg-primary' : 'bg-surface-tertiary'
                     }`}
                   >
                     <span
                       className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-xs transition duration-200 ease-in-out my-0.5 ${
-                        settings.followup_reminders ? 'translate-x-5.5' : 'translate-x-0.5'
+                        notifications.followup_reminders ? 'translate-x-5.5' : 'translate-x-0.5'
                       }`}
                     />
                   </button>
@@ -419,12 +454,12 @@ export default function Settings() {
                     type="button"
                     onClick={() => toggleNotification('interview_reminders')}
                     className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out focus:outline-none ${
-                      settings.interview_reminders ? 'bg-primary' : 'bg-surface-tertiary'
+                      notifications.interview_reminders ? 'bg-primary' : 'bg-surface-tertiary'
                     }`}
                   >
                     <span
                       className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-xs transition duration-200 ease-in-out my-0.5 ${
-                        settings.interview_reminders ? 'translate-x-5.5' : 'translate-x-0.5'
+                        notifications.interview_reminders ? 'translate-x-5.5' : 'translate-x-0.5'
                       }`}
                     />
                   </button>
@@ -442,12 +477,12 @@ export default function Settings() {
                     type="button"
                     onClick={() => toggleNotification('daily_progress')}
                     className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out focus:outline-none ${
-                      settings.daily_progress ? 'bg-primary' : 'bg-surface-tertiary'
+                      notifications.daily_progress ? 'bg-primary' : 'bg-surface-tertiary'
                     }`}
                   >
                     <span
                       className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-xs transition duration-200 ease-in-out my-0.5 ${
-                        settings.daily_progress ? 'translate-x-5.5' : 'translate-x-0.5'
+                        notifications.daily_progress ? 'translate-x-5.5' : 'translate-x-0.5'
                       }`}
                     />
                   </button>
@@ -465,12 +500,12 @@ export default function Settings() {
                     type="button"
                     onClick={() => toggleNotification('streak_alerts')}
                     className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out focus:outline-none ${
-                      settings.streak_alerts ? 'bg-primary' : 'bg-surface-tertiary'
+                      notifications.streak_alerts ? 'bg-primary' : 'bg-surface-tertiary'
                     }`}
                   >
                     <span
                       className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-xs transition duration-200 ease-in-out my-0.5 ${
-                        settings.streak_alerts ? 'translate-x-5.5' : 'translate-x-0.5'
+                        notifications.streak_alerts ? 'translate-x-5.5' : 'translate-x-0.5'
                       }`}
                     />
                   </button>
@@ -488,8 +523,10 @@ export default function Settings() {
                   </div>
                 </div>
 
-                <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/15 px-2 py-0.5 rounded-md whitespace-nowrap">
-                  Connected
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md whitespace-nowrap ${
+                  settings.telegram_chat_id ? 'text-emerald-500 bg-emerald-500/15' : 'text-amber-500 bg-amber-500/15'
+                }`}>
+                  {settings.telegram_chat_id ? 'Connected' : 'Not Connected'}
                 </span>
               </div>
             </div>
@@ -543,17 +580,44 @@ export default function Settings() {
                   </span>
                 </div>
 
-                <div className="p-3.5 rounded-xl bg-surface-secondary flex items-center justify-between gap-4">
-                  <div>
-                    <h4 className="text-xs font-bold text-foreground">Google Sheets 2-Way Sync</h4>
-                    <p className="text-[11px] text-foreground-secondary font-medium mt-0.5">
-                      Applications & settings sync bi-directionally with your Master Sheet.
-                    </p>
+                <div className="p-4 rounded-xl bg-surface-secondary space-y-3">
+                  <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">Quick Support</h3>
+                  <div className="space-y-1">
+                    <a
+                      href="mailto:support@applyops.local?subject=ApplyOps Bug Report"
+                      className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-surface-tertiary text-left transition-colors duration-150 group cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <AlertCircle className="w-3.5 h-3.5 text-foreground-secondary group-hover:text-rose-500 transition-colors" />
+                        <span className="text-xs font-medium text-foreground-secondary group-hover:text-foreground">Report an issue</span>
+                      </div>
+                      <ArrowUpRight className="w-3.5 h-3.5 text-muted group-hover:text-foreground transition-colors" />
+                    </a>
+
+                    <a
+                      href="mailto:support@applyops.local?subject=ApplyOps Feedback"
+                      className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-surface-tertiary text-left transition-colors duration-150 group cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <MessageSquare className="w-3.5 h-3.5 text-foreground-secondary group-hover:text-primary transition-colors" />
+                        <span className="text-xs font-medium text-foreground-secondary group-hover:text-foreground">Send feedback</span>
+                      </div>
+                      <ArrowUpRight className="w-3.5 h-3.5 text-muted group-hover:text-foreground transition-colors" />
+                    </a>
+
+                    <a
+                      href="mailto:support@applyops.local?subject=ApplyOps Feature Request"
+                      className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-surface-tertiary text-left transition-colors duration-150 group cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <Lightbulb className="w-3.5 h-3.5 text-foreground-secondary group-hover:text-amber-500 transition-colors" />
+                        <span className="text-xs font-medium text-foreground-secondary group-hover:text-foreground">Request a feature</span>
+                      </div>
+                      <ArrowUpRight className="w-3.5 h-3.5 text-muted group-hover:text-foreground transition-colors" />
+                    </a>
                   </div>
-                  <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/15 px-2 py-0.5 rounded-md whitespace-nowrap flex items-center gap-1">
-                    <Check className="w-3 h-3" /> Active
-                  </span>
                 </div>
+
               </div>
             </div>
           )}

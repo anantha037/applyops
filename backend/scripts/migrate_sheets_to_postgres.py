@@ -270,14 +270,14 @@ def run_migration(dry_run: bool) -> None:
         if existing_settings is None:
             session.add(DBSettings(
                 id=1,
-                daily_goal=src_settings.daily_goal,
+                weekly_goal=src_settings.weekly_goal,
                 working_hours_start=src_settings.working_hours_start or "09:00",
                 working_hours_end=src_settings.working_hours_end   or "18:00",
                 telegram_chat_id=src_settings.telegram_chat_id or "",
                 dashboard_pin=src_settings.dashboard_pin or "",
             ))
             session.flush()
-        print(f"       daily_goal={src_settings.daily_goal}")
+        print(f"       weekly_goal={src_settings.weekly_goal}")
 
         # 2 ── Contacts (Contacts_Manual first, then Applications hr_*) ───────
         print("  [2/6] Migrating Contacts …")

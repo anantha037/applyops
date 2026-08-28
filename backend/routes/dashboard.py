@@ -10,6 +10,8 @@ from fastapi import APIRouter, Depends, Request
 
 from backend.auth import get_current_user
 from backend.db.models import User
+from backend.db.session import get_session
+from sqlmodel import Session
 
 from backend.models import Application
 from backend import db_client
@@ -19,73 +21,89 @@ INDIA_TIMEZONE = ZoneInfo("Asia/Kolkata")
 
 
 @router.get("/due-today", response_model=list[Application])
-def due_today(request: Request, user: User = Depends(get_current_user)) -> list[Application]:
+def due_today(request: Request, user: User = Depends(get_current_user), session: Session = Depends(get_session)) -> list[Application]:
     """Return applications requiring a follow-up today in the local call window."""
     today = datetime.now(INDIA_TIMEZONE).date()
-    return db_client.applications_due_on(user.id, today)
+    return db_client.applications_due_on(user.id, today, session=session)
 
 
 @router.get("/summary")
-def summary(request: Request, user: User = Depends(get_current_user)) -> dict[str, object]:
+def summary(request: Request, user: User = Depends(get_current_user), session: Session = Depends(get_session)) -> dict[str, object]:
     today = datetime.now(INDIA_TIMEZONE).date()
-    applications = db_client.list_applications(user.id)
-    settings = db_client.get_settings(user.id)
-    all_activities = db_client.list_activity(user.id, None)
+    settings = db_client.get_settings(user.id, session=session)
+    stats = db_client.get_current_pipeline_stats(user.id, session=session)
 
-    today_count = sum(app.date_applied == today for app in applications)
+    from sqlmodel import select, func
+    from backend.db.models import Application as DBApplication
+    today_count = session.exec(
+        select(func.count(DBApplication.id))
+        .where(DBApplication.user_id == user.id, DBApplication.date_applied == today)
+    ).one()
 
-    # Derive additional stats for v2 dashboard
-    interviews_count = sum(app.status == "Interviewing" for app in applications)
-    offers_count = sum(app.status == "Offer Received" for app in applications)
-    ghosted_count = sum(app.status == "Ghosted" for app in applications)
+    activities_today = db_client.list_activity(user.id, today, session=session)
+    calls_today = sum(1 for act in activities_today if act.action_type in ("Call Dialed", "Call Connected", "Recruiter Call"))
 
-    contacted_apps = [app for app in applications if app.status != "Not Contacted"]
-    total_contacted = len(contacted_apps)
-    
-    responded_app_ids = {
-        act.application_id for act in all_activities
-        if act.action_type in ("Call Connected", "Interview Completed")
+    # Map stats back to the funnel expected by the UI
+    funnel = {
+        "Total": stats["Total"],
+        "Not Contacted": stats["Not Contacted"],
+        "In Progress": stats["In Progress"],
+        "Interviewing": stats["Interviewing"],
+        "Offer Received": stats["Offer Received"],
+        "Rejected": stats["Rejected"],
+        "Ghosted": stats["Ghosted"],
     }
-    contacted_and_responded = sum(1 for app in contacted_apps if app.id in responded_app_ids)
-    
-    response_rate = (contacted_and_responded / total_contacted * 100) if total_contacted > 0 else 0
-    response_rate = round(response_rate)
-
-    calls_today = sum(
-        1 for act in all_activities 
-        if act.timestamp.replace(tzinfo=ZoneInfo("UTC")).astimezone(INDIA_TIMEZONE).date() == today 
-        and act.action_type in ("Call Dialed", "Call Connected", "Recruiter Call")
-    )
 
     return {
         "today_count": today_count,
         "applications_today": today_count,
-        "goal": settings.daily_goal,
-        "calls_goal": settings.daily_calls_goal,
+        "goal": settings.weekly_goal,
+        "calls_goal": getattr(settings, "daily_calls_goal", 10),
         "calls_today": calls_today,
         "streak": 0,
-        "funnel": dict(Counter(app.status for app in applications)),
-        "response_rate": response_rate,
-        "interviews_count": interviews_count,
-        "offers_count": offers_count,
-        "ghosted_count": ghosted_count,
+        "funnel": funnel,
+        "response_rate": round(stats["response_rate"]),
+        "interviews_count": funnel["Interviewing"],
+        "offers_count": funnel["Offer Received"],
+        "ghosted_count": funnel["Ghosted"]
     }
 
 
 @router.get("/daily-report")
-def daily_report(request: Request, user: User = Depends(get_current_user)) -> dict[str, object]:
+def daily_report(request: Request, user: User = Depends(get_current_user), session: Session = Depends(get_session)) -> dict[str, object]:
     today = datetime.now(INDIA_TIMEZONE).date()
-    applications = db_client.list_applications(user.id)
-    activity = db_client.list_activity(user.id, today)
-    today_apps = [app for app in applications if app.date_applied == today]
+    
+    from sqlmodel import select, func, or_
+    from backend.db.models import Application as DBApplication
+    applications_sent = session.exec(
+        select(func.count(DBApplication.id))
+        .where(DBApplication.user_id == user.id, DBApplication.date_applied == today)
+    ).one()
+    
+    methods = session.exec(
+        select(DBApplication.application_method, func.count(DBApplication.id))
+        .where(DBApplication.user_id == user.id, DBApplication.date_applied == today)
+        .group_by(DBApplication.application_method)
+    ).all()
+    method_breakdown = {m or "Other": c for m, c in methods}
+    
+    interviews_in_pipeline = session.exec(
+        select(func.count(DBApplication.id))
+        .where(
+            DBApplication.user_id == user.id,
+            or_(
+                DBApplication.status == "Interviewing",
+                DBApplication.interview_date >= today
+            )
+        )
+    ).one()
+    
+    activity = db_client.list_activity(user.id, today, session=session)
     return {
         "calls_dialed": sum(item.action_type == "Call Dialed" for item in activity),
         "calls_connected": sum(item.action_type == "Call Connected" for item in activity),
-        "applications_sent": len(today_apps),
-        "method_breakdown": dict(Counter(app.application_method or "Other" for app in today_apps)),
         "interviews_attended": sum(item.action_type == "Interview Completed" for item in activity),
-        "interviews_in_pipeline": sum(
-            app.status == "Interviewing" or (app.interview_date is not None and app.interview_date >= today)
-            for app in applications
-        ),
+        "applications_sent": applications_sent,
+        "method_breakdown": method_breakdown,
+        "interviews_in_pipeline": interviews_in_pipeline
     }

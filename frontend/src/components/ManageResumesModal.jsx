@@ -16,7 +16,12 @@ export default function ManageResumesModal({ isOpen, onClose, resumes, setResume
       setResumes(prev => prev.filter(r => r.id !== id))
       if (onResumeDeleted) onResumeDeleted(id)
     } catch (e) {
-      setError(e.message)
+      const msg = e.message || ''
+      if (msg === 'Failed to fetch' || msg.includes('timed out')) {
+        setError('Could not reach the server — check your connection or try again in a moment.')
+      } else {
+        setError(msg)
+      }
     } finally {
       setDeleting(null)
     }

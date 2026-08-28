@@ -6,7 +6,7 @@ from datetime import date, datetime, timedelta, timezone
 from enum import StrEnum
 from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class CalendarEventType(StrEnum):
@@ -15,6 +15,12 @@ class CalendarEventType(StrEnum):
     APPLICATION_DEADLINE = "Application Deadline"
     REMINDER             = "Reminder"
     PERSONAL             = "Personal"
+    RECRUITER_CALL       = "Recruiter Call"
+    SEND_EMAIL           = "Send Email"
+    PREPARE_FOR_INTERVIEW = "Prepare for Interview"
+    SEND_THANK_YOU       = "Send Thank-you"
+    REVIEW_OFFER         = "Review Offer"
+    CUSTOM               = "Custom"
 
 
 class CalendarEventSource(StrEnum):
@@ -24,22 +30,25 @@ class CalendarEventSource(StrEnum):
 
 class CalendarEventCreate(BaseModel):
     """Payload for a new calendar event (manual creation only)."""
-    title:                  str
+    title:                  str = Field(min_length=1)
     event_type:             CalendarEventType
     date:                   date
     time:                   str | None = None
     related_application_id: str | None = None
-    notes:                  str        = ""
+    contact_id:             str | None = None
+    notes:                  str | None = None
     source:                 CalendarEventSource = CalendarEventSource.MANUAL
 
 
 class CalendarEventUpdate(BaseModel):
     """Partial update payload for a calendar event."""
-    title:      str | None = None
-    event_type: CalendarEventType | None = None
-    event_date: date | None = None   # renamed from `date` to avoid shadowing the type
-    time:       str  | None = None
-    notes:      str  | None = None
+    title:                  str | None = Field(default=None, min_length=1)
+    event_type:             CalendarEventType | None = None
+    event_date:             date | None = None
+    time:                   str  | None = None
+    notes:                  str  | None = None
+    related_application_id: str  | None = None
+    contact_id:             str  | None = None
 
 
 class CalendarEvent(CalendarEventCreate):
@@ -109,6 +118,13 @@ class ApplicationFields(BaseModel):
     model_config = ConfigDict(use_enum_values=True)
 
     date_applied: date = Field(default_factory=date.today)
+
+    @field_validator("date_applied", mode="after")
+    @classmethod
+    def validate_date_applied(cls, v: date) -> date:
+        if v > date.today():
+            raise ValueError("Application date cannot be in the future")
+        return v
     company: Annotated[str, Field(min_length=1)]
     job_title: Annotated[str, Field(min_length=1)]
     jd_summary: str = ""
@@ -130,11 +146,15 @@ class ApplicationFields(BaseModel):
 
 class ApplicationCreate(ApplicationFields):
     """Payload for a new application."""
+    next_action_due: date | None = None
+    next_action_type: str | None = None
+    next_action_title: str | None = None
     contact_name: str | None = None
     contact_email: str | None = None
     contact_phone: str | None = None
     contact_role: str | None = None
     contact_linkedin: str | None = None
+    contact_id: str | None = None
     resume_id: str | None = None
 
 
@@ -144,6 +164,13 @@ class ApplicationUpdate(BaseModel):
     model_config = ConfigDict(use_enum_values=True)
 
     date_applied: date | None = None
+
+    @field_validator("date_applied", mode="after")
+    @classmethod
+    def validate_date_applied(cls, v: date | None) -> date | None:
+        if v is not None and v > date.today():
+            raise ValueError("Application date cannot be in the future")
+        return v
     company: Annotated[str | None, Field(min_length=1)] = None
     job_title: Annotated[str | None, Field(min_length=1)] = None
     jd_summary: str | None = None
@@ -162,11 +189,14 @@ class ApplicationUpdate(BaseModel):
     latest_update: str | None = None
     remarks: str | None = None
     next_action_due: date | None = None
+    next_action_type: str | None = None
+    next_action_title: str | None = None
     contact_name: str | None = None
     contact_email: str | None = None
     contact_phone: str | None = None
     contact_role: str | None = None
     contact_linkedin: str | None = None
+    contact_id: str | None = None
     resume_id: str | None = None
 
 
@@ -175,6 +205,8 @@ class Application(ApplicationFields):
 
     id: str
     next_action_due: date | None = None
+    next_action_type: str | None = None
+    next_action_title: str | None = None
     contact_id: str | None = None
     resume_id: str | None = None
 
@@ -215,7 +247,7 @@ class DailyFeedback(BaseModel):
 
 
 class Settings(BaseModel):
-    daily_goal: int = Field(default=0, ge=0)
+    weekly_goal: int = Field(default=25, ge=1)
     daily_calls_goal: int = Field(default=0, ge=0)
     working_hours_start: str = ""
     working_hours_end: str = ""
@@ -229,7 +261,7 @@ class Settings(BaseModel):
 
 
 class SettingsUpdate(BaseModel):
-    daily_goal: int | None = Field(default=None, ge=0)
+    weekly_goal: int | None = Field(default=None, ge=1)
     daily_calls_goal: int | None = Field(default=None, ge=0)
     working_hours_start: str | None = None
     working_hours_end: str | None = None
@@ -258,6 +290,7 @@ class ContactCreate(BaseModel):
     tags:    str = ""   # comma-separated: Recruiter, HR Manager, Referrer, Other
     notes:   str = ""
     linkedin_url: str = ""
+    application_id: str | None = None
 
 
 class ContactManual(ContactCreate):
@@ -293,6 +326,7 @@ class ContactView(BaseModel):
     responded:             bool = False
     last_action_status:    str = "Not Contacted"
     last_action_date:      str | None = None  # ISO date string or None
+    manual_last_contact_date: str | None = None
 
 
 class ContactUpdate(BaseModel):
@@ -307,6 +341,15 @@ class ContactUpdate(BaseModel):
     linkedin_url:       str | None = None
     last_action_status: str | None = None
     last_action_date:   date | None = None
+    manual_last_contact_date: date | None = None
+    application_id:     str | None = None
+
+    @field_validator("manual_last_contact_date")
+    @classmethod
+    def validate_past_date(cls, v: date | None) -> date | None:
+        if v and v > datetime.now(timezone.utc).date():
+            raise ValueError("Last contact date cannot be in the future")
+        return v
 
 
 # ── Analytics ────────────────────────────────────────────────────────────────
