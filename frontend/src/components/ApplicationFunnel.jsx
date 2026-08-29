@@ -7,7 +7,7 @@ export default function ApplicationFunnel({ summary = {}, loading = false }) {
   const [timeRange, setTimeRange] = useState('all')
 
   const funnel = summary.funnel || {}
-  const totalApps = summary.total_applications || (summary.funnel ? Object.values(summary.funnel).reduce((a, b) => a + b, 0) : 0)
+  const totalApps = summary.total_applications || funnel['Total'] || (summary.funnel ? Object.keys(summary.funnel).reduce((sum, key) => key !== 'Total' ? sum + summary.funnel[key] : sum, 0) : 0)
 
   const stages = [
     { 
