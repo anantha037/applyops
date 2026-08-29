@@ -118,13 +118,6 @@ class ApplicationFields(BaseModel):
     model_config = ConfigDict(use_enum_values=True)
 
     date_applied: date = Field(default_factory=date.today)
-
-    @field_validator("date_applied", mode="after")
-    @classmethod
-    def validate_date_applied(cls, v: date) -> date:
-        if v > date.today():
-            raise ValueError("Application date cannot be in the future")
-        return v
     company: Annotated[str, Field(min_length=1)]
     job_title: Annotated[str, Field(min_length=1)]
     jd_summary: str = ""
@@ -164,13 +157,6 @@ class ApplicationUpdate(BaseModel):
     model_config = ConfigDict(use_enum_values=True)
 
     date_applied: date | None = None
-
-    @field_validator("date_applied", mode="after")
-    @classmethod
-    def validate_date_applied(cls, v: date | None) -> date | None:
-        if v is not None and v > date.today():
-            raise ValueError("Application date cannot be in the future")
-        return v
     company: Annotated[str | None, Field(min_length=1)] = None
     job_title: Annotated[str | None, Field(min_length=1)] = None
     jd_summary: str | None = None
