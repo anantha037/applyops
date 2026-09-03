@@ -49,7 +49,7 @@ logger = logging.getLogger(__name__)
 
 SECRET_KEY: str = os.environ.get("JWT_SECRET_KEY", "")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 15
+ACCESS_TOKEN_EXPIRE_MINUTES = 1440
 REFRESH_TOKEN_EXPIRE_DAYS = 7
 PASSWORD_RESET_EXPIRE_HOURS = 1
 RATE_LIMIT_WINDOW_MINUTES = 15
@@ -178,7 +178,7 @@ def rotate_refresh_token(raw_token: str, session: Session) -> tuple[str, str]:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
 
     if rt.revoked:
-        if rt.revoked_at and _utc_now() - _ensure_aware(rt.revoked_at) < timedelta(seconds=5):
+        if rt.revoked_at and _utc_now() - _ensure_aware(rt.revoked_at) < timedelta(seconds=60):
             # Grace period active (concurrent request fallback). Return 409 to prevent family revocation.
             logger.info("Concurrent refresh detected within grace period for user %s. Returning 409.", user.id)
             raise HTTPException(
