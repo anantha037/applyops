@@ -37,6 +37,8 @@ from pydantic import BaseModel
 from sqlmodel import Session, select
 
 from backend.auth import (
+    ACCESS_TOKEN_EXPIRE_MINUTES,
+    REFRESH_TOKEN_EXPIRE_DAYS,
     check_rate_limit,
     consume_password_reset_token,
     create_access_token,
@@ -141,7 +143,7 @@ def _set_auth_cookies(response: Response, access: str, refresh: str):
         httponly=True,
         samesite=samesite_setting,
         secure=is_prod,
-        max_age=86400,
+        max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
     )
     response.set_cookie(
         key="applyops_refresh_token",
@@ -149,7 +151,7 @@ def _set_auth_cookies(response: Response, access: str, refresh: str):
         httponly=True,
         samesite=samesite_setting,
         secure=is_prod,
-        max_age=7 * 24 * 3600,
+        max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 3600,
     )
 
 
