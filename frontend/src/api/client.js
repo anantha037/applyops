@@ -21,15 +21,14 @@ async function _doRefresh() {
     if (refreshRes.ok || refreshRes.status === 409) {
       if (isBrowser) localStorage.setItem('applyops_is_logged_in', '1')
       return true
-    } else {
+    } else if (refreshRes.status === 401 || refreshRes.status === 403) {
       if (isBrowser) localStorage.removeItem('applyops_is_logged_in')
       window.dispatchEvent(new Event('auth:unauthorized'))
       return false
     }
+    throw new Error(`Auth service unavailable (${refreshRes.status}). Please try again.`)
   } catch (err) {
-    if (isBrowser) localStorage.removeItem('applyops_is_logged_in')
-    window.dispatchEvent(new Event('auth:unauthorized'))
-    return false
+    throw err
   } finally {
     refreshPromise = null
   }
@@ -90,8 +89,7 @@ async function request(path, options = {}, isRetry = false) {
           })
         }
       } catch (e) {
-        if (isBrowser) localStorage.removeItem('applyops_is_logged_in')
-        window.dispatchEvent(new Event('auth:unauthorized'))
+        throw e
       }
     }
 
