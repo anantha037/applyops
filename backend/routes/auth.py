@@ -141,7 +141,7 @@ def _set_auth_cookies(response: Response, access: str, refresh: str):
         httponly=True,
         samesite=samesite_setting,
         secure=is_prod,
-        max_age=900,
+        max_age=86400,
     )
     response.set_cookie(
         key="applyops_refresh_token",
